@@ -1,0 +1,54 @@
+// Build script: bundles the app with esbuild into dist/.
+//   node build.mjs          production build
+//   node build.mjs --watch  rebuild on change and serve on http://localhost:5173
+//   node build.mjs --test   run the unit tests
+import { createRequire } from "node:module";
+import { cpSync, existsSync, mkdirSync, readFileSync, readdirSync, rmSync, writeFileSync } from "node:fs";
+import { execFileSync } from "node:child_process";
+import path from "node:path";
+
+const require = createRequire(import.meta.url);
+const esbuild = require("esbuild");
+const root = path.dirname(new URL(import.meta.url).pathname);
+const args = new Set(process.argv.slice(2));
+const nodePaths = (process.env.NODE_PATH || "").split(path.delimiter).filter(Boolean);
+const version = JSON.parse(readFileSync(path.join(root, "package.json"), "utf8")).version;
+
+if (args.has("--test")) {
+  const out = path.join(root, ".test-build");
+  rmSync(out, { recursive: true, force: true });
+  const files = readdirSync(path.join(root, "tests")).filter((f) => f.endsWith(".test.ts"));
+  await esbuild.build({ entryPoints: files.map((f) => path.join(root, "tests", f)), bundle: true, platform: "node", format: "esm", outdir: out, outExtension: { ".js": ".mjs" }, nodePaths, logLevel: "warning" });
+  try { execFileSync(process.execPath, ["--test", ...readdirSync(out).map((f) => path.join(out, f))], { stdio: "inherit" }); }
+  finally { rmSync(out, { recursive: true, force: true }); }
+  process.exit(0);
+}
+
+const dist = path.join(root, "dist");
+rmSync(dist, { recursive: true, force: true });
+mkdirSync(dist, { recursive: true });
+cpSync(path.join(root, "public"), dist, { recursive: true });
+
+const options = {
+  entryPoints: { app: path.join(root, "src/main.tsx") },
+  bundle: true, format: "esm", target: "es2020", outdir: dist, jsx: "automatic",
+  minify: !args.has("--watch"), sourcemap: args.has("--watch") ? "inline" : false,
+  define: { "process.env.NODE_ENV": args.has("--watch") ? '"development"' : '"production"', __APP_VERSION__: JSON.stringify(version) },
+  loader: { ".css": "css" }, nodePaths, logLevel: "info",
+};
+
+const html = readFileSync(path.join(root, "index.html"), "utf8").replaceAll("%VERSION%", version);
+writeFileSync(path.join(dist, "index.html"), html);
+const sw = readFileSync(path.join(root, "public/sw.js"), "utf8").replace("%VERSION%", version + "-" + Date.now().toString(36));
+writeFileSync(path.join(dist, "sw.js"), sw);
+
+if (args.has("--watch")) {
+  const ctx = await esbuild.context(options);
+  await ctx.watch();
+  const { port } = await ctx.serve({ servedir: dist, port: 5173 });
+  console.log(`Bench Stats running at http://localhost:${port}`);
+} else {
+  await esbuild.build(options);
+  if (!existsSync(path.join(dist, "app.js"))) throw new Error("build failed");
+  console.log("Built to dist/");
+}

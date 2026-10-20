@@ -1,0 +1,24 @@
+{
+  "name": "bench-stats",
+  "version": "2.0.0",
+  "private": true,
+  "description": "Volleyball stat tracking, lineups and practice planning for coaches",
+  "type": "module",
+  "scripts": {
+    "dev": "node build.mjs --watch",
+    "build": "node build.mjs",
+    "test": "node build.mjs --test",
+    "typecheck": "tsc --noEmit"
+  },
+  "dependencies": {
+    "jszip": "^3.10.1",
+    "react": "^19.2.0",
+    "react-dom": "^19.2.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.2.0",
+    "@types/react-dom": "^19.2.0",
+    "esbuild": "^0.25.0",
+    "typescript": "^5.9.0"
+  }
+}

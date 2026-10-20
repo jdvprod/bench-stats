@@ -1,0 +1,93 @@
+/** Everything Bench Stats saves. Each record belongs to a team, so one coach can run many teams. */
+import type { MatchEvent } from "../sports/volleyball/engine";
+
+export interface TeamSettings {
+  subLimit: number;        // subs allowed per set (0 = no limit)
+  bestOf: number;          // default match format
+  askLoc: boolean;         // ask where the ball landed
+  askLocDigs: boolean;     // also ask after digs
+  askOpp: boolean;         // ask for their jersey number
+  hideZones: boolean;      // hide zone numbers on drawing boards
+}
+export const DEFAULT_SETTINGS: TeamSettings = { subLimit: 15, bestOf: 5, askLoc: true, askLocDigs: false, askOpp: true, hideZones: false };
+
+export interface Lineup { lu: string[]; lib: string | null; libSrv: string | null }
+
+export interface Team {
+  id: string;
+  name: string;
+  level: string;           // e.g. "Varsity", "JV", "16U Club"
+  color: string;           // primary team color (hex)
+  createdAt: number;
+  activeSeasonId: string | null;
+  currentMatchId: string | null;
+  settings: TeamSettings;
+  defLineup: Lineup | null;
+  scrimSplit?: { aName: string; bName: string; a: string[]; b: string[]; out: string[]; to: number; games: number } | null;
+  luAdvice?: { lineup: string[]; libero: string | null; summary: string; reasons: string[]; serveReceive: string[]; at: number } | null;
+  sample?: boolean;
+}
+
+export interface Season { id: string; teamId: string; name: string; createdAt: number }
+
+export type GoalMetric = "hitting" | "passAvg" | "serveIn" | "killsPerSet" | "digsPerSet" | "acesPerSet" | "blocksPerSet" | "assistsPerSet" | "perfectPass" | "serveEff";
+export interface Goal { id: string; metric: GoalMetric; target: number; note?: string }
+
+export interface Player {
+  id: string; teamId: string;
+  num: string; first: string; last: string; pos: string;
+  grad: number | null;     // graduation year (recruiting)
+  height: string;          // e.g. 5'10"
+  active: boolean;
+  goals: Goal[];
+  notes: string;
+}
+
+export type MatchKind = "match" | "scrimmage" | "drills";
+export interface ScrimSetup { a: { name: string; ids: string[] }; b: { name: string; ids: string[] }; to: number }
+
+export interface Match {
+  id: string; teamId: string; seasonId: string | null;
+  kind: MatchKind;
+  opp: string;             // opponent name, or session name for practice
+  date: string;            // YYYY-MM-DD
+  bestOf: number;
+  status: "live" | "done";
+  site: "home" | "away" | "neutral" | "";
+  event: string;           // tournament / league name
+  notes: string;
+  oppPlayers: string[];
+  scrim: ScrimSetup | null;
+  filmStart: number | null;
+  nextLu: Lineup | null;
+  report: string; reportAt: number | null;
+  planId: string | null;
+  createdAt: number;
+  sample?: boolean;
+}
+
+/** Events recorded on one device for one match. Several devices can record the same match. */
+export interface EventLog { id: string; matchId: string; device: string; events: MatchEvent[] }
+
+export interface Opponent { id: string; teamId: string; name: string; notes: string; scout: string; scoutAt: number | null }
+
+export const DRILL_CATEGORIES = ["Warm-up", "Serving", "Serve receive", "Setting", "Attacking", "Blocking", "Defense", "Transition", "Game play", "Conditioning", "Team talk"] as const;
+export interface Drill { id: string; teamId: string; name: string; category: string; minutes: number; description: string; focus: string[] }
+export interface PlanBlock { id: string; title: string; category: string; minutes: number; notes: string; drillId: string | null; done?: boolean }
+export interface PracticePlan {
+  id: string; teamId: string; seasonId: string | null;
+  date: string; title: string; start: string;  // start time, e.g. 15:30
+  blocks: PlanBlock[]; notes: string; status: "planned" | "done"; createdAt: number;
+}
+
+export interface Board { id: string; teamId: string; name: "hit" | "serve" | "def"; strokes: Stroke[] }
+export interface Stroke { tool: "pen" | "arrow" | "dot" | "hl"; color: string; pts: [number, number][] }
+
+export interface Prefs { theme: "system" | "light" | "dark"; size: "normal" | "large"; teamId: string | null }
+
+export const STORES = ["teams", "seasons", "players", "matches", "logs", "opponents", "drills", "plans", "boards", "kv"] as const;
+export type StoreName = (typeof STORES)[number];
+export interface StoreTypes {
+  teams: Team; seasons: Season; players: Player; matches: Match; logs: EventLog; opponents: Opponent;
+  drills: Drill; plans: PracticePlan; boards: Board; kv: { id: string; value: any };
+}

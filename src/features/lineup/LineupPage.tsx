@@ -1,0 +1,152 @@
+/** Lineup builder: six starters, libero, all six rotations, rotation results, AI suggestion. */
+import { useState } from "react";
+import { activePlayers, appendEvents, currentMatch, matchesOf, patch, player, playerName, replayOf, setTeamPatch, team, toast } from "../../data/store";
+import { Lineup } from "../../data/model";
+import { aggregate, rotateLineup } from "../../sports/volleyball/engine";
+import { fmtPct, fmtSigned, ratio } from "../../sports/volleyball/metrics";
+import { Card, Seg } from "../../ui/kit";
+import { useDragDrop } from "../../ui/drag";
+import { askJson, aiAvailable, AiError, AI_ERRORS } from "../../ai/client";
+import { lineupPrompt } from "../../ai/prompts";
+
+/** Court order for display: front row P4 P3 P2, back row P5 P6 P1. */
+const FRONT = [3, 2, 1], BACK = [4, 5, 0];
+const POS_NAME = ["P1 · right back · serves", "P2 · right front", "P3 · middle front", "P4 · left front", "P5 · left back", "P6 · middle back"];
+
+/** Which back-row player the libero replaces in this rotation (the back-row middle, else nobody). */
+export function liberoFor(lu: string[], lib: string | null, libSrv: string | null): number | null {
+  if (!lib) return null;
+  for (const i of [4, 5, 0]) { const p = player(lu[i]); if (p?.pos === "MB") { if (i === 0 && libSrv !== lu[0]) return null; return i; } }
+  if (libSrv && lu[0] === libSrv) return 0;
+  return null;
+}
+
+export function LineupPage() {
+  const t = team()!, ps = activePlayers(), m = currentMatch();
+  const live = m && m.kind === "match" ? replayOf(m)?.cur : null;
+  const seed: Lineup = t.defLineup || { lu: ps.filter((p) => p.pos !== "L").slice(0, 6).map((p) => p.id), lib: ps.find((p) => p.pos === "L")?.id || null, libSrv: null };
+  const [lu, setLu] = useState<string[]>([0, 1, 2, 3, 4, 5].map((i) => seed.lu[i] || ""));
+  const [lib, setLib] = useState<string | null>(seed.lib);
+  const [libSrv, setLibSrv] = useState<string | null>(seed.libSrv);
+  const [sel, setSel] = useState<number | "lib" | null>(null);
+  const [busy, setBusy] = useState(false), [err, setErr] = useState("");
+  const [statsFrom, setStatsFrom] = useState<"season" | "lineup">("season");
+
+  const place = (slot: number | "lib", id: string) => {
+    const n = lu.slice(); let L = lib;
+    const from = n.indexOf(id);
+    if (slot === "lib") { if (from >= 0) n[from] = ""; L = id; }
+    else { const prev = n[slot]; if (from >= 0) n[from] = prev; else if (L === id) L = prev && player(prev)?.pos === "L" ? prev : null; n[slot] = id; }
+    setLu(n); setLib(L); if (libSrv && !n.includes(libSrv)) setLibSrv(null); setSel(null);
+  };
+  useDragDrop((d) => { if (d.target === "slot") place(d.targetId === "lib" ? "lib" : +d.targetId, d.id); });
+
+  const valid = lu.every(Boolean) && new Set(lu).size === 6 && !(lib && lu.includes(lib));
+  const current: Lineup = { lu, lib, libSrv: libSrv && lu.includes(libSrv) ? libSrv : null };
+  const saveDefault = () => { if (!valid) return toast("Fill all six spots with different players."); setTeamPatch({ defLineup: current }); toast("Saved as your starting lineup"); };
+  const useNow = () => { if (!m || !valid) return; appendEvents(m.id, [{ t: "LU", ...current } as any]); toast("Lineup is on court now"); };
+  const useNext = () => { if (!m || !valid) return; patch("matches", m.id, { nextLu: current }); toast("Queued for the next set"); };
+
+  // Rotation results from this season, optionally only sets that started with this exact lineup
+  const sets = matchesOf().filter((x) => x.kind === "match" && (!t.activeSeasonId || x.seasonId === t.activeSeasonId)).flatMap((x) => replayOf(x)?.sets || []);
+  const same = sets.filter((s) => s.startLu && s.startLu.join() === lu.join());
+  const A = aggregate(statsFrom === "lineup" ? same : sets);
+
+  const suggest = async () => {
+    if (!aiAvailable()) return setErr(AI_ERRORS.no_key);
+    setBusy(true); setErr("");
+    try {
+      const r = await askJson<{ lineup: string[]; libero: string | null; summary: string; reasons: string[]; serveReceive: string[] }>(lineupPrompt(), { tier: "complex" });
+      const ids = new Set(ps.map((p) => p.id));
+      if (!Array.isArray(r.lineup) || r.lineup.length !== 6 || new Set(r.lineup).size !== 6 || !r.lineup.every((id) => ids.has(id))) throw new AiError("bad", "The suggestion didn't use your roster correctly. Try again.");
+      const libero = r.libero && ids.has(r.libero) && !r.lineup.includes(r.libero) ? r.libero : null;
+      setTeamPatch({ luAdvice: { lineup: r.lineup, libero, summary: String(r.summary || ""), reasons: (r.reasons || []).map(String), serveReceive: (r.serveReceive || []).map(String), at: Date.now() } });
+    } catch (e) { setErr(e instanceof AiError ? e.message : AI_ERRORS.upstream); }
+    setBusy(false);
+  };
+  const adv = t.luAdvice;
+
+  const slot = (i: number | "lib") => {
+    const id = i === "lib" ? lib : lu[i];
+    const p = player(id);
+    return <button key={i} className={"lslot " + (p ? "filled " : "") + (sel === i ? "sel" : "")} data-drop="slot" data-drop-id={String(i)} onClick={() => setSel(sel === i ? null : i)} aria-label={i === "lib" ? "Libero" : POS_NAME[i]}>
+      <span className="pos">{i === "lib" ? "LIBERO" : "P" + (i + 1)}</span>
+      {p ? <><span className="n">{p.num}</span><span className="nm">{p.first || p.last}</span><span className="ps">{p.pos}</span></> : <span className="small muted">{sel === i ? "Pick a player" : "Empty"}</span>}
+    </button>;
+  };
+
+  return <div className="page">
+    <div className="pagehead"><h1>Lineup & rotations</h1>
+      <div className="row">
+        <button className="btn primary" disabled={!valid} onClick={saveDefault}>Save as starting lineup</button>
+        {m && m.kind === "match" && <><button className="btn" disabled={!valid} onClick={useNow}>Put on court now</button><button className="btn" disabled={!valid} onClick={useNext}>Use next set{m.nextLu ? " ✓" : ""}</button></>}
+      </div>
+    </div>
+    {live?.lu && <p className="small muted">On court now in set {live.n}: {live.lu.map((id) => playerName(id)).join(", ")}. <button className="btn sm" onClick={() => { setLu(live.lu!.slice()); setLib(live.lib); setLibSrv(live.libSrv); }}>Load it here</button></p>}
+    <div className="grid2" style={{ alignItems: "start" }}>
+      <Card title="Starting six" actions={<span className="small muted">Tap a spot, then a player. Or drag.</span>}>
+        <div className="stack">
+          <div className="netbar" style={{ textAlign: "center" }}><span className="label">NET</span></div>
+          <div className="mini3" style={{ gap: 8 }}>{FRONT.map(slot)}</div>
+          <div className="mini3" style={{ gap: 8 }}>{BACK.map(slot)}</div>
+          <div className="row" style={{ alignItems: "stretch" }}>
+            <div style={{ width: 120 }}>{slot("lib")}</div>
+            <label className="field grow"><span className="label">Libero serves for</span>
+              <select value={libSrv || ""} onChange={(e) => setLibSrv(e.target.value || null)} disabled={!lib}><option value="">Nobody</option>{lu.filter(Boolean).map((id) => <option key={id} value={id}>{playerName(id)}</option>)}</select></label>
+          </div>
+          <div>
+            <div className="label" style={{ marginBottom: 6 }}>Roster {sel !== null && <span className="tag">placing into {sel === "lib" ? "libero" : "P" + ((sel as number) + 1)}</span>}</div>
+            <div className="players">{ps.map((p) => {
+              const where = lu.indexOf(p.id), isLib = lib === p.id;
+              return <button key={p.id} className={"pl " + (where >= 0 || isLib ? "" : "bench")} data-drag="lp" data-drag-id={p.id} onClick={() => { if (sel !== null) place(sel, p.id); else { const empty = lu.findIndex((x) => !x); if (empty >= 0) place(empty, p.id); else toast("Tap a spot first, then the player."); } }}>
+                {isLib && <span className="lb">L</span>}<span className="n">{p.num}</span><span className="nm">{p.first || p.last}</span><span className="ps">{where >= 0 ? "P" + (where + 1) : p.pos}</span>
+              </button>; })}</div>
+          </div>
+          {!valid && <p className="hint warn">Fill all six spots with different players{lib && lu.includes(lib) ? ", and keep the libero out of the six" : ""}.</p>}
+          <LineupChecks lu={lu} />
+        </div>
+      </Card>
+      <div className="stack">
+        <Card title="Best lineup from your stats" actions={<button className="btn sm primary" disabled={busy} onClick={suggest}>{busy ? "Thinking…" : adv ? "Ask again" : "Suggest a lineup"}</button>}>
+          {err && <p className="hint warn">{err}</p>}
+          {adv ? <div className="stack">
+            <p><b>{adv.summary}</b></p>
+            <div className="mini3">{[3, 2, 1, 4, 5, 0].map((i) => <div key={i}><b>{player(adv.lineup[i])?.num ?? "?"}</b>{playerName(adv.lineup[i], "first")}</div>)}</div>
+            {adv.libero && <p className="small">Libero: {playerName(adv.libero, "full")}</p>}
+            <ul className="recs">{adv.reasons.map((r, i) => <li key={i}>{r}</li>)}</ul>
+            {adv.serveReceive.length > 0 && <><div className="label">Serve receive</div><ul className="recs">{adv.serveReceive.map((r, i) => <li key={i}>{r}</li>)}</ul></>}
+            <div className="row"><button className="btn sm" onClick={() => { setLu(adv.lineup.slice()); setLib(adv.libero); setLibSrv(null); toast("Loaded. Save it to keep it."); }}>Load into builder</button><span className="small muted">Suggested {new Date(adv.at).toLocaleDateString()}</span></div>
+          </div> : <p className="small muted">Uses every player's hitting, passing, serving and your rotation results to suggest a starting six. You can load it, tweak it, and save.</p>}
+        </Card>
+      </div>
+    </div>
+    <Card title="All six rotations" actions={<Seg value={statsFrom} onChange={setStatsFrom} options={[["season", "Season results"], ["lineup", `This lineup (${same.length} sets)`]]} />}>
+      <div className="rots">{[1, 2, 3, 4, 5, 6].map((r) => {
+        const L = rotateLineup(lu, r - 1), li = liberoFor(L, lib, libSrv), x = A.rot[r], net = x ? x.w - x.l : 0;
+        const cell = (i: number) => { const isL = li === i, id = isL ? lib : L[i]; return <div key={i} className={(i === 0 ? "srvp " : "") + (isL ? "libx" : "")} title={isL ? `${playerName(lib)} in for ${playerName(L[i])}` : undefined}><b>{player(id)?.num ?? "–"}</b>{id ? playerName(id, "first") : "—"}</div>; };
+        return <div key={r} className="rotcard">
+          <div className="hd"><span>Rotation {r}</span>{x && x.w + x.l > 0 && <span style={{ color: net > 0 ? "var(--good)" : net < 0 ? "var(--bad)" : undefined }}>{fmtSigned(net)}</span>}</div>
+          <div className="mini3"><span className="net" />{FRONT.map(cell)}{BACK.map(cell)}</div>
+          <div className="small muted" style={{ marginTop: 6 }}>Serving: {playerName(li === 0 ? lib : L[0]) || "—"}{x && x.rn ? ` · SO ${fmtPct(ratio(x.rw, x.rn))}` : ""}{x && x.sn ? ` · PS ${fmtPct(ratio(x.sw, x.sn))}` : ""}</div>
+        </div>; })}</div>
+      <p className="keys" style={{ marginTop: 8 }}>Highlighted box = server. Dashed = libero in for that player. SO = side-out %, PS = point-scoring % in that rotation.</p>
+    </Card>
+  </div>;
+}
+
+/** Quick sanity checks on a 5-1 / 6-2 style lineup. */
+function LineupChecks({ lu }: { lu: string[] }) {
+  if (lu.some((x) => !x)) return null;
+  const pos = lu.map((id) => player(id)?.pos || "");
+  const opp = (a: number) => (a + 3) % 6;
+  const notes: string[] = [];
+  const s = pos.indexOf("S"), o = pos.indexOf("OPP");
+  if (s >= 0 && o >= 0 && opp(s) !== o) notes.push("The setter and opposite usually line up across from each other (3 spots apart).");
+  const mbs = pos.map((p, i) => (p === "MB" ? i : -1)).filter((i) => i >= 0);
+  if (mbs.length === 2 && opp(mbs[0]) !== mbs[1]) notes.push("The two middles usually line up across from each other so one is always front row.");
+  const ohs = pos.map((p, i) => (p === "OH" ? i : -1)).filter((i) => i >= 0);
+  if (ohs.length === 2 && opp(ohs[0]) !== ohs[1]) notes.push("The two outsides usually line up across from each other.");
+  if (s < 0) notes.push("No setter in the six.");
+  if (!notes.length) return <p className="hint">Balanced: setter, middles and outsides are across from each other.</p>;
+  return <div className="hint warn">{notes.map((n, i) => <div key={i}>{n}</div>)}</div>;
+}

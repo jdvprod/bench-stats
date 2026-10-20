@@ -1,0 +1,13 @@
+/** Screen state shared between components (not saved). */
+import { emit } from "../data/store";
+
+export type Panel = null | "fix" | "lineup" | "sub" | "tag" | "timeout" | "teams";
+export const ui = {
+  sel: null as string | null,          // selected player on the pad
+  panel: null as Panel,                // open editor on the Track screen
+  follow: null as null | { id: string; half: "us" | "them" | null; askOpp: boolean; label: string },
+  statsScope: "match" as string,       // season | practice | match | s1..s5
+  statsSeason: "" as string,
+  courtTab: "tendency" as "tendency" | "boards",
+};
+export function setUi(p: Partial<typeof ui>) { Object.assign(ui, p); emit(); }
