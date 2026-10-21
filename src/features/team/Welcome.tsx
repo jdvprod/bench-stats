@@ -21,12 +21,12 @@ export function Welcome() {
   const [msg, setMsg] = useState("");
   const onFile = (f?: File | null) => { if (!f) return; const r = new FileReader(); r.onload = () => { const res = importBackup(String(r.result || "")); setMsg(res.message); if (res.ok) go("team"); }; r.readAsText(f); };
   return <div className="page" style={{ maxWidth: 720, margin: "0 auto", paddingTop: 32 }}>
-    <div className="row" style={{ gap: 12 }}><div className="jersey" style={{ width: 56, height: 56, fontSize: 28, borderRadius: 12 }}>BS</div><div><h1>Bench Stats</h1><p className="muted">Volleyball stats, lineups and practice planning for coaches.</p></div></div>
+    <div className="row" style={{ gap: 12 }}><div className="jersey" style={{ width: 56, height: 56, fontSize: 28, borderRadius: 12 }}>BB</div><div><h1>Benchboard</h1><p className="muted">Volleyball stats, lineups and practice planning for coaches.</p></div></div>
     <section className="card"><div className="hd"><h3>Create your team</h3></div><NewTeamForm /></section>
     <section className="card"><div className="hd"><h3>Or</h3></div>
       <div className="stack">
         <div className="row"><button className="btn" onClick={() => { createSampleTeam(); go("track"); }}>Explore with a sample team</button><span className="small muted">Four finished matches and one live match, so every screen is filled in. Delete it any time.</span></div>
-        <div className="row"><label className="btn" style={{ cursor: "pointer" }}>Import a backup<input type="file" accept=".json,application/json" hidden onChange={(e) => onFile(e.target.files?.[0])} /></label><span className="small muted">From the first version of Bench Stats (Team → Backup &amp; restore → Save a backup) or from this one.</span></div>
+        <div className="row"><label className="btn" style={{ cursor: "pointer" }}>Import a backup<input type="file" accept=".json,application/json" hidden onChange={(e) => onFile(e.target.files?.[0])} /></label><span className="small muted">From Bench Stats (the first version) (Team → Backup &amp; restore → Save a backup) or from this one.</span></div>
         {msg && <p className="hint">{msg}</p>}
       </div>
     </section>

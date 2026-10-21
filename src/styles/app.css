@@ -1,4 +1,4 @@
-/* Bench Stats design system. Layout: dark sidebar on wide screens, bottom tab bar on phones. */
+/* Benchboard design system. Layout: dark sidebar on wide screens, bottom tab bar on phones. */
 :root{
   --bg:#F2F3F5; --surface:#FFFFFF; --surface-2:#F7F8F9; --ink:#111214; --muted:#666B73; --line:#E2E4E8;
   --us:#2A78AE; --us-soft:#E5F1FA; --them:#B8571A; --them-soft:#FBEEE4;

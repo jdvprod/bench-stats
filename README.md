@@ -1,4 +1,6 @@
-# Bench Stats
+# Benchboard
+
+_Formerly Bench Stats._
 
 Volleyball stats, lineups, rotations and practice planning for coaches. Works offline, installs like an app on phones, tablets and laptops, and keeps every team's data on the device.
 

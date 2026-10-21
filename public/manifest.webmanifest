@@ -1,6 +1,6 @@
 {
-  "name": "Bench Stats",
-  "short_name": "Bench Stats",
+  "name": "Benchboard",
+  "short_name": "Benchboard",
   "description": "Volleyball stat tracking, lineups and practice planning for coaches",
   "start_url": "./#/track",
   "scope": "./",

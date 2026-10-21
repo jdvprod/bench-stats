@@ -1,4 +1,4 @@
-/** Everything Bench Stats saves. Each record belongs to a team, so one coach can run many teams. */
+/** Everything Benchboard saves. Each record belongs to a team, so one coach can run many teams. */
 import type { MatchEvent } from "../sports/volleyball/engine";
 
 export interface TeamSettings {

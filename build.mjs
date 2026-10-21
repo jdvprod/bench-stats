@@ -46,7 +46,7 @@ if (args.has("--watch")) {
   const ctx = await esbuild.context(options);
   await ctx.watch();
   const { port } = await ctx.serve({ servedir: dist, port: 5173 });
-  console.log(`Bench Stats running at http://localhost:${port}`);
+  console.log(`Benchboard running at http://localhost:${port}`);
 } else {
   await esbuild.build(options);
   if (!existsSync(path.join(dist, "app.js"))) throw new Error("build failed");

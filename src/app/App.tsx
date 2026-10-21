@@ -49,15 +49,15 @@ export function App() {
   }
   return <>
     <nav className="nav" aria-label="Sections">
-      <div className="brand"><i><Icon name="brand" /></i><b>Bench Stats</b></div>
+      <div className="brand"><i><Icon name="brand" /></i><b>Benchboard</b></div>
       <div className="teamswitch">{switcher("")}</div>
       {NAV.map(([k, l, cls]) => <a key={k} className={"tab " + (cls || "")} href={"#/" + k} aria-current={page === k || (k === "stats" && page === "player") ? "page" : undefined}><Icon name={k} /><span>{l}</span></a>)}
       <a className="tab end" href="#/settings" aria-current={page === "settings" ? "page" : undefined}><Icon name="settings" /><span>Settings</span></a>
     </nav>
     <div className="content">
-      <div className="mobilebar"><b>Bench Stats</b>{switcher("")}</div>
+      <div className="mobilebar"><b>Benchboard</b>{switcher("")}</div>
       {showBoard && page !== "live" && <Scoreboard />}
-      {!state.persistent && <div className="banner warn" style={{ marginTop: 12 }}><p>This browser isn't letting Bench Stats save. Stats will be lost when you close it. Try a regular (not private) window.</p></div>}
+      {!state.persistent && <div className="banner warn" style={{ marginTop: 12 }}><p>This browser isn't letting Benchboard save. Stats will be lost when you close it. Try a regular (not private) window.</p></div>}
       {body}
     </div>
     <Toast />

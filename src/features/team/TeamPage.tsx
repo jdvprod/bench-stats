@@ -123,10 +123,10 @@ function Backup() {
   const t = team()!;
   return <Card title="Backup & restore">
     <div className="stack">
-      <p className="small">Everything is saved on this device. Save a backup to move it to another device or keep a copy. Restoring skips anything you already have. Backups from the first version of Bench Stats import as a new team.</p>
+      <p className="small">Everything is saved on this device. Save a backup to move it to another device or keep a copy. Restoring skips anything you already have. Backups from the first version of Benchboard import as a new team.</p>
       <div className="row">
-        <button className="btn sm" onClick={() => { download(`Bench Stats ${t.name} ${new Date().toISOString().slice(0, 10)}.json`, exportAll(t.id), "application/json"); toast("Backup saved"); }}>Save this team</button>
-        <button className="btn sm" onClick={() => { download(`Bench Stats all teams ${new Date().toISOString().slice(0, 10)}.json`, exportAll(), "application/json"); toast("Backup saved"); }}>Save all teams</button>
+        <button className="btn sm" onClick={() => { download(`Benchboard ${t.name} ${new Date().toISOString().slice(0, 10)}.json`, exportAll(t.id), "application/json"); toast("Backup saved"); }}>Save this team</button>
+        <button className="btn sm" onClick={() => { download(`Benchboard all teams ${new Date().toISOString().slice(0, 10)}.json`, exportAll(), "application/json"); toast("Backup saved"); }}>Save all teams</button>
         <label className="btn sm" style={{ cursor: "pointer" }}>Restore a backup<input type="file" accept=".json,application/json" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} /></label>
       </div>
       {msg && <p className="hint">{msg}</p>}
