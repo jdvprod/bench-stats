@@ -1,5 +1,4 @@
 /** Minimal Excel (.xlsx) writer: several sheets of plain values, bold header row. */
-import JSZip from "jszip";
 
 type Cell = string | number | null | undefined;
 const esc = (s: string) => s.replace(/[<>&"']/g, (c) => ({ "<": "&lt;", ">": "&gt;", "&": "&amp;", '"': "&quot;", "'": "&apos;" }[c]!)).replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "");
@@ -17,6 +16,7 @@ function sheetXml(rows: Cell[][]) {
 }
 
 export async function buildXlsx(sheets: [string, Cell[][]][]): Promise<Blob> {
+  const { default: JSZip } = await import("jszip"); // loaded only when someone exports
   const zip = new JSZip();
   const names = sheets.map(([n], i) => (n.replace(/[\\/?*[\]:]/g, " ").slice(0, 31) || "Sheet" + (i + 1)));
   zip.file("[Content_Types].xml", `<?xml version="1.0" encoding="UTF-8" standalone="yes"?><Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types"><Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/><Default Extension="xml" ContentType="application/xml"/><Override PartName="/xl/workbook.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.sheet.main+xml"/><Override PartName="/xl/styles.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.styles+xml"/>${names.map((_, i) => `<Override PartName="/xl/worksheets/sheet${i + 1}.xml" ContentType="application/vnd.openxmlformats-officedocument.spreadsheetml.worksheet+xml"/>`).join("")}</Types>`);

@@ -31,7 +31,7 @@ cpSync(path.join(root, "public"), dist, { recursive: true });
 
 const options = {
   entryPoints: { app: path.join(root, "src/main.tsx") },
-  bundle: true, format: "esm", target: "es2020", outdir: dist, jsx: "automatic",
+  bundle: true, format: "esm", target: "es2020", outdir: dist, jsx: "automatic", splitting: true, chunkNames: "chunks/[name]-[hash]",
   minify: !args.has("--watch"), sourcemap: args.has("--watch") ? "inline" : false,
   define: { "process.env.NODE_ENV": args.has("--watch") ? '"development"' : '"production"', __APP_VERSION__: JSON.stringify(version) },
   loader: { ".css": "css" }, nodePaths, logLevel: "info",
@@ -50,5 +50,10 @@ if (args.has("--watch")) {
 } else {
   await esbuild.build(options);
   if (!existsSync(path.join(dist, "app.js"))) throw new Error("build failed");
+  // precache lazily loaded chunks too, so exports work offline
+  const chunkDir = path.join(dist, "chunks");
+  const chunks = existsSync(chunkDir) ? readdirSync(chunkDir).map((f) => "./chunks/" + f) : [];
+  const swPath = path.join(dist, "sw.js");
+  writeFileSync(swPath, readFileSync(swPath, "utf8").replace('"./favicon.png"]', '"./favicon.png"' + chunks.map((c) => ", " + JSON.stringify(c)).join("") + "]"));
   console.log("Built to dist/");
 }
