@@ -11,6 +11,10 @@ interface WatchData { team: { name: string; color: string; level: string } | nul
 
 export function WatchPage({ code }: { code: string }) {
   const [d, setD] = useState<WatchData | null>(null), [err, setErr] = useState(""), [tick, setTick] = useState(0);
+  const fkey = "bs-follow-" + code;
+  const [follow, setFollowState] = useState<string>(() => { try { return localStorage.getItem(fkey) || ""; } catch { return ""; } });
+  const [onlyMine, setOnlyMine] = useState(false);
+  const setFollow = (id: string) => { setFollowState(id); try { if (id) localStorage.setItem(fkey, id); else localStorage.removeItem(fkey); } catch { /* private mode */ } };
   useEffect(() => {
     let stop = false, timer: any;
     const load = async () => {
@@ -40,7 +44,9 @@ export function WatchPage({ code }: { code: string }) {
     if (l.op) s += ` · their #${l.op}`;
     return s.replace(/^Opponent /, them + " ");
   };
-  const plays = R.log.filter((l) => (l.kind === "stat" && l.w) || l.kind === "set" || l.kind === "to" || l.kind === "sub").slice(-40).reverse();
+  const fp = follow ? P.get(follow) : undefined, fs: Stat | undefined = fp ? A.ps[follow] : undefined;
+  const mine = (l: LogEntry) => (l.kind === "stat" && l.p === follow) || (l.kind === "sub" && (l.in === follow || l.out === follow));
+  const plays = R.log.filter((l) => onlyMine && fp ? l.kind === "stat" || l.kind === "sub" ? mine(l) : l.kind === "set" : (l.kind === "stat" && l.w) || l.kind === "set" || l.kind === "to" || l.kind === "sub").slice(-40).reverse();
   const leader = (f: (s: Stat) => number, label: string) => { const top = Object.entries(A.ps).map(([id, s]) => [id, f(s)] as [string, number]).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1])[0]; return top ? <div key={label}><div className="label">{label}</div><b style={{ fontFamily: "var(--display)", fontSize: 26 }}>{+top[1].toFixed(1)}</b><div className="small">{nm(top[0])}</div></div> : null; };
   const ago = Math.max(0, Math.round((Date.now() - new Date(d.at).getTime()) / 1000)); void tick;
 
@@ -61,6 +67,19 @@ export function WatchPage({ code }: { code: string }) {
         {run.n >= 3 && <span className={"chip run-" + run.side}>{run.n}-0 run</span>}
       </div>
     </section>
+    <section className="card">
+      <div className="row between" style={{ marginBottom: fp ? 10 : 0 }}>
+        <span className="label">Follow a player</span>
+        <select className="input" style={{ width: "auto" }} value={follow} onChange={(e) => setFollow(e.target.value)} aria-label="Follow a player">
+          <option value="">Choose…</option>{d.players.slice().sort((a, b) => (+a.num || 0) - (+b.num || 0)).map((p) => <option key={p.id} value={p.id}>#{p.num} {p.first} {p.last ? p.last + "." : ""}</option>)}
+        </select>
+      </div>
+      {fp && <div className="follow">
+        <div className="follow-nm"><b>#{fp.num} {fp.first}</b><span className="small muted">{fp.pos}{c?.lu?.includes(follow) || c?.lib === follow ? " · on court now" : ""}</span></div>
+        <div className="follow-k">{[["Kills", fs?.K || 0], ["Aces", fs?.SA || 0], ["Digs", fs?.D || 0], ["Blocks", fs ? +blocks(fs).toFixed(1) : 0], ["Assists", fs?.AST || 0]].map(([l, v]) => <div key={l as string}><b>{v}</b><span>{l}</span></div>)}</div>
+        {fs && fs.TA > 0 && <p className="small muted" style={{ margin: "6px 0 0" }}>Hitting {fmtHit(hitting(fs))} on {fs.TA} swings</p>}
+      </div>}
+    </section>
     <section className="card"><div className="tbl"><table>
       <thead><tr><th className="l">Team</th>{R.sets.map((s) => <th key={s.n}>{s.n}</th>)}<th>Sets</th></tr></thead>
       <tbody><tr><td className="l"><b style={{ color: "var(--us)" }}>{us}</b></td>{R.sets.map((s) => <td key={s.n} style={{ fontWeight: s.winner === "us" ? 800 : undefined }}>{s.us}</td>)}<td><b>{R.wonUs}</b></td></tr>
@@ -71,10 +90,10 @@ export function WatchPage({ code }: { code: string }) {
     </div><p className="small muted" style={{ marginTop: 8 }}>Team hitting {fmtHit(hitting(A.T))} · {A.T.SA} aces · {A.team.OE} opponent errors</p></section>
     <section className="card"><div className="label" style={{ marginBottom: 6 }}>Player stats</div>
       <div className="tbl"><table><thead><tr><th className="l">Player</th><th title="Kills">K</th><th title="Aces">Ace</th><th title="Digs">Dig</th><th title="Blocks">Blk</th><th title="Assists">Ast</th></tr></thead>
-        <tbody>{Object.entries(A.ps).filter(([id]) => P.has(id)).sort((a, b) => (+P.get(a[0])!.num || 0) - (+P.get(b[0])!.num || 0)).map(([id, s]) => <tr key={id}><td className="l">{nm(id)} {P.get(id)!.last ? P.get(id)!.last + "." : ""}</td><td>{s.K}</td><td>{s.SA}</td><td>{s.D}</td><td>{+blocks(s).toFixed(1)}</td><td>{s.AST}</td></tr>)}</tbody></table></div>
+        <tbody>{Object.entries(A.ps).filter(([id]) => P.has(id)).sort((a, b) => (+P.get(a[0])!.num || 0) - (+P.get(b[0])!.num || 0)).map(([id, s]) => <tr key={id} className={id === follow ? "follow-row" : undefined}><td className="l">{nm(id)} {P.get(id)!.last ? P.get(id)!.last + "." : ""}</td><td>{s.K}</td><td>{s.SA}</td><td>{s.D}</td><td>{+blocks(s).toFixed(1)}</td><td>{s.AST}</td></tr>)}</tbody></table></div>
     </section>
-    <section className="card"><div className="label" style={{ marginBottom: 6 }}>Play by play</div>
-      <ul className="pbp">{plays.map((l) => <li key={l.id}><span className={"sc " + (l.kind === "stat" && l.w ? "pt-" + l.w : "")}>{l.kind === "stat" && l.w ? `${l.us}–${l.them}` : ""}</span><span className={l.kind !== "stat" ? "small muted" : ""}>{text(l)}</span></li>)}</ul>
+    <section className="card"><div className="row between" style={{ marginBottom: 6 }}><span className="label">Play by play</span>{fp && <label className="small row" style={{ gap: 6 }}><input type="checkbox" checked={onlyMine} onChange={(e) => setOnlyMine(e.target.checked)} /> Only #{fp.num}</label>}</div>
+      <ul className="pbp">{plays.map((l) => <li key={l.id} className={follow && mine(l) ? "mine" : undefined}><span className={"sc " + (l.kind === "stat" && l.w ? "pt-" + l.w : "")}>{l.kind === "stat" && l.w ? `${l.us}–${l.them}` : ""}</span><span className={l.kind !== "stat" ? "small muted" : ""}>{text(l)}</span></li>)}</ul>
     </section>
     <p className="small muted" style={{ textAlign: "center" }}>{d.team?.name}{d.team?.level ? " · " + d.team.level : ""} · Live stats by Benchboard</p>
   </div></div>;
