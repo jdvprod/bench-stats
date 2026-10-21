@@ -167,6 +167,15 @@ export async function shareLive(teamId: string, matchId: string) {
   return { code: c, url: location.origin + location.pathname + "#/watch/" + c };
 }
 
+/** A read-only season page for players and parents: results, schedule, leaders and every player's line. */
+export async function shareSeason(teamId: string, seasonId: string) {
+  const existing: any[] = await rest(`season_shares?select=code&team_id=eq.${encodeURIComponent(teamId)}&season_id=eq.${encodeURIComponent(seasonId)}&limit=1`);
+  const c = existing[0]?.code || code(6);
+  if (!existing[0]) await rest("season_shares", { method: "POST", headers: { prefer: "return=minimal" } as any, body: JSON.stringify({ code: c, team_id: teamId, season_id: seasonId }) });
+  await syncNow();
+  return { code: c, url: location.origin + location.pathname + "#/season/" + c };
+}
+
 /* ---------- start ---------- */
 let started = false;
 export function startSync() {

@@ -156,3 +156,41 @@ begin
   return out;
 end $$;
 grant execute on function public.watch(text) to anon, authenticated;
+
+-- ---------- season hub: a public, read-only page for players and parents ----------
+create table if not exists public.season_shares (
+  code text primary key,
+  team_id text not null references public.teams_cloud(id) on delete cascade,
+  season_id text not null,
+  created_at timestamptz not null default now()
+);
+alter table public.season_shares enable row level security;
+drop policy if exists "season shares read" on public.season_shares;
+create policy "season shares read" on public.season_shares for select using (is_member(team_id));
+drop policy if exists "season shares create" on public.season_shares;
+create policy "season shares create" on public.season_shares for insert with check (can_edit(team_id));
+drop policy if exists "season shares delete" on public.season_shares;
+create policy "season shares delete" on public.season_shares for delete using (can_edit(team_id));
+
+-- everything the season hub shows: results, schedule, every match's plays, roster with last initials only
+create or replace function public.season_view(share text) returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+declare s season_shares; out jsonb;
+begin
+  select * into s from season_shares where code = upper(trim(share));
+  if s.code is null then return null; end if;
+  select jsonb_build_object(
+    'team', (select jsonb_build_object('name', data->>'name', 'level', data->>'level', 'schedule', coalesce(data->'schedule', '[]'::jsonb)) from records where store = 'teams' and id = s.team_id and not deleted),
+    'season', (select data->>'name' from records where store = 'seasons' and id = s.season_id and not deleted),
+    'matches', coalesce((select jsonb_agg(jsonb_build_object('id', data->>'id', 'opp', data->>'opp', 'date', data->>'date', 'bestOf', data->'bestOf', 'status', data->>'status', 'event', data->>'event', 'site', data->>'site'))
+                         from records where store = 'matches' and team_id = s.team_id and data->>'seasonId' = s.season_id and data->>'kind' = 'match' and not deleted), '[]'::jsonb),
+    'logs', coalesce((select jsonb_agg(jsonb_build_object('matchId', l.data->>'matchId', 'events', l.data->'events'))
+                      from records l where l.store = 'logs' and l.team_id = s.team_id and not l.deleted
+                      and exists (select 1 from records m where m.store = 'matches' and m.id = l.data->>'matchId' and m.data->>'seasonId' = s.season_id and m.data->>'kind' = 'match' and not m.deleted)), '[]'::jsonb),
+    'players', coalesce((select jsonb_agg(jsonb_build_object('id', data->>'id', 'num', data->>'num', 'first', data->>'first', 'last', left(coalesce(data->>'last', ''), 1), 'pos', data->>'pos'))
+                         from records where store = 'players' and team_id = s.team_id and not deleted and coalesce((data->>'active')::boolean, true)), '[]'::jsonb),
+    'at', now()
+  ) into out;
+  return out;
+end $$;
+grant execute on function public.season_view(text) to anon, authenticated;

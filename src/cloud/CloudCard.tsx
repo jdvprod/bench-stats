@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { team, toast } from "../data/store";
 import { Card, ConfirmButton, copyText } from "../ui/kit";
 import { cloudAvailable, CloudError, currentUser, sendPasswordReset, signIn, signOut, signUp } from "./client";
-import { createInvite, isLinked, joinWithCode, linkTeam, members, pendingCount, removeMember, shareLive, status, syncNow, unlinkTeam } from "./sync";
+import { createInvite, isLinked, joinWithCode, linkTeam, members, pendingCount, removeMember, shareLive, shareSeason, status, syncNow, unlinkTeam } from "./sync";
 import { go } from "../app/router";
 
 const errText = (e: unknown) => (e instanceof CloudError ? e.message : "Something went wrong. Try again.");
@@ -26,6 +26,7 @@ export function AuthForm({ onDone }: { onDone?: () => void }) {
 }
 
 export function CloudCard() {
+  const [seasonUrl, setSeasonUrl] = useState("");
   const t = team()!, user = currentUser(), linked = isLinked(t.id);
   const [busy, setBusy] = useState(false), [err, setErr] = useState(""), [invite, setInvite] = useState<{ code: string; role: string } | null>(null);
   const [joinCode, setJoinCode] = useState(""), [mem, setMem] = useState<{ user_id: string; role: string; email: string | null }[] | null>(null);
@@ -65,6 +66,12 @@ export function CloudCard() {
           {invite && <div className="hint"><div>Send this to the {invite.role === "coach" ? "coach" : "viewer"}. They open the link (or enter the code on their Team tab) after signing in:</div>
             <div className="row" style={{ marginTop: 6 }}><b style={{ fontFamily: "var(--display)", fontSize: 22, letterSpacing: ".12em" }}>{invite.code}</b><button className="btn sm" onClick={() => copyText(link).then((ok) => toast(ok ? "Link copied" : link))}>Copy link</button></div>
             <div className="small muted" style={{ marginTop: 4 }}>{invite.role === "coach" ? "Coaches can track matches, edit the roster and plan practices." : "View-only accounts can see everything but not change it."}</div></div>}
+          {isOwnerOrCoach && <>
+            <div className="label">Season page for players and parents</div>
+            <p className="small muted" style={{ margin: 0 }}>A read-only page with results, schedule, leaders and every player's stats. Last names show as initials. No account needed to view.</p>
+            <div className="row"><button className="btn sm" disabled={busy || !t.activeSeasonId} onClick={() => act(async () => { const r = await shareSeason(t.id, t.activeSeasonId!); setSeasonUrl(r.url); const ok = await copyText(r.url); toast(ok ? "Season link copied. Share it with the team." : "Season link: " + r.url); })}>Share season page</button>
+              {seasonUrl && <a className="small" href={seasonUrl} target="_blank" rel="noopener" style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{seasonUrl}</a>}</div>
+          </>}
           <div className="row"><ConfirmButton className="btn sm ghost" confirmText="Stop syncing on this device?" onConfirm={() => { unlinkTeam(t.id); toast("Stopped syncing this team on this device"); }}>Stop syncing on this device</ConfirmButton></div>
         </>}
       <div className="label" style={{ marginTop: 6 }}>Join a team</div>

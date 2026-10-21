@@ -533,3 +533,16 @@ kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--
 .log.film li{grid-template-columns:64px 1fr auto}.log.film a.num{color:var(--accent);font-weight:700;text-decoration:none}.log.film a.num:hover{text-decoration:underline}
 .log.film .pt-us{color:var(--us);font-weight:700}.log.film .pt-them{color:var(--them);font-weight:700}
 .log.film{max-height:520px;overflow:auto}
+/* season hub */
+.sh-hero{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;background:var(--bar);color:var(--bar-ink);border-color:transparent;border-bottom:5px solid var(--us-bright)}
+.sh-hero h1{margin:0;font-family:var(--display);font-size:30px;text-transform:uppercase;letter-spacing:.02em}.sh-hero p{margin:2px 0 0;color:var(--bar-muted)}
+.sh-rec{text-align:right}.sh-rec b{display:block;font-family:var(--display);font-size:42px;line-height:1;color:var(--us-bright)}.sh-rec span{font-size:12px;color:var(--bar-muted)}
+.sh-list{list-style:none;margin:0;padding:0}.sh-list li{display:grid;grid-template-columns:120px 1fr auto;gap:2px 10px;align-items:baseline;padding:9px 2px;border-bottom:1px solid var(--line)}.sh-list li:last-child{border-bottom:0}
+.sh-list li.click{cursor:pointer}.sh-date{color:var(--muted);font-size:13px}.sh-sets{grid-column:2/4}.sh-box{grid-column:1/-1;margin-top:6px}
+.sh-res{font-family:var(--display);font-weight:700}.sh-res.w{color:var(--us)}.sh-res.l{color:var(--them)}
+.sh-leads{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px}.sh-lead{display:flex;flex-direction:column}.sh-lead b{font-family:var(--display);font-size:28px;line-height:1.1}
+.sh-roster{display:grid;grid-template-columns:repeat(auto-fill,minmax(88px,1fr));gap:8px}
+.linkish{background:none;border:0;padding:0;font:inherit;color:var(--accent);cursor:pointer;text-align:left}.linkish:hover{text-decoration:underline}
+.sh-player{display:flex;gap:14px;align-items:center}.sh-num{width:64px;height:64px;border-radius:12px;background:var(--bar);color:var(--us-bright);display:grid;place-items:center;font-family:var(--display);font-size:34px;font-weight:700}
+.sh-k{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.sh-k div{display:flex;flex-direction:column}.sh-k b{font-family:var(--display);font-size:28px;line-height:1.1}.sh-k small{color:var(--muted);font-size:12px}
+@media (max-width:560px){.sh-k{grid-template-columns:repeat(2,1fr)}.sh-list li{grid-template-columns:92px 1fr auto}}
