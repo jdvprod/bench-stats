@@ -83,6 +83,7 @@ function Overview({ S, A }: { S: Scope; A: Agg }) {
     </div>
     {B && <p className="keys" style={{ marginTop: -4 }}>▲ / ▼ compare this {single?.setN ? "set" : "match"} with your season average.</p>}
     {!single && S.items.length >= 2 && <Trends S={S} />}
+    {!single && S.items.length >= 1 && <div className="grid2" style={{ alignItems: "start" }}><Leaders A={A} /><Highs S={S} /></div>}
     <div className="grid2">
       <Card title="Where points came from"><div className="stack">
         <div><div className="row between small"><b style={{ color: "var(--us)" }}>{t.name}</b><b className="num">{A.us}</b></div>
@@ -243,7 +244,7 @@ export { statLine };
 /** "▲ .041 vs season" */
 function dv(v: number | null, base: number | null | undefined, f: (v: number | null) => string, up: boolean): { text: string; better: boolean | null } | null {
   if (v == null || base == null) return null;
-  const d = v - base; if (Math.abs(d) < 1e-9) return { text: "Same as season", better: null };
+  const d = v - base; if (f(v) === f(base)) return { text: "Same as season", better: null };
   const better = (d > 0) === up;
   return { text: `${better ? "▲" : "▼"} season ${f(base)}`, better };
 }
@@ -263,5 +264,37 @@ function Trends({ S }: { S: Scope }) {
   const pts = S.items.slice().sort((a, b) => a.m.date.localeCompare(b.m.date)).map(({ m, R }) => ({ label: m.date.slice(5).replace("-", "/"), sub: m.opp, v: def[2](teamMetrics(aggregate(R.sets))) }));
   return <Card title="Trend by match" actions={<Seg value={k} onChange={setK} options={TRENDS.map((x) => [x[0], x[1]] as [string, string])} />}>
     <LineChart points={pts} format={def[3]} />
+  </Card>;
+}
+
+/* Team leaders for the selected range. */
+function Leaders({ A }: { A: Agg }) {
+  const ids = Object.keys(A.ps).filter((id) => player(id));
+  const cats: [string, (s: Stat) => number | null, (v: number) => string, ((s: Stat) => boolean)?][] = [
+    ["Kills", (s) => s.K, (v) => String(v)],
+    ["Hitting % (30+ att)", (s) => hitting(s), (v) => fmtHit(v), (s) => s.TA >= 30],
+    ["Aces", (s) => s.SA, (v) => String(v)],
+    ["Pass avg (20+ rec)", (s) => passAvg(s), (v) => fmtAvg(v), (s) => s.R >= 20],
+    ["Digs", (s) => s.D, (v) => String(v)],
+    ["Blocks", (s) => blocks(s), (v) => fmtNum(v)],
+    ["Assists", (s) => s.AST, (v) => String(v)],
+  ];
+  return <Card title="Leaders">
+    <div className="leaders">{cats.map(([label, f, fmt, ok]) => {
+      const top = ids.filter((id) => !ok || ok(A.ps[id])).map((id) => [id, f(A.ps[id])] as [string, number | null]).filter((x) => x[1] != null && (x[1] as number) > 0).sort((a, b) => (b[1] as number) - (a[1] as number)).slice(0, 3);
+      return <div key={label} className="ld"><div className="label">{label}</div>
+        {top.length ? top.map(([id, v], i) => <button key={id} className={"ld-row" + (i === 0 ? " first" : "")} onClick={() => go("player", id)}><span>{playerName(id)}</span><b>{fmt(v as number)}</b></button>) : <p className="small muted">—</p>}</div>; })}</div>
+  </Card>;
+}
+
+/* Best single-match performances. */
+function Highs({ S }: { S: Scope }) {
+  const cats: [string, (s: Stat) => number][] = [["Kills", (s) => s.K], ["Aces", (s) => s.SA], ["Digs", (s) => s.D], ["Assists", (s) => s.AST], ["Blocks", (s) => blocks(s)]];
+  const per = S.items.map(({ m, R }) => ({ m, A: aggregate(R.sets) }));
+  return <Card title="Single-match highs">
+    <ul className="log">{cats.map(([label, f]) => {
+      let best: { id: string; v: number; m: typeof per[0]["m"] } | null = null;
+      for (const { m, A } of per) for (const [id, st] of Object.entries(A.ps)) { const v = f(st); if (player(id) && v > 0 && (!best || v > best.v)) best = { id, v, m }; }
+      return <li key={label} style={{ gridTemplateColumns: "92px 1fr auto" }}><span className="muted">{label}</span><span>{best ? <>{playerName(best.id)} <span className="muted small">vs {best.m.opp}, {fmtDate(best.m.date)}</span></> : "—"}</span><b className="num">{best ? fmtNum(best.v) : ""}</b></li>; })}</ul>
   </Card>;
 }

@@ -137,7 +137,7 @@ function Compare({ A, season }: { A: Agg; season: Agg }) {
   ];
   return <Card title="Against them vs your season">
     <div className="mu-compare">{rows.map(([l, a, s, f, up]) => {
-      const d = a != null && s != null ? a - s : null, better = d != null && Math.abs(d) > 1e-9 ? (d > 0) === up : null;
+      const d = a != null && s != null ? a - s : null, better = d != null && f(a) !== f(s) ? (d > 0) === up : null;
       return <div key={l} className="mu-cmp">
         <span className="l">{l}</span><b>{f(a)}</b>
         <span className={"d " + (better === true ? "up" : better === false ? "down" : "")}>{d == null || better === null ? "same as season" : `${better ? "▲" : "▼"} vs ${f(s)} season`}</span>
@@ -245,4 +245,23 @@ h1{margin:0;font-size:26px}h2{font-size:12px;letter-spacing:.06em;color:var(--mu
 ${o.notes ? `<h2>Notes</h2><p>${esc(o.notes)}</p>` : ""}
 <h2>Past results</h2><table><tbody>${games.map(({ m, R }) => `<tr><td>${esc(m.date)}</td><td>${R.wonUs}–${R.wonThem}</td><td>${R.sets.map((s) => s.us + "-" + s.them).join(", ")}</td></tr>`).join("")}</tbody></table>
 <p style="color:var(--mut);margin-top:18px;font-size:12px">Made with Benchboard</p></main></body></html>`;
+}
+
+/* ---------- in-match panel on the Track screen ---------- */
+export function PlanPanel({ m, onClose }: { m: Match; onClose: () => void }) {
+  const o = opponentsOf().find((x) => oppKey(x.name) === oppKey(m.opp));
+  const R = replayOf(m), today = R ? aggregate(R.sets) : null;
+  const past = o ? (() => { const h = headToHead(o); h.games = h.games.filter((g) => g.m.id !== m.id); h.A = aggregate(h.games.flatMap((g) => g.R.sets)); return h; })() : null;
+  const top = (A: Agg | null) => (A ? Object.entries(A.opp).map(([n, x]) => ({ n, pts: x.K + x.A, ...x })).filter((x) => x.pts > 0).sort((a, b) => b.pts - a.pts).slice(0, 3) : []);
+  const plan = o?.plan || [];
+  const zoneOf = (z: Record<string, number>) => { const t = Object.entries(z).filter((q) => q[0] !== "out").sort((a, b) => b[1] - a[1])[0]; return t ? " · Z" + t[0] : ""; };
+  return <div className="editor">
+    <div className="row between"><b>Game plan vs {m.opp}</b><span className="row" style={{ gap: 6 }}>{o && <button className="btn sm" onClick={() => go("matchup", o.id)}>Full matchup</button>}<button className="btn sm" onClick={onClose}>Close</button></span></div>
+    {plan.length ? <ul className="mu-plan">{plan.map((p) => <li key={p.id}><label><input type="checkbox" checked={!!p.done} onChange={(e) => o && patch("opponents", o.id, { plan: plan.map((x) => (x.id === p.id ? { ...x, done: e.target.checked } : x)) })} /><span className={p.done ? "done" : ""}>{p.text}</span></label></li>)}</ul>
+      : <p className="small muted">No game plan saved for {m.opp}. Add keys on the Matchups tab before the match.</p>}
+    <div className="two">
+      <div><div className="label" style={{ marginBottom: 4 }}>Hurting us today</div>{top(today).length ? top(today).map((x) => <div key={x.n} className="small"><b>#{x.n}</b> {x.K} kills, {x.A} aces{zoneOf(x.z)}</div>) : <p className="small muted">Nobody yet. Tap their number after their kills.</p>}</div>
+      <div><div className="label" style={{ marginBottom: 4 }}>Past matches vs them</div>{past && top(past.A).length ? top(past.A).map((x) => <div key={x.n} className="small"><b>#{x.n}</b> {x.K} kills, {x.A} aces{zoneOf(x.z)}</div>) : <p className="small muted">No history yet.</p>}</div>
+    </div>
+  </div>;
 }

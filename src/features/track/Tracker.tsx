@@ -17,6 +17,7 @@ import { timeoutPrompt } from "../../ai/prompts";
 import { go } from "../../app/router";
 import { SplitEditor, SplitState } from "../practice/SplitEditor";
 import { parseQuick, QUICK_HELP } from "../../sports/volleyball/quickcodes";
+import { PlanPanel } from "../matchup/MatchupPage";
 
 const TAGS = ["Great play", "Review this", "Serve receive", "Rotation breakdown", "Defense", "Coachable moment"];
 
@@ -130,6 +131,7 @@ function ControlBar({ m, c, names }: { m: Match; c: SetState; names: { us: strin
       <button className="ctrl" onClick={() => panel("fix")}>Fix score<small>{c.us}–{c.them}</small></button>
       {c.lu && <button className="ctrl" onClick={() => panel("sub")}>Sub<small>{c.subs}{lim ? " of " + lim : ""} used</small></button>}
       <button className="ctrl" onClick={() => panel("lineup")}>{c.lu ? "Fix positions" : "Set lineup"}<small>{c.lu ? "who's where now" : "rotation tracking"}</small></button>
+      <button className="ctrl" onClick={() => panel("plan")}>Game plan<small>keys & threats</small></button>
       <button className="ctrl" onClick={() => panel("tag")}>Film tag<small>bookmark</small></button>
       <button className="ctrl" onClick={undo}>Undo<small>your last entry</small></button>
       <FocusToggle />
@@ -185,6 +187,7 @@ function Panels({ m, R, c }: { m: Match; R: Replay; c: SetState }) {
   if (p === "sub" && c.lu) return <SubPanel m={m} c={c} />;
   if (p === "tag") return <TagPanel m={m} R={R} />;
   if (p === "teams" && m.scrim) return <TeamsPanel m={m} />;
+  if (p === "plan" && !m.scrim) return <PlanPanel m={m} onClose={() => setUi({ panel: null })} />;
   return null;
 }
 

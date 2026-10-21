@@ -85,6 +85,8 @@ export interface PracticePlan {
   id: string; teamId: string; seasonId: string | null;
   date: string; title: string; start: string;  // start time, e.g. 15:30
   blocks: PlanBlock[]; notes: string; status: "planned" | "done"; createdAt: number;
+  /** Who was at practice: present, late or absent (missing = not taken). */
+  attendance?: Record<string, "in" | "late" | "out">;
 }
 
 export interface Board { id: string; teamId: string; name: "hit" | "serve" | "def"; strokes: Stroke[] }

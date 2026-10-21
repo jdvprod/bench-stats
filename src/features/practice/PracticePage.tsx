@@ -150,6 +150,7 @@ function PlanEditor({ plan, onDelete }: { plan: PracticePlan; onDelete: () => vo
         </select>
         <button className="btn sm" onClick={() => addDrill()}>+ Custom block</button>
       </div>
+      <Attendance plan={plan} onChange={(attendance) => set({ attendance })} />
       <label className="field"><span className="label">Notes</span><textarea rows={2} value={plan.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
       <div className="row">
         <button className="btn" onClick={() => set({ status: plan.status === "done" ? "planned" : "done" })}>{plan.status === "done" ? "Mark not done" : "Mark practice done"}</button>
@@ -224,4 +225,16 @@ function History() {
       <button className="btn sm" onClick={() => { setUi({ statsScope: "m:" + m.id }); go("stats"); }}>Stats</button>
     </li>; })}</ul> : <p className="empty">No practice sessions tracked yet. Start a scrimmage or track drill stats from a plan.</p>}
   </Card>;
+}
+
+/* ---------- attendance ---------- */
+const ATT: Record<string, { next: "in" | "late" | "out" | undefined; label: string }> = { none: { next: "in", label: "—" }, in: { next: "late", label: "Here" }, late: { next: "out", label: "Late" }, out: { next: undefined, label: "Out" } };
+function Attendance({ plan, onChange }: { plan: PracticePlan; onChange: (a: PracticePlan["attendance"]) => void }) {
+  const ps = activePlayers(), a = plan.attendance || {};
+  const counts = { in: 0, late: 0, out: 0 } as Record<string, number>; for (const p of ps) if (a[p.id]) counts[a[p.id]]++;
+  const cycle = (id: string) => { const cur = a[id] || "none", nx = ATT[cur].next; const n = { ...a }; if (nx) n[id] = nx; else delete n[id]; onChange(n); };
+  return <div className="att">
+    <div className="row between"><span className="label">Attendance</span><span className="small muted">{counts.in} here · {counts.late} late · {counts.out} out{ps.length ? "" : ""} <button type="button" className="btn sm ghost" onClick={() => onChange(Object.fromEntries(ps.map((p) => [p.id, "in"])) as any)}>All here</button></span></div>
+    <div className="att-grid">{ps.map((p) => { const st = a[p.id] || "none"; return <button type="button" key={p.id} className={"att-b " + st} onClick={() => cycle(p.id)} aria-label={`${p.first} ${p.last}: ${ATT[st].label}. Tap to change.`}><b>{p.num}</b><span>{p.first || p.last}</span><i>{ATT[st].label}</i></button>; })}</div>
+  </div>;
 }

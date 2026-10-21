@@ -1,6 +1,6 @@
 /** Player portal: season numbers, trends, match log, goals, AI report card and a shareable report. */
 import { useState } from "react";
-import { matchesOf, patch, player, replayOf, team, toast, uid } from "../../data/store";
+import { matchesOf, patch, plansOf, player, replayOf, team, toast, uid } from "../../data/store";
 import { Goal, GoalMetric, Match } from "../../data/model";
 import { aggregate, Agg, SetState, Stat } from "../../sports/volleyball/engine";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, fmtSigned, hitting, passAvg, playerMetrics, PlayerMetrics, serveAttempts, serveErrors } from "../../sports/volleyball/metrics";
@@ -41,7 +41,12 @@ export function PlayerPage({ id }: { id: string }) {
   const [pickMetric, setMetric] = useState<GoalMetric | "net" | null>(null);
   if (!p) return <div className="page"><Card><p className="empty">Player not found.</p><button className="btn" onClick={() => go("team")}>Back to roster</button></Card></div>;
   const rows = rowsFor(id);
+  const taken = plansOf().filter((pl) => pl.attendance && Object.keys(pl.attendance).length);
+  const att = taken.length ? (() => { const here = taken.filter((pl) => pl.attendance![id] === "in" || pl.attendance![id] === "late").length; return `${here} of ${taken.length} (${Math.round((100 * here) / taken.length)}%)`; })() : "";
   const A = aggregate(rows.flatMap((r) => r.sets)), s = A.ps[id], pm = playerMetrics(A, id);
+  // last 3 matches vs the season, shown under each number
+  const L3 = rows.length >= 4 ? aggregate(rows.slice(-3).flatMap((r) => r.sets)) : null, l3 = L3?.ps[id], lm = L3 ? playerMetrics(L3, id) : null;
+  const fd = (a: number | null | undefined, b: number | null | undefined, f: (v: number) => string) => (a == null || b == null ? null : f(a) === f(b) ? { text: "Last 3: same", better: null } : { text: `${a > b ? "▲" : "▼"} last 3: ${f(a)}`, better: a > b });
   const has = (k: keyof Stat) => !!s && s[k] > 0;
   const valOf = (r: Row, k: GoalMetric | "net") => (k === "net" ? r.pm.netPerSet : (r.pm[GOALS[k].key] as number | null));
   // default to the first stat this player actually has a trend for (a setter has no hitting trend)
@@ -55,18 +60,18 @@ export function PlayerPage({ id }: { id: string }) {
       <div className="jersey">{p.num}</div>
       <div className="grow"><h1 style={{ margin: 0 }}>{p.first} {p.last}</h1>
         <p className="muted">{[p.pos, p.height, p.grad ? "Class of " + p.grad : "", t.name].filter(Boolean).join(" · ")}</p>
-        <p className="small muted">{rows.length} matches · {pm.sets} sets this season{pm.plusMinus != null ? ` · ${fmtSigned(pm.plusMinus)} on court` : ""}</p></div>
+        <p className="small muted">{rows.length} matches · {pm.sets} sets this season{pm.plusMinus != null ? ` · ${fmtSigned(pm.plusMinus)} on court` : ""}{att ? ` · practice ${att}` : ""}</p></div>
       <button className="btn" onClick={() => shareReport(id, rows, A)}>Download player report</button>
     </div></section>
     {!s ? <Card><p className="empty">No stats yet this season.</p></Card> : <>
       <div className="kpis">
-        {has("TA") && <Kpi label="Hitting" value={fmtHit(hitting(s))} sub={`${s.K} K · ${s.AE} E · ${s.TA} TA · ${fmtNum(pm.kps, 2)} K/set`} />}
-        {has("R") && <Kpi label="Passing" value={fmtAvg(passAvg(s))} sub={`${s.R} rec · ${fmtPct(pm.perfectPass)} perfect · ${s.P0} aced`} />}
-        {serveAttempts(s) > 0 && <Kpi label="Serving" value={fmtPct(pm.serveIn)} sub={`${s.SA} aces · ${serveErrors(s)} err · eff ${fmtHit(pm.serveEff)}`} />}
-        {has("D") && <Kpi label="Digs" value={s.D} sub={`${fmtNum(pm.dps, 2)} per set · ${s.DE} errors`} />}
+        {has("TA") && <Kpi label="Hitting" value={fmtHit(hitting(s))} delta={l3 && l3.TA >= 5 ? fd(hitting(l3), hitting(s), (v) => fmtHit(v)) : null} sub={`${s.K} K · ${s.AE} E · ${s.TA} TA · ${fmtNum(pm.kps, 2)} K/set`} />}
+        {has("R") && <Kpi label="Passing" value={fmtAvg(passAvg(s))} delta={l3 && l3.R >= 5 ? fd(passAvg(l3), passAvg(s), (v) => fmtAvg(v)) : null} sub={`${s.R} rec · ${fmtPct(pm.perfectPass)} perfect · ${s.P0} aced`} />}
+        {serveAttempts(s) > 0 && <Kpi label="Serving" value={fmtPct(pm.serveIn)} delta={lm && l3 && serveAttempts(l3) >= 5 ? fd(lm.serveIn, pm.serveIn, (v) => fmtPct(v)) : null} sub={`${s.SA} aces · ${serveErrors(s)} err · eff ${fmtHit(pm.serveEff)}`} />}
+        {has("D") && <Kpi label="Digs" value={s.D} delta={lm ? fd(lm.dps, pm.dps, (v) => fmtNum(v, 2) + "/set") : null} sub={`${fmtNum(pm.dps, 2)} per set · ${s.DE} errors`} />}
         {(s.BS + s.BA) > 0 && <Kpi label="Blocks" value={fmtNum(blocks(s))} sub={`${s.BS} solo · ${s.BA} assist · ${fmtNum(pm.bps, 2)}/set`} />}
         {has("AST") && <Kpi label="Assists" value={s.AST} sub={`${fmtNum(pm.aps, 2)} per set · ${s.BHE} errors`} />}
-        <Kpi label="Net points" value={fmtSigned(pm.netPoints)} sub={`${fmtNum(pm.netPerSet, 2)} per set`} />
+        <Kpi label="Net points" value={fmtSigned(pm.netPoints)} delta={lm ? fd(lm.netPerSet, pm.netPerSet, (v) => fmtNum(v, 2) + "/set") : null} sub={`${fmtNum(pm.netPerSet, 2)} per set`} />
       </div>
       <div className="grid2" style={{ alignItems: "start" }}>
         <Card title="Trend" actions={<Seg value={metric} onChange={setMetric} options={TREND} />}>
