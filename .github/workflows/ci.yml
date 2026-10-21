@@ -6,8 +6,8 @@ jobs:
   app:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-node@v4
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
         with: { node-version: 22 }
       - run: npm install --no-audit --no-fund
       - run: npm run build
@@ -15,7 +15,7 @@ jobs:
   schema:
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v5
       - name: Check supabase/schema.sql on a throwaway Postgres
         run: |
           ls -d /usr/lib/postgresql/*/bin >/dev/null 2>&1 || (sudo apt-get update -q && sudo apt-get install -yq postgresql)
