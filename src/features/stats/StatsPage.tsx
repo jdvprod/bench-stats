@@ -57,7 +57,7 @@ export function StatsPage() {
       {view === "players" && <Players A={A} />}
       {view === "offense" && <Offense A={A} />}
       {view === "servepass" && <ServePass A={A} />}
-      {view === "rotations" && <Rotations A={A} S={S} />}
+      {view === "rotations" && <><Rotations A={A} S={S} /><Units A={A} /></>}
       {view === "situations" && <SituationsView S={S} />}
       {view === "opponent" && <Opponent A={A} />}
     </>}
@@ -445,4 +445,28 @@ function SituationsView({ S }: { S: Scope }) {
       <p className="keys" style={{ marginTop: 8 }}>Consecutive points won while that player served.</p>
     </Card>}
   </div>;
+}
+
+/* ---------- lineup units ---------- */
+function Units({ A }: { A: Agg }) {
+  const [libOn, setLibOn] = useState(false);
+  const libs = new Set(teamPlayers().filter((p) => /^L|libero/i.test(p.pos || "")).map((p) => p.id));
+  const m = new Map<string, { ids: string[]; w: number; l: number; sw: number; sn: number; pw: number; pn: number }>();
+  for (const r of A.rallies) {
+    const ids = r.onCourt.filter((id) => libOn || !libs.has(id)).slice().sort((a, b) => (+(player(a)?.num ?? 999)) - (+(player(b)?.num ?? 999)) || a.localeCompare(b));
+    if (ids.length < 6) continue;
+    const k = ids.join(","), u = m.get(k) || { ids, w: 0, l: 0, sw: 0, sn: 0, pw: 0, pn: 0 }; m.set(k, u);
+    const won = r.w === "us"; if (won) u.w++; else u.l++;
+    if (r.server === "them") { u.sn++; if (won) u.sw++; } else { u.pn++; if (won) u.pw++; }
+  }
+  const rows = [...m.values()].filter((u) => u.w + u.l >= 10).sort((a, b) => (b.w - b.l) - (a.w - a.l));
+  if (!rows.length) return null;
+  const nm = (id: string) => { const p = player(id); return p ? "#" + p.num + " " + p.first : "?"; };
+  return <Card title="Best units on court" actions={libs.size ? <label className="small row" style={{ gap: 6 }}><input type="checkbox" checked={libOn} onChange={(e) => setLibOn(e.target.checked)} /> Count the libero</label> : undefined}>
+    <div className="tbl"><table>
+      <thead><tr><th className="l">Players on court</th><th>Rallies</th><th>Won–lost</th><th>Net</th><th>Side-out</th><th>Point-scoring</th></tr></thead>
+      <tbody>{rows.slice(0, 8).map((u) => { const net = u.w - u.l; return <tr key={u.ids.join()}><td className="l small" style={{ whiteSpace: "normal", minWidth: 220 }}>{u.ids.map((id, i) => <span key={id} style={{ fontWeight: rows[0].ids.includes(id) ? undefined : 700, color: rows[0].ids.includes(id) ? undefined : "var(--us)" }}>{i ? ", " : ""}{nm(id)}</span>)}</td><td>{u.w + u.l}</td><td>{u.w}–{u.l}</td><td><b style={{ color: net > 0 ? "var(--us)" : net < 0 ? "var(--them)" : undefined }}>{fmtSigned(net)}</b></td><td>{fmtPct(ratio(u.sw, u.sn))}</td><td>{fmtPct(ratio(u.pw, u.pn))}</td></tr>; })}</tbody>
+    </table></div>
+    <p className="keys" style={{ marginTop: 8 }}>Groups of six that played at least 10 rallies together, ranked by points won minus lost. Rotation order doesn't matter here; subs create new groups.</p>
+  </Card>;
 }
