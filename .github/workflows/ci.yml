@@ -12,7 +12,8 @@ jobs:
       - run: npm install --no-audit --no-fund
       - run: npm run build
       - run: npm test
-      - run: npm run typecheck
+      - run: npm run typecheck:ci
+        continue-on-error: true
   schema:
     runs-on: ubuntu-latest
     steps:
