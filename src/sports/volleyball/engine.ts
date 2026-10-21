@@ -121,6 +121,8 @@ export interface SetState {
   team: TeamStat;
   src: Record<Side, Record<string, number>>;
   ctx: Partial<Record<AttackContext, { team: CtxLine; p: Record<string, CtxLine> }>>;
+  /** Attacks by our rotation and hitter: setter distribution. */
+  atkRot: Record<number, Record<string, CtxLine>>;
   srv: Record<string, { n: number; w: number }>;
   opp: Record<string, OppPlayerLine>;
   locs: Loc[];
@@ -144,7 +146,7 @@ export interface Replay {
 function newSet(n: number, serve: Side, lu: string[] | null, lib: string | null): SetState {
   return {
     n, us: 0, them: 0, serve, rot: 1, rotB: 1, lu: lu ? lu.slice() : null, lib, libSrv: null, startLu: lu ? lu.slice() : null, startLibSrv: null,
-    subs: 0, subLog: [], to: { us: 0, them: 0 }, rallies: [], ps: {}, team: teamBlank(), src: { us: {}, them: {} }, ctx: {}, srv: {}, opp: {},
+    subs: 0, subLog: [], to: { us: 0, them: 0 }, rallies: [], ps: {}, team: teamBlank(), src: { us: {}, them: {} }, ctx: {}, atkRot: {}, srv: {}, opp: {},
     locs: [], tags: [], fbr: { n: 0, w: 0 }, fbso: { n: 0, w: 0 }, side: { a: blank(), b: blank() }, pside: {}, pm: {},
     target: 25, over: false, winner: null,
   };
@@ -211,7 +213,8 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
       if (!rally.firstAtk) rally.firstAtk = t;
       const c = cur.ctx[rally.ctx] || (cur.ctx[rally.ctx] = { team: { K: 0, E: 0, TA: 0 }, p: {} });
       const pk = c.p[ev.p || "_"] || (c.p[ev.p || "_"] = { K: 0, E: 0, TA: 0 });
-      for (const o of [c.team, pk]) { o.TA++; if (t === "K") o.K++; if (t === "AE") o.E++; }
+      const ar = cur.atkRot[cur.rot] || (cur.atkRot[cur.rot] = {}), pa = ar[ev.p || "_"] || (ar[ev.p || "_"] = { K: 0, E: 0, TA: 0 });
+      for (const o of [c.team, pk, pa]) { o.TA++; if (t === "K") o.K++; if (t === "AE") o.E++; }
       if (t === "TA") rally.ctx = "OTH";
     }
     if (ev.op && OPP_NUMBER[t]) {
@@ -273,6 +276,7 @@ export interface Agg {
   so: { w: number; n: number }; psc: { w: number; n: number };
   soByPass: Record<"P3" | "P2" | "P1" | "P0" | "none", { w: number; n: number }>;
   ctx: Partial<Record<AttackContext, { team: CtxLine; p: Record<string, CtxLine> }>>;
+  atkRot: Record<number, Record<string, CtxLine>>;
   srv: Record<string, { n: number; w: number; best: number }>;
   opp: Record<string, OppPlayerLine>;
   locs: Loc[]; tags: Tag[];
@@ -289,7 +293,7 @@ export function aggregate(list: SetState[]): Agg {
   const A: Agg = {
     sets: list.length, ps: {}, T: blank(), team: teamBlank(), rot: {}, src: { us: {}, them: {} }, so: { w: 0, n: 0 }, psc: { w: 0, n: 0 },
     soByPass: { P3: { w: 0, n: 0 }, P2: { w: 0, n: 0 }, P1: { w: 0, n: 0 }, P0: { w: 0, n: 0 }, none: { w: 0, n: 0 } },
-    ctx: {}, srv: {}, opp: {}, locs: [], tags: [], fbr: { n: 0, w: 0 }, fbso: { n: 0, w: 0 }, us: 0, them: 0,
+    ctx: {}, atkRot: {}, srv: {}, opp: {}, locs: [], tags: [], fbr: { n: 0, w: 0 }, fbso: { n: 0, w: 0 }, us: 0, them: 0,
     side: { a: blank(), b: blank() }, pside: {}, pm: {}, setsPlayed: {}, rallies: [],
   };
   for (let r = 1; r <= 6; r++) A.rot[r] = { w: 0, l: 0, rw: 0, rn: 0, sw: 0, sn: 0 };
@@ -318,6 +322,7 @@ export function aggregate(list: SetState[]): Agg {
       C.team.K += src.team.K; C.team.E += src.team.E; C.team.TA += src.team.TA;
       for (const p in src.p) { const P = C.p[p] || (C.p[p] = { K: 0, E: 0, TA: 0 }); P.K += src.p[p].K; P.E += src.p[p].E; P.TA += src.p[p].TA; }
     }
+    for (const r in s.atkRot || {}) { const D = A.atkRot[+r] || (A.atkRot[+r] = {}); for (const p in s.atkRot[+r]) { const x = s.atkRot[+r][p], P = D[p] || (D[p] = { K: 0, E: 0, TA: 0 }); P.K += x.K; P.E += x.E; P.TA += x.TA; } }
     for (const p in s.srv) { const S = A.srv[p] || (A.srv[p] = { n: 0, w: 0, best: 0 }); S.n += s.srv[p].n; S.w += s.srv[p].w; }
     for (const o in s.opp) {
       const O = A.opp[o] || (A.opp[o] = { K: 0, A: 0, E: 0, P: 0, z: {} }), so = s.opp[o];

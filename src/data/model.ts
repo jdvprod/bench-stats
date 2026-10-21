@@ -78,7 +78,7 @@ export interface Match {
 export interface EventLog { id: string; matchId: string; device: string; events: MatchEvent[] }
 
 export interface PlanItem { id: string; text: string; done?: boolean }
-export interface Opponent { id: string; teamId: string; name: string; notes: string; scout: string; scoutAt: number | null; plan?: PlanItem[] }
+export interface Opponent { id: string; teamId: string; name: string; notes: string; scout: string; scoutAt: number | null; plan?: PlanItem[]; roster?: Record<string, { name?: string; pos?: string }> }
 export interface ScheduleItem { id: string; date: string; time: string; opp: string; site: "home" | "away" | "neutral" | ""; event: string }
 
 export const DRILL_CATEGORIES = ["Warm-up", "Serving", "Serve receive", "Setting", "Attacking", "Blocking", "Defense", "Transition", "Game play", "Conditioning", "Team talk"] as const;

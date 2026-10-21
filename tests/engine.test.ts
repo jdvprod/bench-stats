@@ -124,3 +124,10 @@ test("flags a rotation stuck on their serve and a shaky next server", () => {
   const f0 = flags(R0, { us: "Us", them: "Them", subLimit: 15, playerIds: LU, short: (id) => id });
   assert.ok(f0.some((f) => /Stuck in rotation 1/.test(f.title)), "3 straight on their serve");
 });
+
+test("attacks are split by our rotation for setter distribution", () => {
+  const R = replay([ev("NS", { serve: "us", lu: LU }), ev("K", { p: "oh1" }), ev("TA", { p: "mb1" }), ev("AE", { p: "oh1" })]);
+  const A = aggregate(R.sets);
+  assert.deepEqual(A.atkRot[1].oh1, { K: 1, E: 1, TA: 2 }, "we kept serving, so every attack was in rotation 1");
+  assert.equal(A.atkRot[1].mb1.TA, 1);
+});

@@ -90,7 +90,20 @@ export function scoutPrompt(oppName: string) {
     L.push("OUR ROTATIONS VS THEM: " + [1, 2, 3, 4, 5, 6].map((r) => `R${r} ${A.rot[r].w}-${A.rot[r].l}`).join(", "));
   }
   const o = opponentsOf().find((x) => oppKey(x.name) === k); if (o?.notes) L.push("COACH NOTES: " + o.notes);
+  if (o?.roster && Object.keys(o.roster).length) L.push("THEIR ROSTER: " + Object.entries(o.roster).map(([n, r]) => `#${n} ${r.name || ""}${r.pos ? " (" + r.pos + ")" : ""}`).join(", "));
   return `Write a pre-match scouting report for the head coach. Sections: Last time:, Their threats:, Where they score:, Serving and serve-receive plan:, Our keys to win:. 2-4 bullets per section. If there's little data, say what to watch for early instead of guessing. ${FORMAT} Under 320 words.\n\n${L.join("\n")}`;
+}
+
+export function seasonPrompt(items: { m: Match; R: import("../sports/volleyball/engine").Replay }[], seasonName: string) {
+  const t = team()!, sorted = items.slice().sort((a, b) => a.m.date.localeCompare(b.m.date));
+  const A = aggregate(sorted.flatMap((x) => x.R.sets));
+  const L = [`TEAM: ${t.name} (${t.level}), ${seasonName}.`, "MATCHES (oldest first):"];
+  for (const { m, R } of sorted) { const a = aggregate(R.sets), M = teamMetrics(a); L.push(`- ${m.date} vs ${m.opp}: ${R.wonUs}-${R.wonThem} (${R.sets.map((s) => s.us + "-" + s.them).join(", ")}); hitting ${fmtHit(M.hitting)}, side-out ${fmtPct(M.sideOut)}, pass ${fmtAvg(M.passAvg)}, serve in ${fmtPct(M.serveIn)}`); }
+  L.push("SEASON: " + teamLine(A));
+  L.push("ROTATIONS: " + [1, 2, 3, 4, 5, 6].map((r) => `R${r} ${A.rot[r].w}-${A.rot[r].l}`).join(", "));
+  L.push("PLAYERS:");
+  for (const p of teamPlayers()) { const s = A.ps[p.id]; if (s) L.push(`- #${p.num} ${p.first} (${p.pos}): ${statLine(s)}; ${playerMetrics(A, p.id).sets} sets`); }
+  return `Write a season review for the coaching staff. Sections: Where we are:, What's working:, What's holding us back:, Trends:, Player notes:, Next 3 practice priorities:. 2-4 bullets each; cite numbers and trends across matches; name players by number and first name. ${FORMAT} Under 380 words.\n\n${L.join("\n")}`;
 }
 
 export function reportCardPrompt(playerId: string) {

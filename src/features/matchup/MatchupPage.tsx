@@ -100,7 +100,7 @@ function Matchup({ h, next }: { h: H2H; next?: ScheduleItem }) {
     {!games.length ? <GamePlan o={o} h={h} /> : <>
       <Compare A={A} season={season} />
       <div className="grid2" style={{ alignItems: "start" }}>
-        <Threats A={A} />
+        <Threats A={A} o={o} />
         <Card title="Past results">
           <ul className="log">{games.map(({ m, R }) => <li key={m.id} className="click" style={{ gridTemplateColumns: "1fr auto auto", cursor: "pointer" }} onClick={() => { setUi({ statsScope: "m:" + m.id }); go("stats"); }}>
             <span>{fmtDate(m.date)}{m.event ? <span className="muted"> · {m.event}</span> : null}</span><span className="small muted">{R.sets.map((s) => s.us + "-" + s.them).join(", ")}</span>
@@ -145,14 +145,16 @@ function Compare({ A, season }: { A: Agg; season: Agg }) {
   </Card>;
 }
 
-function Threats({ A }: { A: Agg }) {
+function Threats({ A, o }: { A: Agg; o: Opponent }) {
+  const ro = o.roster || {};
+  const setName = (n: string, field: "name" | "pos", v: string) => patch("opponents", o.id, { roster: { ...ro, [n]: { ...ro[n], [field]: v } } });
   const rows = Object.entries(A.opp).map(([n, x]) => ({ n, ...x, pts: x.K + x.A })).sort((a, b) => b.pts - a.pts || a.E - b.E).slice(0, 8);
   const max = Math.max(1, ...rows.map((r) => r.pts));
   return <Card title="Their threats">
     {rows.length ? <div className="tbl"><table>
-      <thead><tr><th className="l">Player</th><th className="l" style={{ width: "28%" }}>Points</th><th>K</th><th>Ace</th><th>Err</th><th className="l">Hot zone</th></tr></thead>
+      <thead><tr><th className="l">#</th><th className="l">Name · pos</th><th className="l" style={{ width: "24%" }}>Points</th><th>K</th><th>Ace</th><th>Err</th><th className="l">Hot zone</th></tr></thead>
       <tbody>{rows.map((r) => { const z = Object.entries(r.z).filter((x) => x[0] !== "out").sort((a, b) => b[1] - a[1])[0];
-        return <tr key={r.n}><td className="l"><b>#{r.n}</b></td><td className="l"><div className="mu-bar"><i style={{ width: (100 * r.pts) / max + "%" }} /></div></td><td>{r.K}</td><td>{r.A}</td><td>{r.E}</td><td className="l">{z ? "Z" + z[0] : "—"}</td></tr>; })}</tbody>
+        return <tr key={r.n}><td className="l"><b>#{r.n}</b></td><td className="l"><input className="input mu-name" key={o.id + r.n} defaultValue={[ro[r.n]?.name, ro[r.n]?.pos].filter(Boolean).join(" · ")} placeholder="Add name" aria-label={`Name for their #${r.n}`} onBlur={(e) => { const [nm, ...ps] = e.target.value.split("·").map((x) => x.trim()); setName(r.n, "name", nm || ""); if (ps.length) setName(r.n, "pos", ps.join(" ")); }} /></td><td className="l"><div className="mu-bar"><i style={{ width: (100 * r.pts) / max + "%" }} /></div></td><td>{r.K}</td><td>{r.A}</td><td>{r.E}</td><td className="l">{z ? "Z" + z[0] : "—"}</td></tr>; })}</tbody>
     </table></div> : <p className="empty">Tap their jersey number after their kills and aces to see who hurts you.</p>}
   </Card>;
 }
@@ -226,7 +228,7 @@ function scoutingSheet(h: H2H): string {
   const t = team()!, { o, games, A, season } = h, M = teamMetrics(A), S = teamMetrics(season);
   const esc = (x: unknown) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
   const won = games.filter((g) => g.R.matchOver && g.R.wonUs > g.R.wonThem).length, lost = games.filter((g) => g.R.matchOver && g.R.wonThem > g.R.wonUs).length;
-  const threats = Object.entries(A.opp).sort((a, b) => b[1].K + b[1].A - (a[1].K + a[1].A)).slice(0, 6).map(([n, x]) => { const z = Object.entries(x.z).filter((q) => q[0] !== "out").sort((a, b) => b[1] - a[1])[0]; return `<tr><td>#${esc(n)}</td><td>${x.K}</td><td>${x.A}</td><td>${x.E}</td><td>${z ? "Zone " + z[0] : "–"}</td></tr>`; }).join("");
+  const threats = Object.entries(A.opp).sort((a, b) => b[1].K + b[1].A - (a[1].K + a[1].A)).slice(0, 6).map(([n, x]) => { const z = Object.entries(x.z).filter((q) => q[0] !== "out").sort((a, b) => b[1] - a[1])[0]; return `<tr><td>#${esc(n)} ${esc(o.roster?.[n]?.name || "")}${o.roster?.[n]?.pos ? " (" + esc(o.roster[n].pos) + ")" : ""}</td><td>${x.K}</td><td>${x.A}</td><td>${x.E}</td><td>${z ? "Zone " + z[0] : "–"}</td></tr>`; }).join("");
   const rots = [1, 2, 3, 4, 5, 6].map((r) => `<td>${A.rot[r].w}–${A.rot[r].l}</td>`).join("");
   const plan = (o.plan || []).map((p) => `<li>${esc(p.text)}</li>`).join("") || suggestions(h).map((s) => `<li>${esc(s)}</li>`).join("");
   const recs = (v: "theirAttack" | "theirServe") => tendencies(A.locs, v).recs.map((r) => `<li>${esc(r)}</li>`).join("");
@@ -260,8 +262,8 @@ export function PlanPanel({ m, onClose }: { m: Match; onClose: () => void }) {
     {plan.length ? <ul className="mu-plan">{plan.map((p) => <li key={p.id}><label><input type="checkbox" checked={!!p.done} onChange={(e) => o && patch("opponents", o.id, { plan: plan.map((x) => (x.id === p.id ? { ...x, done: e.target.checked } : x)) })} /><span className={p.done ? "done" : ""}>{p.text}</span></label></li>)}</ul>
       : <p className="small muted">No game plan saved for {m.opp}. Add keys on the Matchups tab before the match.</p>}
     <div className="two">
-      <div><div className="label" style={{ marginBottom: 4 }}>Hurting us today</div>{top(today).length ? top(today).map((x) => <div key={x.n} className="small"><b>#{x.n}</b> {x.K} kills, {x.A} aces{zoneOf(x.z)}</div>) : <p className="small muted">Nobody yet. Tap their number after their kills.</p>}</div>
-      <div><div className="label" style={{ marginBottom: 4 }}>Past matches vs them</div>{past && top(past.A).length ? top(past.A).map((x) => <div key={x.n} className="small"><b>#{x.n}</b> {x.K} kills, {x.A} aces{zoneOf(x.z)}</div>) : <p className="small muted">No history yet.</p>}</div>
+      <div><div className="label" style={{ marginBottom: 4 }}>Hurting us today</div>{top(today).length ? top(today).map((x) => <div key={x.n} className="small"><b>#{x.n}{o?.roster?.[x.n]?.name ? " " + o.roster[x.n].name : ""}</b> {x.K} kills, {x.A} aces{zoneOf(x.z)}</div>) : <p className="small muted">Nobody yet. Tap their number after their kills.</p>}</div>
+      <div><div className="label" style={{ marginBottom: 4 }}>Past matches vs them</div>{past && top(past.A).length ? top(past.A).map((x) => <div key={x.n} className="small"><b>#{x.n}{o?.roster?.[x.n]?.name ? " " + o!.roster![x.n].name : ""}</b> {x.K} kills, {x.A} aces{zoneOf(x.z)}</div>) : <p className="small muted">No history yet.</p>}</div>
     </div>
   </div>;
 }

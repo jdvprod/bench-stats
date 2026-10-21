@@ -472,3 +472,4 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .spark{width:96px;height:28px;margin-top:4px}.spark path{fill:none;stroke:var(--us);stroke-width:2;stroke-linejoin:round}.spark circle{fill:var(--us)}
 @media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .home-next{background:var(--surface-2);border-color:color-mix(in srgb,var(--us) 45%,var(--line))}}
 :root[data-theme="dark"] .home-next{background:var(--surface-2);border-color:color-mix(in srgb,var(--us) 45%,var(--line))}
+.mu-name{padding:4px 8px;min-width:120px;font-size:13.5px}

@@ -7,7 +7,7 @@ import { flags } from "../../sports/volleyball/flags";
 import { Card, copyText, download, fmtDate, Kpi, Seg } from "../../ui/kit";
 import { Diverge, LineChart, StackBar } from "../../ui/charts";
 import { AiCard } from "../../ui/ai";
-import { reportPrompt, snapshot, statLine } from "../../ai/prompts";
+import { reportPrompt, seasonPrompt, snapshot, statLine } from "../../ai/prompts";
 import { setUi, ui } from "../../app/ui";
 import { go } from "../../app/router";
 import { activeSeason, defaultScope, resolveScope, Scope, seasonMatches } from "./scope";
@@ -84,6 +84,7 @@ function Overview({ S, A }: { S: Scope; A: Agg }) {
       {M.perSet && <Kpi label="Per set" value={fmtNum(M.perSet.K)} delta={dv(M.perSet.K, B?.perSet?.K, (v) => fmtNum(v), true)} sub={`kills · ${fmtNum(M.perSet.SA)} aces · ${fmtNum(M.perSet.BLK)} blocks · ${fmtNum(M.perSet.D)} digs`} />}
     </div>
     {B && <p className="keys" style={{ marginTop: -4 }}>▲ / ▼ compare this {single?.setN ? "set" : "match"} with your season average.</p>}
+    {!single && S.kind === "games" && S.items.length >= 2 && <AiCard key={"season" + ui.statsSeason} title="Season review" desc="Where the team stands, what's working, what's holding you back, and practice priorities, written from every match." button="Write season review" prompt={() => seasonPrompt(S.items, seasonsOf().find((x) => x.id === ui.statsSeason)?.name || "this season")} filename={`${t.name} season review`} />}
     {!single && S.items.length >= 2 && <Trends S={S} />}
     {!single && S.items.length >= 1 && <div className="grid2" style={{ alignItems: "start" }}><Leaders A={A} /><div className="stack"><Awards S={S} /><Highs S={S} /></div></div>}
     <div className="grid2">
@@ -152,6 +153,7 @@ function Offense({ A }: { A: Agg }) {
       <thead><tr><th className="l">Hitter</th><th>TA</th><th>Hit %</th><th>In-system</th><th>Out-of-system</th><th>Transition</th><th>Share of sets</th></tr></thead>
       <tbody>{hitters.map((p) => { const s = A.ps[p.id]; const i = pctx(p.id, ["P3", "P2"]), o = pctx(p.id, ["P1"]), tr = pctx(p.id, ["DIG", "FREE"]); return <tr key={p.id}><td className="l">{playerName(p.id)}</td><td>{s.TA}</td><td><b>{fmtHit(hitting(s))}</b></td><td>{fmtHit(hitting({ K: i.K, AE: i.E, TA: i.TA }))} <span className="muted small">({i.TA})</span></td><td>{fmtHit(hitting({ K: o.K, AE: o.E, TA: o.TA }))} <span className="muted small">({o.TA})</span></td><td>{fmtHit(hitting({ K: tr.K, AE: tr.E, TA: tr.TA }))} <span className="muted small">({tr.TA})</span></td><td>{fmtPct(ratio(s.TA, A.T.TA))}</td></tr>; })}</tbody>
     </table></div></Card>
+    <Distribution A={A} />
   </div>;
 }
 
@@ -342,5 +344,22 @@ function Awards({ S }: { S: Scope }) {
   if (!aw.length) return null;
   return <Card title="Season awards so far">
     <ul className="log">{aw.map((a) => <li key={a.title} className="click" style={{ gridTemplateColumns: "1fr auto", cursor: "pointer" }} onClick={() => go("player", a.id)}><span><span className="small muted">{a.title}</span><br /><b>{playerName(a.id, "full")}</b></span><span className="small muted" style={{ textAlign: "right", maxWidth: 220 }}>{a.why}</span></li>)}</ul>
+  </Card>;
+}
+
+/* Setter distribution: who gets the attacks in each of our rotations. */
+function Distribution({ A }: { A: Agg }) {
+  const tot: Record<string, number> = {};
+  for (let r = 1; r <= 6; r++) for (const [p, x] of Object.entries(A.atkRot[r] || {})) if (p !== "_") tot[p] = (tot[p] || 0) + x.TA;
+  const hitters = Object.entries(tot).sort((a, b) => b[1] - a[1]).slice(0, 6).map((x) => x[0]);
+  if (!hitters.length) return null;
+  return <Card title="Setter distribution by rotation">
+    <div className="tbl"><table>
+      <thead><tr><th className="l">Rotation</th><th>Attacks</th>{hitters.map((id) => <th key={id}>{playerName(id)}</th>)}</tr></thead>
+      <tbody>{[1, 2, 3, 4, 5, 6].map((r) => { const row = A.atkRot[r] || {}, n = Object.values(row).reduce((a, x) => a + x.TA, 0);
+        const top = hitters.reduce((b, id) => ((row[id]?.TA || 0) > (row[b]?.TA || 0) ? id : b), hitters[0]);
+        return <tr key={r}><td className="l"><b>R{r}</b></td><td>{n}</td>{hitters.map((id) => { const x = row[id]; return <td key={id} className={x && id === top && n >= 5 ? "cmp-best" : ""}>{x && n ? <>{Math.round((100 * x.TA) / n)}% <span className="muted small">{fmtHit(hitting({ K: x.K, AE: x.E, TA: x.TA }))}</span></> : "—"}</td>; })}</tr>; })}</tbody>
+    </table></div>
+    <p className="keys" style={{ marginTop: 8 }}>Share of attacks each hitter gets in each rotation, with her hitting % there. Spot rotations where the offense leans on one hitter or where a hot hitter isn't getting the ball.</p>
   </Card>;
 }
