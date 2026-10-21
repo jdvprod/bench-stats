@@ -61,7 +61,7 @@ export function FormationsPage() {
   const presets = t.formationPresets || [];
 
   return <div className="page">
-    <div className="pagehead"><h1>Formations</h1>
+    <div className="pagehead"><div className="row"><button className="btn sm" onClick={() => go("labs")}>← Labs</button><h1>Formations</h1></div>
       <Seg value={phase} onChange={setPhase} options={PHASES} label="Phase" />
     </div>
     <div className="grid2" style={{ alignItems: "start" }}>

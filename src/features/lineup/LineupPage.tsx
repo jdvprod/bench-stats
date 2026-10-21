@@ -8,7 +8,6 @@ import { Card, Seg } from "../../ui/kit";
 import { useDragDrop } from "../../ui/drag";
 import { askJson, aiAvailable, AiError, AI_ERRORS } from "../../ai/client";
 import { lineupPrompt } from "../../ai/prompts";
-import { go } from "../../app/router";
 
 /** Court order for display: front row P4 P3 P2, back row P5 P6 P1. */
 const FRONT = [3, 2, 1], BACK = [4, 5, 0];
@@ -79,7 +78,6 @@ export function LineupPage() {
   return <div className="page">
     <div className="pagehead"><h1>Lineup & rotations</h1>
       <div className="row">
-        <button className="btn" onClick={() => go("formations")}>Formations →</button>
         <button className="btn primary" disabled={!valid} onClick={saveDefault}>Save as starting lineup</button>
         {m && m.kind === "match" && <><button className="btn" disabled={!valid} onClick={useNow}>Put on court now</button><button className="btn" disabled={!valid} onClick={useNext}>Use next set{m.nextLu ? " ✓" : ""}</button></>}
       </div>

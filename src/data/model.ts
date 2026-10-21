@@ -86,7 +86,7 @@ export interface PracticePlan {
 export interface Board { id: string; teamId: string; name: "hit" | "serve" | "def"; strokes: Stroke[] }
 export interface Stroke { tool: "pen" | "arrow" | "dot" | "hl"; color: string; pts: [number, number][] }
 
-export interface Prefs { theme: "system" | "light" | "dark"; size: "normal" | "large"; teamId: string | null; focus?: boolean; quick?: boolean }
+export interface Prefs { theme: "system" | "light" | "dark"; size: "normal" | "large"; teamId: string | null; focus?: boolean; quick?: boolean; labsFocus?: boolean }
 
 export const STORES = ["teams", "seasons", "players", "matches", "logs", "opponents", "drills", "plans", "boards", "kv"] as const;
 export type StoreName = (typeof STORES)[number];

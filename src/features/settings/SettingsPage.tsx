@@ -27,9 +27,10 @@ export function SettingsPage() {
       <SetRow title="Ask for their jersey number" sub="After their kills, aces and errors, so you can scout their players."><Switch checked={s.askOpp} onChange={(v) => setSettings({ askOpp: v })} label="Ask for their number" /></SetRow>
       <SetRow title="Subs allowed per set" sub="0 means no limit. High school is usually 15, club 12 or 15."><input className="input" style={{ width: 80 }} type="number" min={0} max={30} value={s.subLimit} onChange={(e) => setSettings({ subLimit: Math.max(0, +e.target.value || 0) })} aria-label="Subs per set" /></SetRow>
       <SetRow title="Default match format"><Seg value={s.bestOf} onChange={(v) => setSettings({ bestOf: v })} options={[[3, "Best of 3"], [5, "Best of 5"]]} label="Format" /></SetRow>
-      <SetRow title="Type-in stat codes" sub="A box on the Track screen for keyboard entry, like 7k or 12ace. Shows on laptops and tablets."><Switch checked={p.quick !== false} onChange={(v) => setPrefs({ quick: v })} label="Type-in stat codes" /></SetRow>
-      <SetRow title="Focus mode" sub="Track with big buttons only and hide the side panels. Good for an assistant on a phone."><Switch checked={!!p.focus} onChange={(v) => setPrefs({ focus: v })} label="Focus mode" /></SetRow>
       <SetRow title="Zone numbers on drawing boards"><Switch checked={!s.hideZones} onChange={(v) => setSettings({ hideZones: !v })} label="Show zone numbers" /></SetRow>
+    </Card>
+    <Card title="Labs">
+      <SetRow title="Try new features" sub="Formations, type-in stat codes and focus mode. Turn on only what you want."><button className="btn sm" onClick={() => go("labs")}>Open Labs</button></SetRow>
     </Card>
     <Card title="AI features">
       <div className="stack">

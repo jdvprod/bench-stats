@@ -8,6 +8,7 @@ import { Toast } from "../ui/kit";
 import { TrackPage } from "../features/track/TrackPage";
 import { LineupPage } from "../features/lineup/LineupPage";
 import { FormationsPage } from "../features/formations/FormationsPage";
+import { LabsPage } from "../features/labs/LabsPage";
 import { PracticePage } from "../features/practice/PracticePage";
 import { StatsPage } from "../features/stats/StatsPage";
 import { CourtPage } from "../features/court/CourtPage";
@@ -18,7 +19,7 @@ import { LivePage } from "../features/live/LivePage";
 import { Welcome } from "../features/team/Welcome";
 
 const HOST_THEME = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
-const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["formations", "Formations", "wide-only"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"]];
+const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"], ["labs", "Labs", "wide-only"]];
 
 export function App() {
   useVersion();
@@ -40,6 +41,7 @@ export function App() {
   switch (page) {
     case "lineup": body = <LineupPage />; break;
     case "formations": body = <FormationsPage />; break;
+    case "labs": body = <LabsPage />; break;
     case "practice": body = <PracticePage />; break;
     case "stats": body = <StatsPage />; break;
     case "court": body = <CourtPage />; break;
@@ -53,7 +55,7 @@ export function App() {
     <nav className="nav" aria-label="Sections">
       <div className="brand"><i><Icon name="brand" /></i><b>Benchboard</b></div>
       <div className="teamswitch">{switcher("")}</div>
-      {NAV.map(([k, l, cls]) => <a key={k} className={"tab " + (cls || "")} href={"#/" + k} aria-current={page === k || (k === "stats" && page === "player") ? "page" : undefined}><Icon name={k} /><span>{l}</span></a>)}
+      {NAV.map(([k, l, cls]) => <a key={k} className={"tab " + (cls || "")} href={"#/" + k} aria-current={page === k || (k === "stats" && page === "player") || (k === "labs" && page === "formations") ? "page" : undefined}><Icon name={k} /><span>{l}</span></a>)}
       <a className="tab end" href="#/settings" aria-current={page === "settings" ? "page" : undefined}><Icon name="settings" /><span>Settings</span></a>
     </nav>
     <div className="content">

@@ -65,7 +65,7 @@ export function Tracker({ m }: { m: Match }) {
     else { setUi({ follow: null }); toast((p ? playerName(p) + " · " : "") + a.long); }
     return true;
   };
-  const focus = !!state.prefs.focus;
+  const focus = !!(state.prefs.labsFocus && state.prefs.focus);
 
   return (
     <div className={"stack" + (focus ? " focus" : "")}>
@@ -138,13 +138,14 @@ function ControlBar({ m, c, names }: { m: Match; c: SetState; names: { us: strin
 
 function FocusToggle() {
   const on = !!state.prefs.focus;
+  if (!state.prefs.labsFocus) return null;
   return <button className="ctrl" aria-pressed={on} onClick={() => setPrefs({ focus: !on })}>{on ? "Exit focus" : "Focus mode"}<small>{on ? "show side panels" : "big buttons only"}</small></button>;
 }
 
 /* ---------- type-in codes ---------- */
 function QuickEntry({ m, record }: { m: Match; record: (k: ActionCode, o?: { p?: string | null; op?: string; quiet?: boolean }) => boolean }) {
   const [v, setV] = useState(""), [help, setHelp] = useState(false), [msg, setMsg] = useState("");
-  if (state.prefs.quick === false) return null;
+  if (!state.prefs.quick) return null;
   const submit = () => {
     const r = parseQuick(v); if (!v.trim()) return;
     const done: string[] = [], bad = r.errors.slice();

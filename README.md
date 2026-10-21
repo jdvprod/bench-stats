@@ -6,10 +6,10 @@ Volleyball stats, lineups, rotations and practice planning for coaches. Works of
 
 ## What's in it
 
-- **Track**: live stat entry by player, type-in codes for keyboards (`7k 12ace ok11`), a big-button focus mode, scoreboard with rotation, server, timeouts and subs, drag-and-drop subs, libero serving, film tags, undo, in-game coach flags, and AI timeout talking points.
+- **Track**: live stat entry by player (Labs adds type-in codes like `7k 12ace ok11` and a big-button focus mode), scoreboard with rotation, server, timeouts and subs, drag-and-drop subs, libero serving, film tags, undo, in-game coach flags, and AI timeout talking points.
 - **Stats**: season, practice, match or single-set views. Includes overview KPIs, player totals, per-set and advanced stats (+/−, net points, serve efficiency, ace:error), attack by first contact (in-system, out-of-system, transition), side-out by pass grade, rotations, opponent players, an Excel export and an AI match report.
 - **Court**: a tendency court that turns tapped ball locations into zone heat maps and defense, attack and serve recommendations, filterable by opponent, their jersey number, our player and rotation. It also has three saved drawing boards.
-- **Formations**: drag players into serve-receive, serving and base-defense spots for all six rotations. It flags overlap (rotation) faults at the serve, shows where each player moves after the serve, and saves named sets like "5-1 three-passer".
+- **Labs** (off until turned on): **Formations**: drag players into serve-receive, serving and base-defense spots for all six rotations. It flags overlap (rotation) faults at the serve, shows where each player moves after the serve, and saves named sets like "5-1 three-passer".
 - **Lineup**: a starting-six builder with the libero, checks that the lineup is balanced, a preview of all six rotations with season results, "on court now" or "next set" buttons, and an AI lineup suggestion.
 - **Practice**: a plan builder with a timeline and drill library, a "what to work on" list built from your stats, AI plans, scrimmages with a roster split and head-to-head stats, drill tracking and history.
 - **Player pages**: KPIs, trend charts, match log, goals with progress bars, an AI report card and a downloadable report for players and parents.
