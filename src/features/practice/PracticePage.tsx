@@ -132,17 +132,17 @@ function PlanEditor({ plan, onDelete }: { plan: PracticePlan; onDelete: () => vo
       {plan.blocks.map((b, i) => { const start = clock; clock += b.minutes; return <div key={b.id} className={"block " + (b.done ? "done" : "")}>
         <div className="time">{addMin(plan.start, start)}</div>
         <div className="stack" style={{ gap: 6, minWidth: 0 }}>
-          <div className="row" style={{ gap: 6 }}><span className="cat" style={{ color: catColor(b.category) }}>●</span>
-            <select className="input" style={{ width: "auto", padding: "4px 6px" }} value={b.category} onChange={(e) => setB(i, { category: e.target.value })}>{DRILL_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
-            <input className="input" style={{ width: 70, padding: "4px 6px" }} type="number" min={1} max={120} value={b.minutes} onChange={(e) => setB(i, { minutes: Math.max(1, +e.target.value || 1) })} aria-label="Minutes" /><span className="small muted">min</span></div>
+          <div className="blk-head"><span className="cat" style={{ color: catColor(b.category) }}>●</span>
+            <select className="input" style={{ width: "auto", minWidth: 0, maxWidth: 150, padding: "4px 6px" }} value={b.category} onChange={(e) => setB(i, { category: e.target.value })}>{DRILL_CATEGORIES.map((c) => <option key={c}>{c}</option>)}</select>
+            <input className="input" style={{ width: 64, padding: "4px 6px" }} type="number" min={1} max={120} value={b.minutes} onChange={(e) => setB(i, { minutes: Math.max(1, +e.target.value || 1) })} aria-label="Minutes" /><span className="small muted">min</span>
+            <span className="blk-ctl">
+              <button className="btn sm ghost" aria-label="Move up" disabled={i === 0} onClick={() => move(i, -1)}>↑</button>
+              <button className="btn sm ghost" aria-label="Move down" disabled={i === plan.blocks.length - 1} onClick={() => move(i, 1)}>↓</button>
+              <button className="btn sm" aria-pressed={!!b.done} aria-label="Mark done" onClick={() => setB(i, { done: !b.done })}>{b.done ? "✓ Done" : "Done"}</button>
+              <button className="btn sm ghost" aria-label="Remove" onClick={() => set({ blocks: plan.blocks.filter((_, j) => j !== i) })}>✕</button>
+            </span></div>
           <input className="input" value={b.title} onChange={(e) => setB(i, { title: e.target.value })} aria-label="Block title" />
-          <textarea className="input" rows={2} value={b.notes} placeholder="Notes, what to watch for" onChange={(e) => setB(i, { notes: e.target.value })} />
-        </div>
-        <div className="stack" style={{ gap: 4 }}>
-          <button className="btn sm" aria-label="Move up" onClick={() => move(i, -1)}>↑</button>
-          <button className="btn sm" aria-label="Move down" onClick={() => move(i, 1)}>↓</button>
-          <button className="btn sm" aria-pressed={!!b.done} onClick={() => setB(i, { done: !b.done })}>{b.done ? "✓" : "Done"}</button>
-          <button className="btn sm" aria-label="Remove" onClick={() => set({ blocks: plan.blocks.filter((_, j) => j !== i) })}>✕</button>
+          <textarea className="input" rows={b.notes ? 2 : 1} value={b.notes} placeholder="Notes, what to watch for" onChange={(e) => setB(i, { notes: e.target.value })} />
         </div>
       </div>; })}
       <div className="row">

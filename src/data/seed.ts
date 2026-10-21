@@ -66,7 +66,7 @@ export function createSampleTeam() {
   const ds = all("drills").filter((d) => d.teamId === t.id);
   const pick = ["Dynamic warm-up + arm care", "Three-person serve receive", "Out-of-system hitting", "Dig from coach on box", "Rotation scrimmage", "Huddle: goals for today"];
   const tomorrow = new Date(now + day).toISOString().slice(0, 10);
-  save("plans", { id: uid("pl"), teamId: t.id, seasonId: t.activeSeasonId, date: tomorrow, title: "Serve receive + rotation 4", start: "15:30", notes: "Focus from the Westbrook match: passing and rotation 4.", status: "planned", createdAt: now,
+  save("plans", { id: uid("pl"), teamId: t.id, seasonId: t.activeSeasonId, date: tomorrow, title: "Serve receive + rotation 2", start: "15:30", notes: "Focus from the Westbrook match: passing and rotation 2.", status: "planned", createdAt: now,
     blocks: pick.map((n) => ds.find((d) => d.name === n)).filter(Boolean).map((d) => ({ id: uid("b"), title: d!.name, category: d!.category, minutes: d!.minutes, notes: d!.description, drillId: d!.id })) } as PracticePlan, true);
   const maya = all("players").find((p) => p.teamId === t.id && p.num === "7");
   if (maya) save("players", { ...maya, goals: [{ id: uid("g"), metric: "hitting", target: 0.3 }, { id: uid("g"), metric: "passAvg", target: 2.2 }] }, true);

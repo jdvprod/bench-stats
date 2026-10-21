@@ -245,7 +245,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
 .lslot .nm{font-size:12px;font-weight:600;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .lslot .ps{font-size:10px;color:var(--muted);font-weight:700;letter-spacing:.06em}
 .lslot.sel{outline:3px solid var(--accent)}
-.rots{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+.rots{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}@media (max-width:900px){.rots{grid-template-columns:repeat(2,1fr)}}@media (max-width:420px){.rots{gap:6px}}
 .rotcard{border:1px solid var(--line);border-radius:8px;padding:8px;background:var(--surface)}
 .rotcard .hd{display:flex;justify-content:space-between;font-size:12px;font-weight:700;margin-bottom:6px;gap:6px}
 .mini3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:4px}
@@ -266,7 +266,7 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
 .recs li::before{content:"→";color:var(--accent);font-weight:700}
 
 /* ---------- planner ---------- */
-.block{display:grid;grid-template-columns:auto 1fr auto;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--surface)}
+.block{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:start;border:1px solid var(--line);border-radius:9px;padding:10px 12px;background:var(--surface)}
 .block .time{font-family:var(--display);font-weight:700;font-size:15px;color:var(--muted);min-width:52px}
 .block.done{opacity:.6}
 .block .cat{font-size:11.5px;font-weight:700;color:var(--accent);text-transform:uppercase;letter-spacing:.06em}
@@ -522,3 +522,5 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 }
 .toast{display:flex;align-items:center;gap:12px}
 .toast-act{background:none;border:0;color:var(--us-bright);font:inherit;font-weight:700;cursor:pointer;padding:2px 4px;margin:-2px -6px -2px 0}
+.blk-ctl{margin-left:auto;display:flex;gap:4px}.blk-ctl .btn{min-width:34px}
+.blk-head{display:flex;align-items:center;gap:6px;min-width:0}.blk-head .btn.sm{padding:4px 8px}@media (max-width:480px){.blk-head{flex-wrap:wrap}}
