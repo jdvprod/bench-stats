@@ -18,6 +18,7 @@ import { SettingsPage } from "../features/settings/SettingsPage";
 import { PlayerPage } from "../features/player/PlayerPage";
 import { LivePage } from "../features/live/LivePage";
 import { Welcome } from "../features/team/Welcome";
+import { createSampleTeam } from "../data/seed";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { WatchPage } from "../cloud/WatchPage";
 import { JoinPage } from "../cloud/CloudCard";
@@ -34,6 +35,16 @@ export function App() {
   if (route.page === "watch" && route.id) return <><WatchPage code={route.id} /><Toast /></>;
   if (!state.ready) return <div className="content"><p className="empty" style={{ padding: 24 }}>Loading…</p></div>;
   const user = currentUser();
+  if (route.page === "sample") {
+    // from the product page: open straight into a full sample season
+    setTimeout(() => {
+      const existing = all("teams").find((x) => x.sample);
+      if (existing) setPrefs({ teamId: existing.id }); else createSampleTeam();
+      if (!user) skipAccounts();
+      location.replace("#/track");
+    }, 0);
+    return <div className="content"><p className="empty" style={{ padding: 24 }}>Loading the sample season…</p></div>;
+  }
   if (!user && (route.page === "account" || (route.page === "join" && route.id && wantsAuthGate()))) {
     if (route.page === "join" && route.id) try { sessionStorage.setItem("bs-join", route.id); } catch { /* ignore */ }
     return <><AuthPage key={route.id || "a"} initial={route.id === "signup" || route.page === "join" ? "signup" : "signin"} onSkip={() => { skipAccounts(); location.hash = "#/track"; }} /><Toast /></>;

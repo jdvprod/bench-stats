@@ -26,10 +26,10 @@ const TREND: [GoalMetric | "net", string][] = [["hitting", "Hitting %"], ["passA
 
 interface Row { m: Match; sets: SetState[]; A: Agg; s: Stat; pm: PlayerMetrics }
 
-function rowsFor(id: string): Row[] {
+function rowsFor(id: string, src: "games" | "practice" | "all" = "games"): Row[] {
   const t = team()!;
   const out: Row[] = [];
-  for (const m of matchesOf().filter((x) => x.kind === "match" && (!t.activeSeasonId || x.seasonId === t.activeSeasonId)).reverse()) {
+  for (const m of matchesOf().filter((x) => (src === "all" || (src === "games" ? x.kind === "match" : x.kind !== "match")) && (!t.activeSeasonId || x.seasonId === t.activeSeasonId)).reverse()) {
     const R = replayOf(m); if (!R) continue; const A = aggregate(R.sets); if (!A.ps[id] && !A.pm[id]) continue;
     out.push({ m, sets: R.sets, A, s: A.ps[id], pm: playerMetrics(A, id) });
   }
@@ -38,9 +38,9 @@ function rowsFor(id: string): Row[] {
 
 export function PlayerPage({ id }: { id: string }) {
   const p = player(id), t = team()!;
-  const [pickMetric, setMetric] = useState<GoalMetric | "net" | null>(null);
+  const [pickMetric, setMetric] = useState<GoalMetric | "net" | null>(null), [src, setSrc] = useState<"games" | "practice" | "all">("games");
   if (!p) return <div className="page"><Card><p className="empty">Player not found.</p><button className="btn" onClick={() => go("team")}>Back to roster</button></Card></div>;
-  const rows = rowsFor(id);
+  const rows = rowsFor(id, src);
   const taken = plansOf().filter((pl) => pl.attendance && Object.keys(pl.attendance).length);
   const att = taken.length ? (() => { const here = taken.filter((pl) => pl.attendance![id] === "in" || pl.attendance![id] === "late").length; return `${here} of ${taken.length} (${Math.round((100 * here) / taken.length)}%)`; })() : "";
   const A = aggregate(rows.flatMap((r) => r.sets)), s = A.ps[id], pm = playerMetrics(A, id);
@@ -60,8 +60,9 @@ export function PlayerPage({ id }: { id: string }) {
       <div className="jersey">{p.num}</div>
       <div className="grow"><h1 style={{ margin: 0 }}>{p.first} {p.last}</h1>
         <p className="muted">{[p.pos, p.height, p.grad ? "Class of " + p.grad : "", t.name].filter(Boolean).join(" · ")}</p>
-        <p className="small muted">{rows.length} matches · {pm.sets} sets this season{pm.plusMinus != null ? ` · ${fmtSigned(pm.plusMinus)} on court` : ""}{att ? ` · practice ${att}` : ""}</p></div>
-      <button className="btn" onClick={() => shareReport(id, rows, A)}>Download player report</button>
+        <p className="small muted">{rows.length} {src === "practice" ? "practices" : src === "all" ? "matches and practices" : "matches"} · {pm.sets} sets this season{pm.plusMinus != null ? ` · ${fmtSigned(pm.plusMinus)} on court` : ""}{att ? ` · practice ${att}` : ""}</p></div>
+      <div className="stack" style={{ alignItems: "flex-end" }}><Seg value={src} onChange={setSrc} options={[["games", "Matches"], ["practice", "Practice"], ["all", "All"]]} label="Which stats" />
+        <button className="btn" onClick={() => shareReport(id, rowsFor(id, "games"), aggregate(rowsFor(id, "games").flatMap((r) => r.sets)))}>Download player report</button></div>
     </div></section>
     {!s ? <Card><p className="empty">No stats yet this season.</p></Card> : <>
       <div className="kpis">
