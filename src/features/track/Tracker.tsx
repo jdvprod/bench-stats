@@ -391,13 +391,16 @@ export function logText(l: LogEntry, m: Match, teamName: string): string {
 }
 
 function RecentCard({ m, R }: { m: Match; R: Replay }) {
-  const t = team()!;
-  return <Card title="Recent"><ul className="log">{R.log.slice(-10).reverse().map((l) => (
-    <li key={l.id}>
-      <span className={l.kind === "stat" ? "" : "ctl"}>{logText(l, m, t.name)}</span>
+  const t = team()!, [edit, setEdit] = useState<string | null>(null);
+  return <Card title="Recent" actions={<span className="small muted">Tap a play to fix the player</span>}><ul className="log">{R.log.slice(-10).reverse().map((l) => {
+    const canEdit = l.kind === "stat" && !!l.p && isMine(l.id) && !m.scrim;
+    return <li key={l.id} className={edit === l.id ? "editing" : ""}>
+      {canEdit ? <button className="log-edit" onClick={() => setEdit(edit === l.id ? null : l.id)} aria-expanded={edit === l.id}>{logText(l, m, t.name)}</button> : <span className={l.kind === "stat" ? "" : "ctl"}>{logText(l, m, t.name)}</span>}
       <span className={"sc " + (l.kind === "stat" && l.w ? l.w : "")}>{l.kind === "stat" && l.w ? `${l.us}–${l.them}` : ""}</span>
       <DeleteX onDelete={() => { deleteEvent(m.id, l.id); toast("Entry deleted"); }} />
-    </li>))}</ul></Card>;
+      {edit === l.id && l.kind === "stat" && <div className="log-fix"><span className="small muted">Who actually did it?</span>
+        <div className="pick">{activePlayers().map((p) => <button key={p.id} aria-pressed={p.id === l.p} onClick={() => { patchEvent(m.id, l.id, { p: p.id }); setEdit(null); toast(`Changed to ${playerName(p.id)}`); }}>#{p.num} {p.first}</button>)}</div></div>}
+    </li>; })}</ul></Card>;
 }
 
 function DeleteX({ onDelete }: { onDelete: () => void }) {

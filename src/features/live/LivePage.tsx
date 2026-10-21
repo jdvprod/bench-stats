@@ -12,7 +12,7 @@ import { ShareLive } from "../../cloud/CloudCard";
 export function LivePage() {
   const t = team()!, cur = currentMatch();
   const games = matchesOf().filter((m) => m.kind === "match");
-  const [pick, setPick] = useState<string>("");
+  const [pick, setPick] = useState<string>(""), [tv, setTv] = useState(false);
   const m = (pick && get("matches", pick)) || (cur && cur.kind === "match" ? cur : games[0]);
   if (!m) return <div className="page"><Card><p className="empty">No matches yet. Start one on the Track tab and it shows up here live.</p></Card></div>;
   const R = replayOf(m)!, c = R.cur, names = sideNames(m, t.name);
@@ -26,10 +26,24 @@ export function LivePage() {
     ["Errors given", String(M.freePoints.ours), String(M.freePoints.theirs)], ["Hitting %", fmtHit(M.hitting), "—"], ["Side-out %", fmtPct(M.sideOut), fmtPct(ratio(A.psc.n - A.psc.w, A.psc.n))], ["Pass average", fmtAvg(M.passAvg), "—"], ["Serve errors", String(serveErrors(A.T)), "—"],
   ];
 
+  if (tv) {
+    const close = () => { setTv(false); try { if (document.fullscreenElement) document.exitFullscreen(); } catch { /* ignore */ } };
+    const lastPlays = R.log.filter((l) => l.kind === "stat" && l.w).slice(-3).reverse();
+    return <div className="tv" onClick={close} role="button" aria-label="Exit TV mode" tabIndex={0} onKeyDown={(e) => e.key === "Escape" && close()}>
+      <div className="tv-score">
+        <div className="tv-side"><div className="tv-nm us">{names.us}</div><div className="tv-pts us">{c?.us ?? 0}</div><div className="tv-sets">Sets {R.wonUs}</div></div>
+        <div className="tv-mid"><div>Set {c?.n ?? 1}</div>{live && c && <div className="tv-srv">{c.serve === "us" ? "◀ serving" : "serving ▶"}</div>}</div>
+        <div className="tv-side"><div className="tv-nm them">{names.them}</div><div className="tv-pts them">{c?.them ?? 0}</div><div className="tv-sets">Sets {R.wonThem}</div></div>
+      </div>
+      <div className="tv-sets-row">{R.sets.map((s) => <span key={s.n}>Set {s.n}: <b>{s.us}–{s.them}</b></span>)}</div>
+      <div className="tv-plays">{lastPlays.map((l) => <div key={l.id}>{logText(l, m, t.name)}</div>)}</div>
+      <div className="tv-hint">Tap anywhere to exit</div>
+    </div>;
+  }
   return <div className="page">
     <div className="row between">
       <div className="row"><span className="tag" style={{ marginLeft: 0, background: live ? "var(--accent)" : "var(--surface-2)", color: live ? "var(--accent-ink)" : "var(--muted)" }}>{live ? "● Live" : "Final"}</span><span className="small muted">{fmtDate(m.date)}{m.event ? " · " + m.event : ""}{m.site ? " · " + m.site : ""}</span></div>
-      <div className="row"><ShareLive matchId={m.id} />
+      <div className="row"><button className="btn sm" onClick={() => { setTv(true); try { document.documentElement.requestFullscreen?.(); } catch { /* ignore */ } }}>TV mode</button><ShareLive matchId={m.id} />
       <select className="input" style={{ width: "auto", maxWidth: 260 }} value={m.id} onChange={(e) => setPick(e.target.value)} aria-label="Match">{games.slice(0, 40).map((g) => <option key={g.id} value={g.id}>{fmtDate(g.date)} vs {g.opp}</option>)}</select></div>
     </div>
     <section className="card" style={{ background: "var(--bar)", color: "var(--bar-ink)", borderColor: "transparent" }}>

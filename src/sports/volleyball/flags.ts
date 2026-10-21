@@ -60,6 +60,15 @@ export function flags(R: Replay, x: FlagContext): Flag[] {
     const next = cur.lu[1], st = mA.ps[next];
     if (st) { const att = st.SA + st.SI + serveErrors(st); if (att >= 4 && (st.SA + st.SI) / att < 0.8) out.push({ lvl: "warn", title: `Next server ${x.short(next)} is ${st.SA + st.SI} of ${att} today.`, detail: "A safe, in serve wins more than a missed tough one." }); }
   }
+  // Setter distribution: a cold hitter getting most of the sets in a rotation while someone else is hot there
+  for (let r = 1; r <= 6; r++) {
+    const row = mA.atkRot?.[r]; if (!row) continue;
+    const list = Object.entries(row).filter(([p]) => p !== "_"), n = list.reduce((a, [, v]) => a + v.TA, 0); if (n < 8) continue;
+    const top = list.sort((a, b) => b[1].TA - a[1].TA)[0], th = hitting({ K: top[1].K, AE: top[1].E, TA: top[1].TA });
+    const hot = list.filter(([p, v]) => p !== top[0] && v.TA >= 3).map(([p, v]) => [p, hitting({ K: v.K, AE: v.E, TA: v.TA })] as [string, number | null]).sort((a, b) => (b[1] ?? -1) - (a[1] ?? -1))[0];
+    if (top[1].TA / n >= 0.45 && th != null && th < 0.1 && hot && hot[1] != null && hot[1] >= 0.3)
+      out.push({ lvl: "warn", title: `Rotation ${r}: ${x.short(top[0])} gets ${Math.round((100 * top[1].TA) / n)}% of attacks, hitting ${fmtHit(th)}.`, detail: `${x.short(hot[0])} is hitting ${fmtHit(hot[1])} there. Spread it around.` });
+  }
   // Where our aces land: keep serving there
   const aceZ: Record<string, number> = {};
   for (const s2 of R.sets) for (const l of s2.locs) if (l.t === "SA") { const z = zoneKey(l.x, l.y); if (z) aceZ[z] = (aceZ[z] || 0) + 1; }

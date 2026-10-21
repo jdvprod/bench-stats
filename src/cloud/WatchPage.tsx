@@ -69,6 +69,10 @@ export function WatchPage({ code }: { code: string }) {
     <section className="card"><div className="label" style={{ marginBottom: 8 }}>Leaders</div><div className="kpis" style={{ gridTemplateColumns: "repeat(auto-fill,minmax(120px,1fr))" }}>
       {leader((s) => s.K, "Kills")}{leader((s) => s.SA, "Aces")}{leader((s) => s.D, "Digs")}{leader((s) => blocks(s), "Blocks")}{leader((s) => s.AST, "Assists")}
     </div><p className="small muted" style={{ marginTop: 8 }}>Team hitting {fmtHit(hitting(A.T))} · {A.T.SA} aces · {A.team.OE} opponent errors</p></section>
+    <section className="card"><div className="label" style={{ marginBottom: 6 }}>Player stats</div>
+      <div className="tbl"><table><thead><tr><th className="l">Player</th><th title="Kills">K</th><th title="Aces">Ace</th><th title="Digs">Dig</th><th title="Blocks">Blk</th><th title="Assists">Ast</th></tr></thead>
+        <tbody>{Object.entries(A.ps).filter(([id]) => P.has(id)).sort((a, b) => (+P.get(a[0])!.num || 0) - (+P.get(b[0])!.num || 0)).map(([id, s]) => <tr key={id}><td className="l">{nm(id)} {P.get(id)!.last ? P.get(id)!.last + "." : ""}</td><td>{s.K}</td><td>{s.SA}</td><td>{s.D}</td><td>{+blocks(s).toFixed(1)}</td><td>{s.AST}</td></tr>)}</tbody></table></div>
+    </section>
     <section className="card"><div className="label" style={{ marginBottom: 6 }}>Play by play</div>
       <ul className="pbp">{plays.map((l) => <li key={l.id}><span className={"sc " + (l.kind === "stat" && l.w ? "pt-" + l.w : "")}>{l.kind === "stat" && l.w ? `${l.us}–${l.them}` : ""}</span><span className={l.kind !== "stat" ? "small muted" : ""}>{text(l)}</span></li>)}</ul>
     </section>
