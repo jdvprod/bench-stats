@@ -25,7 +25,7 @@ export function sampleMatch(seed: number, startTs: number, opts: { sets?: number
   const P = (x: string) => "sp" + x;
   const LU = ["1", "7", "9", "14", "4", "12"].map(P); let lu = LU.slice(), serve: "us" | "them" = seed % 2 ? "us" : "them";
   push("NS", null, null, { serve, lu: LU.slice(), lib: P("3"), libSrv: null });
-  const atk: Record<string, { k: number; e: number }> = { [P("7")]: { k: 0.47, e: 0.09 }, [P("4")]: { k: 0.26, e: 0.22 }, [P("14")]: { k: 0.38, e: 0.14 }, [P("9")]: { k: 0.42, e: 0.12 }, [P("12")]: { k: 0.34, e: 0.15 }, [P("15")]: { k: 0.33, e: 0.16 }, [P("8")]: { k: 0.3, e: 0.15 } };
+  const atk: Record<string, { k: number; e: number }> = { [P("7")]: { k: 0.36, e: 0.13 }, [P("4")]: { k: 0.22, e: 0.2 }, [P("14")]: { k: 0.3, e: 0.15 }, [P("9")]: { k: 0.34, e: 0.12 }, [P("12")]: { k: 0.28, e: 0.15 }, [P("15")]: { k: 0.27, e: 0.16 }, [P("8")]: { k: 0.25, e: 0.15 } };
   const oppN = ["11", "11", "11", "7", "7", "3", "15", "9"];
   const locThem = () => [rnd(0.2, 8.8), rnd(0.3, 8.6)], locUs = () => [rnd(0.2, 8.8), rnd(9.6, 17.6)];
   const front = () => [lu[1], lu[2], lu[3]];
@@ -49,7 +49,7 @@ export function sampleMatch(seed: number, startTs: number, opts: { sets?: number
         const cand = front().filter((id) => atk[id]); const a = cand.length ? pick(cand) : P("7"), A = atk[a], z = r() / k;
         if (z < A.k) { push("AST", P("1")); push("K", a, a === P("7") ? [rnd(0.2, 3.5), rnd(0.5, 5)] : locThem()); return "us"; }
         push("SATT", P("1"));
-        if (z < A.k + A.e) { push("AE", a); return "them"; }
+        if (r() < A.e * 1.15) { push("AE", a); return "them"; }
         push("TA", a, locThem());
       }
       const w = r();

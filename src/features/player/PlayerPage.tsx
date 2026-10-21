@@ -9,6 +9,8 @@ import { LineChart } from "../../ui/charts";
 import { AiCard } from "../../ui/ai";
 import { reportCardPrompt } from "../../ai/prompts";
 import { go } from "../../app/router";
+import { CourtSvg } from "../../ui/court";
+import { tendencies } from "../../sports/volleyball/tendencies";
 
 export const GOALS: Record<GoalMetric, { label: string; key: keyof PlayerMetrics; fmt: (v: number | null) => string; step: number; lowerBetter?: boolean }> = {
   hitting: { label: "Hitting %", key: "hitting", fmt: fmtHit, step: 0.01 },
@@ -80,6 +82,7 @@ export function PlayerPage({ id }: { id: string }) {
         </Card>
         <Goals id={id} A={A} />
       </div>
+      <PlayerCourt id={id} A={A} />
       <Card title="Match by match"><div className="tbl"><table>
         <thead><tr><th className="l">Date</th><th className="l">Opponent</th><th>Sets</th><th>K</th><th>E</th><th>TA</th><th>Hit %</th><th>Ace</th><th>SE</th><th>Pass</th><th>Dig</th><th>Blk</th><th>Ast</th><th>+/−</th></tr></thead>
         <tbody>{rows.slice().reverse().map((r) => { const x = r.s || ({} as Stat); return <tr key={r.m.id}><td className="l">{fmtDate(r.m.date)}</td><td className="l">{r.m.opp}</td><td>{r.pm.sets}</td><td>{x.K ?? 0}</td><td>{x.AE ?? 0}</td><td>{x.TA ?? 0}</td><td>{r.s ? fmtHit(hitting(x)) : "—"}</td><td>{x.SA ?? 0}</td><td>{r.s ? serveErrors(x) : 0}</td><td>{r.s ? fmtAvg(passAvg(x)) : "—"}</td><td>{x.D ?? 0}</td><td>{r.s ? fmtNum(blocks(x)) : 0}</td><td>{x.AST ?? 0}</td><td>{fmtSigned(r.pm.plusMinus)}</td></tr>; })}</tbody>
@@ -175,4 +178,27 @@ ${best.length ? `<h2>Best matches</h2><table><thead><tr><th>Date</th><th>Opponen
 ${pr.video ? `<h2>Highlights</h2><p><a href="${esc(pr.video)}">${esc(pr.video)}</a></p>` : ""}
 ${pr.email || pr.phone || pr.coachContact ? `<h2>Contact</h2><div class="g">${item("Player email", pr.email)}${item("Player phone", pr.phone)}${item("Coach", pr.coachContact)}</div>` : ""}
 <footer>Stats recorded with Benchboard · ${new Date().toLocaleDateString()}</footer></main></body></html>`;
+}
+
+/** Where her attacks land, plus hitting and passing by rotation. */
+function PlayerCourt({ id, A }: { id: string; A: Agg }) {
+  const T = tendencies(A.locs, "ourAttack", { p: id });
+  const rots = [1, 2, 3, 4, 5, 6].map((r) => ({ r, a: A.atkRot[r]?.[id], p: A.rcvRot[r]?.[id] })).filter((x) => (x.a && x.a.TA) || (x.p && x.p.R));
+  if (!T.total && !rots.length) return null;
+  const byZone: Record<string, number> = {}; for (const [z, c] of Object.entries(T.zones)) byZone[z] = c.total;
+  const top = Object.entries(T.zones).sort((a, b) => b[1].total - a[1].total)[0];
+  return <div className="grid2" style={{ alignItems: "start" }}>
+    {T.total > 0 && <Card title="Where attacks land">
+      <CourtSvg half="them" counts={{ half: "them", byZone, total: T.total, heat: true }} label="Attack chart"
+        dots={T.points.filter((l) => l.x != null).map((l) => ({ x: l.x, y: l.y, color: l.t === "K" ? "var(--us)" : "var(--muted)", r: 0.24, opacity: 0.85 }))} labels={{ top: "Opponent" }} />
+      <div className="keys"><span><span className="sw" style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: "var(--us)", marginRight: 4 }} />Kill</span><span><span className="sw" style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: "var(--muted)", marginRight: 4 }} />Kept in play</span>{top && <span>· Most often zone {top[0]} ({Math.round((100 * top[1].total) / T.total)}%)</span>}</div>
+    </Card>}
+    {rots.length > 0 && <Card title="By rotation">
+      <div className="tbl"><table>
+        <thead><tr><th className="l">Rotation</th><th>Swings</th><th>Kills</th><th>Hit %</th><th>Passes</th><th>Pass avg</th></tr></thead>
+        <tbody>{rots.map(({ r, a, p }) => <tr key={r}><td className="l"><b>R{r}</b></td><td>{a?.TA || 0}</td><td>{a?.K || 0}</td><td>{a && a.TA ? fmtHit((a.K - a.E) / a.TA) : "—"}</td><td>{p?.R || 0}</td><td>{p && p.R ? fmtAvg(p.RS / p.R) : "—"}</td></tr>)}</tbody>
+      </table></div>
+      <p className="keys" style={{ marginTop: 8 }}>Use this to see which rotations produce the best swings, and where serve receive leans on this player most.</p>
+    </Card>}
+  </div>;
 }
