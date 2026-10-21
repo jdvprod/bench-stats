@@ -193,6 +193,7 @@ let started = false;
 export function startSync() {
   if (started) return; started = true;
   hooks.change = markDirty;
+  hooks.who = () => currentUser()?.email || null;
   hooks.teamRemoved = (id) => unlinkTeam(id);
   const tick = () => { if (document.visibilityState === "visible") syncNow(); };
   setInterval(() => {

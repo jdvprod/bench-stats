@@ -1,6 +1,6 @@
 /** Live stat tracking for a match, drill session or scrimmage. */
 import { useCallback, useState } from "react";
-import { setTeamPatch, setPrefs, state, activePlayers, appendEvents, deleteEvent, eventsOf, isMine, patch, patchEvent, player, playerName, replayOf, save, team, toast, undoLast } from "../../data/store";
+import { setTeamPatch, setPrefs, state, stampLog, logsOf, DEVICE, activePlayers, appendEvents, deleteEvent, eventsOf, isMine, patch, patchEvent, player, playerName, replayOf, save, team, toast, undoLast } from "../../data/store";
 import { Match } from "../../data/model";
 import { ACTIONS, ActionCode, GROUPS, LOCATION_HALF, OPP_NUMBER } from "../../sports/volleyball/actions";
 import { aggregate, LogEntry, Replay, serverOf, SetState, zoneOf } from "../../sports/volleyball/engine";
@@ -99,6 +99,7 @@ export function Tracker({ m }: { m: Match }) {
     <div className={"stack" + (focus ? " focus" : "")}>
       <Banners m={m} R={R} />
       <ControlBar m={m} c={c} names={names} />
+      <CrewWarning m={m} />
       <QuickEntry m={m} record={record} />
       <div className={focus ? "stack" : "split"}>
         <div className="stack">
@@ -225,7 +226,7 @@ function Panels({ m, R, c }: { m: Match; R: Replay; c: SetState }) {
   if (p === "tag") return <TagPanel m={m} R={R} />;
   if (p === "teams" && m.scrim) return <TeamsPanel m={m} />;
   if (p === "plan" && !m.scrim) return <PlanPanel m={m} onClose={() => setUi({ panel: null })} />;
-  if (p === "job" && m.kind === "match" && !m.scrim) return <JobPanel />;
+  if (p === "job" && m.kind === "match" && !m.scrim) return <JobPanel m={m} />;
   return null;
 }
 
@@ -529,19 +530,46 @@ function KeyHelp({ onClose }: { onClose: () => void }) {
 }
 
 /* ---------- my job (several coaches on one match) ---------- */
-function JobPanel() {
+function JobPanel({ m }: { m: Match }) {
   const job = state.prefs.job || "all", picked = state.prefs.jobGroups?.length ? state.prefs.jobGroups : STAT_GROUP_NAMES;
-  const toggle = (g: string) => { const next = picked.includes(g) ? picked.filter((x) => x !== g) : picked.concat(g); setPrefs({ jobGroups: next.length ? next : [g] }); };
+  const set = (p: Parameters<typeof setPrefs>[0]) => { setPrefs(p); stampLog(m.id); };
+  const toggle = (g: string) => { const next = picked.includes(g) ? picked.filter((x) => x !== g) : picked.concat(g); set({ jobGroups: next.length ? next : [g] }); };
   return <div className="editor">
     <b>My job on this device</b>
     <span className="small muted">When several coaches track the same match, split the work. Only one device should keep score.</span>
     <div className="pick">
       {([["all", "Everything", "stats and score"], ["score", "Score only", "who won each rally"], ["stats", "Stats only", "never changes the score"]] as const).map(([k, l, d]) =>
-        <button key={k} aria-pressed={job === k} onClick={() => setPrefs({ job: k })}>{l}<small style={{ display: "block", fontWeight: 400 }}>{d}</small></button>)}
+        <button key={k} aria-pressed={job === k} onClick={() => set({ job: k })}>{l}<small style={{ display: "block", fontWeight: 400 }}>{d}</small></button>)}
     </div>
+    <Crew m={m} />
     {job === "stats" && <><span className="label">What I'm tracking</span>
       <div className="pick">{STAT_GROUP_NAMES.map((g) => <button key={g} aria-pressed={picked.includes(g)} onClick={() => toggle(g)}>{g}</button>)}</div>
       <span className="small muted">Example: the head coach keeps score and hitting; an assistant tracks serve receive, serving and digs.</span></>}
     <div className="row"><button className="btn sm" onClick={() => setUi({ panel: null })}>Done</button></div>
   </div>;
+}
+
+/* ---------- other coaches on this match ---------- */
+const JOB_LABEL = { all: "everything", score: "score only", stats: "stats only" } as const;
+function crewOf(m: Match) {
+  const now = Date.now();
+  return logsOf(m.id).filter((l) => l.device !== DEVICE && (l.seen || l.events[l.events.length - 1]?.ts || 0) > now - 20 * 60000)
+    .map((l) => ({ by: l.by ? l.by.split("@")[0] : "Another device", job: (l.job || "all") as keyof typeof JOB_LABEL, groups: l.groups || [], n: l.events.length }));
+}
+function Crew({ m }: { m: Match }) {
+  const crew = crewOf(m);
+  if (!crew.length) return <span className="small muted">No other coaches have tracked this match in the last 20 minutes.</span>;
+  return <div className="small"><span className="label">Also on this match</span>
+    <ul className="crew">{crew.map((x, i) => <li key={i}><b>{x.by}</b> · {JOB_LABEL[x.job]}{x.job === "stats" && x.groups.length ? ` (${x.groups.join(", ").toLowerCase()})` : ""}</li>)}</ul></div>;
+}
+function CrewWarning({ m }: { m: Match }) {
+  if (m.kind !== "match" || m.scrim) return null;
+  const me = jobOf(m), crew = crewOf(m);
+  if (!crew.length) return null;
+  const scorers = crew.filter((x) => x.job !== "stats");
+  const clash = me !== "stats" && scorers.length > 0;
+  return <div className={"banner " + (clash ? "warn" : "")}><p>{clash
+    ? <><b>Two devices are keeping score.</b> {scorers.map((x) => x.by).join(", ")} is also on {JOB_LABEL[scorers[0].job]}. Points will count twice; one of you should switch to stats only.</>
+    : <>Tracking with {crew.map((x) => `${x.by} (${JOB_LABEL[x.job]})`).join(", ")}.</>}</p>
+    <button className="btn sm" onClick={() => setUi({ panel: "job" })}>My job</button></div>;
 }

@@ -83,7 +83,9 @@ export interface Match {
 }
 
 /** Events recorded on one device for one match. Several devices can record the same match. */
-export interface EventLog { id: string; matchId: string; device: string; events: MatchEvent[] }
+export interface EventLog { id: string; matchId: string; device: string; events: MatchEvent[];
+  /** Who is tracking on this device and their job, so other coaches on the match can see it. */
+  by?: string; job?: "all" | "score" | "stats"; groups?: string[]; seen?: number }
 
 export interface PlanItem { id: string; text: string; done?: boolean }
 export interface Opponent { id: string; teamId: string; name: string; notes: string; scout: string; scoutAt: number | null; plan?: PlanItem[]; roster?: Record<string, { name?: string; pos?: string }> }

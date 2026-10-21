@@ -52,7 +52,7 @@ export function setPrefs(p: Partial<Prefs>) {
 export function all<K extends StoreName>(s: K): StoreTypes[K][] { return Array.from(state.tables[s].values()) as StoreTypes[K][]; }
 export function get<K extends StoreName>(s: K, id: string | null | undefined): StoreTypes[K] | undefined { return id ? (state.tables[s].get(id) as StoreTypes[K] | undefined) : undefined; }
 /** Cloud sync listens here: every local change (not ones that came from the cloud). */
-export const hooks = { change: null as null | ((s: StoreName, v: any, deleted: boolean) => void), paused: false, teamRemoved: null as null | ((teamId: string) => void) };
+export const hooks = { who: null as null | (() => string | null), change: null as null | ((s: StoreName, v: any, deleted: boolean) => void), paused: false, teamRemoved: null as null | ((teamId: string) => void) };
 
 export function save<K extends StoreName>(s: K, v: StoreTypes[K], silent = false, fromCloud = false) {
   if (!fromCloud) (v as any)._u = Math.max(Date.now(), ((state.tables[s].get((v as any).id) as any)?._u || 0) + 1);
@@ -129,13 +129,23 @@ export function replayOf(m: Match | undefined | null): Replay | null {
 
 export function appendEvents(matchId: string, evs: Partial<MatchEvent>[]): MatchEvent | null {
   const id = matchId + "|" + DEVICE;
-  const log = get("logs", id) || { id, matchId, device: DEVICE, events: [] };
+  const log = { ...(get("logs", id) || { id, matchId, device: DEVICE, events: [] }), ...stamp(matchId) };
   let ts = Date.now();
   const lastTs = log.events.length ? log.events[log.events.length - 1].ts : 0;
   if (ts <= lastTs) ts = lastTs + 1;
   const added = evs.map((e) => ({ ...e, id: e.id || eventId(), ts: e.ts || ts++ }) as MatchEvent);
   save("logs", { ...log, events: log.events.concat(added) });
   return added[added.length - 1] || null;
+}
+/** This device's name and job, written on its event log for the match. */
+function stamp(matchId: string): Partial<EventLog> {
+  const m = get("matches", matchId), job = m && m.kind === "match" && !m.scrim ? state.prefs.job || "all" : "all";
+  return { by: hooks.who?.() || undefined, job, groups: job === "stats" ? state.prefs.jobGroups : undefined, seen: Date.now() };
+}
+/** Re-stamp this device's log after the job changes, so other coaches see it right away. */
+export function stampLog(matchId: string) {
+  const id = matchId + "|" + DEVICE, log = get("logs", id) || { id, matchId, device: DEVICE, events: [] };
+  save("logs", { ...log, ...stamp(matchId) });
 }
 export function patchEvent(matchId: string, eventIdToPatch: string, p: Record<string, any>) {
   const log = get("logs", matchId + "|" + DEVICE); if (!log) return;
