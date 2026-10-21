@@ -525,3 +525,8 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .blk-ctl{margin-left:auto;display:flex;gap:4px}.blk-ctl .btn{min-width:34px}
 .blk-head{display:flex;align-items:center;gap:6px;min-width:0}.blk-head .btn.sm{padding:4px 8px}@media (max-width:480px){.blk-head{flex-wrap:wrap}}
 th.sortable{cursor:pointer;user-select:none;white-space:nowrap}th.sortable:hover{color:var(--ink)}th.sortable.on{color:var(--accent)}
+/* keyboard help */
+.keyhelp{position:fixed;right:20px;bottom:20px;z-index:50;width:min(460px,calc(100% - 40px));background:var(--surface);border:1px solid var(--line);border-radius:12px;box-shadow:0 12px 32px rgba(0,0,0,.22);padding:14px 16px}
+.kh-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin-top:8px;font-size:13.5px}.kh-grid div{display:flex;align-items:center;gap:6px}
+kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--body,system-ui);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:4px 5px;background:var(--surface-2)}
+.kbd-tip{display:none}@media (hover:hover) and (min-width:1024px){.kbd-tip{display:inline}}

@@ -18,6 +18,7 @@ import { go } from "../../app/router";
 import { SplitEditor, SplitState } from "../practice/SplitEditor";
 import { parseQuick, QUICK_HELP } from "../../sports/volleyball/quickcodes";
 import { PlanPanel } from "../matchup/MatchupPage";
+import { KEYMAP, useStatKeys } from "./keys";
 
 const TAGS = ["Great play", "Review this", "Serve receive", "Rotation breakdown", "Defense", "Coachable moment"];
 
@@ -37,6 +38,19 @@ export function Tracker({ m }: { m: Match }) {
     }
   }, [m]);
   useDragDrop(onDrop, !!(c && c.lu && !scr));
+  const recRef = { current: null as null | ((k: ActionCode) => boolean) };
+  const [keyHelp, setKeyHelp] = useState(false);
+  useStatKeys(!!c, {
+    record: (k) => { recRef.current?.(k); },
+    selectNum: (num) => {
+      const pool = scr ? activePlayers().filter((p) => scr.a.ids.includes(p.id) || scr.b.ids.includes(p.id)) : activePlayers();
+      const p = pool.find((x) => String(x.num) === num); if (!p) return false;
+      setUi({ sel: p.id }); return true;
+    },
+    clear: () => setUi({ sel: null, follow: null }),
+    undo: () => { const u = undoLast(m.id); setUi({ follow: null }); toast(u ? "Undid " + describe(u as any) : "Nothing of yours to undo."); },
+    help: () => setKeyHelp((x) => !x),
+  });
 
   if (!c) return <p className="empty">This match has no sets yet.</p>;
   const setA = aggregate([c]), mA = aggregate(R.sets);
@@ -66,6 +80,7 @@ export function Tracker({ m }: { m: Match }) {
     else { setUi({ follow: null }); toast((p ? playerName(p) + " · " : "") + a.long, { label: "Undo", fn: () => { const u = undoLast(m.id); if (u) toast("Undid " + describe(u as any)); } }); }
     return true;
   };
+  recRef.current = (k) => { const ok = record(k); if (ok && ui.sel && !(ACTIONS[k] as any).team) setUi({ sel: null }); return ok; };
   const focus = !!(state.prefs.labsFocus && state.prefs.focus);
 
   return (
@@ -90,6 +105,7 @@ export function Tracker({ m }: { m: Match }) {
       </div>
       <FollowSheet m={m} />
       {!ui.follow && <ActionSheet m={m} c={c} record={record} />}
+      {keyHelp && <KeyHelp onClose={() => setKeyHelp(false)} />}
     </div>
   );
 }
@@ -336,8 +352,8 @@ function Hint({ c, m }: { c: SetState; m: Match }) {
   const srv = serverOf(c);
   if (ui.sel) return <p className="hint">Recording for <b>{playerName(ui.sel, "full")}</b>{m.scrim ? ` (${m.scrim.b.ids.includes(ui.sel) ? m.scrim.b.name : m.scrim.a.name})` : ""}. Tap again to deselect.</p>;
   if (m.scrim) return <p className="hint">Tap a player from either team, then what they did. Points go to the right team automatically.</p>;
-  if (srv) return <p className="hint">Tap a player, then what they did. Serve buttons go to <b>{playerName(srv)}</b>{srv === c.lib ? " (libero)" : ""}, who's serving.</p>;
-  return <p className="hint">Tap a player, then what they did. Misc, Transition and Opponent work without a player.</p>;
+  if (srv) return <p className="hint">Tap a player, then what they did. Serve buttons go to <b>{playerName(srv)}</b>{srv === c.lib ? " (libero)" : ""}, who's serving. <span className="kbd-tip muted">Laptop? Press <kbd>?</kbd> for keyboard entry.</span></p>;
+  return <p className="hint">Tap a player, then what they did. Misc, Transition and Opponent work without a player. <span className="kbd-tip muted">Laptop? Press <kbd>?</kbd> for keyboard entry.</span></p>;
 }
 
 /* ---------- pad ---------- */
@@ -473,5 +489,18 @@ function ActionSheet({ m, c, record }: { m: Match; c: SetState; record: (k: Acti
       const label = ({ CE: "Comms", PE: "Position" } as Record<string, string>)[k] || a.label.replace(/^Error · /, "Err ");
       return <button key={k} className={"act " + cls} onClick={() => tap(k)}>{label}</button>;
     })}</div></div>)}</div>
+  </div>;
+}
+
+/* ---------- keyboard help ---------- */
+function KeyHelp({ onClose }: { onClose: () => void }) {
+  return <div className="keyhelp" role="dialog" aria-label="Keyboard shortcuts">
+    <div className="row between"><b>Keyboard entry</b><button className="btn sm ghost" onClick={onClose}>Close</button></div>
+    <p className="small muted">Type a jersey number, then a letter. Two digits in a row make one number. Shift for the opponent.</p>
+    <div className="kh-grid">
+      {KEYMAP.map(([k, , l]) => <div key={k}><kbd>{k === k.toUpperCase() && /[A-Z]/.test(k) ? "⇧" + k : k}</kbd><span>{l}</span></div>)}
+      <div><kbd>p</kbd><kbd>3</kbd>…<kbd>0</kbd><span>Pass grade</span></div>
+      <div><kbd>⌫</kbd><span>Undo</span></div><div><kbd>Esc</kbd><span>Clear player</span></div><div><kbd>?</kbd><span>Show or hide this</span></div>
+    </div>
   </div>;
 }
