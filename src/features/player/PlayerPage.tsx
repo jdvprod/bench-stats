@@ -9,6 +9,9 @@ import { LineChart } from "../../ui/charts";
 import { AiCard } from "../../ui/ai";
 import { reportCardPrompt } from "../../ai/prompts";
 import { go } from "../../app/router";
+import { cloudAvailable, currentUser } from "../../cloud/client";
+import { isLinked, shareRecruit } from "../../cloud/sync";
+import { copyText } from "../../ui/kit";
 import { CourtSvg } from "../../ui/court";
 import { tendencies } from "../../sports/volleyball/tendencies";
 
@@ -144,17 +147,21 @@ const PF: [keyof RecruitProfile, string, string][] = [
   ["email", "Player email", "name@email.com"], ["phone", "Player phone", ""], ["video", "Highlight video link", "https://…"], ["coachContact", "Coach contact", "Your name and email"],
 ];
 function Recruiting({ id, rows, A }: { id: string; rows: Row[]; A: Agg }) {
-  const p = player(id)!, pr = p.profile || {};
+  const p = player(id)!, pr = p.profile || {}, t = team()!;
   const [open, setOpen] = useState(!!Object.values(pr).some(Boolean));
+  const [busy, setBusy] = useState(false), [url, setUrl] = useState("");
+  const canShare = cloudAvailable() && !!currentUser() && isLinked(t.id) && !t.sample;
   const set = (k: keyof RecruitProfile, v: string) => patch("players", id, { profile: { ...pr, [k]: v } });
   return <Card title={<>Recruiting profile <span className="tag" style={{ verticalAlign: 2 }}>Preview</span></>} actions={<div className="row">
     {!open && <button className="btn sm" onClick={() => setOpen(true)}>Fill in</button>}
+    {canShare && <button className="btn sm" disabled={busy} onClick={async () => { setBusy(true); try { const r = await shareRecruit(t.id, id, recruitHtml(id, rows, A)); setUrl(r.url); const ok = await copyText(r.url); toast(ok ? "Profile link copied. It's a snapshot; tap again after new matches." : "Profile link: " + r.url); } catch (e: any) { toast(e?.message || "Couldn't share the profile."); } setBusy(false); }}>{busy ? "Publishing…" : url ? "Update profile link" : "Share profile link"}</button>}
     <button className="btn sm primary" onClick={() => { download(`${p.first} ${p.last} recruiting profile.html`, recruitHtml(id, rows, A), "text/html"); toast("Recruiting sheet saved. Send it to college coaches or attach it to emails."); }}>Download recruiting sheet</button></div>}>
     {open ? <div className="stack">
       <div className="pf-grid">{PF.map(([k, label, ph]) => <label key={k} className="field"><span className="label">{label}</span><input key={id + k} defaultValue={pr[k] || ""} placeholder={ph} onBlur={(e) => set(k, e.target.value.trim())} /></label>)}</div>
       <label className="field"><span className="label">About</span><textarea key={id + "about"} rows={3} defaultValue={pr.about || ""} placeholder="Strengths, leadership, what they're looking for in a program" onBlur={(e) => set("about", e.target.value.trim())} /></label>
-      <p className="keys">Stays private on your account. Only what's in the downloaded sheet is shared. Full recruiting profiles and college-coach sharing are coming soon.</p>
+      <p className="keys">Stays private on your account until you share it. The download and the profile link show the player's full name, these details and verified stats; the link is a snapshot you can update anytime.</p>
     </div> : <p className="small muted">Measurables, contact info and a highlight link, combined with verified season stats into a one-page sheet for college coaches.</p>}
+    {url && <p className="small" style={{ marginBottom: 0 }}>Profile link: <a href={url} target="_blank" rel="noopener">{url}</a></p>}
   </Card>;
 }
 
@@ -173,7 +180,7 @@ table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--li
 <div class="hero"><div class="n">${esc(p.num)}</div><div><h1>${esc(p.first + " " + p.last)}</h1><div class="sub">${esc([p.pos, p.height, p.grad ? "Class of " + p.grad : ""].filter(Boolean).join(" · "))}</div><div class="sub">${esc([t.name, t.level, pr.club].filter(Boolean).join(" · "))}</div></div></div>
 ${pr.about ? `<p style="margin-top:14px">${esc(pr.about)}</p>` : ""}
 ${p.height || pr.reach || pr.approach || pr.block || pr.hand || pr.gpa ? `<h2>Measurables</h2><div class="g">${item("Height", p.height)}${item("Standing reach", pr.reach)}${item("Approach jump", pr.approach)}${item("Block jump", pr.block)}${item("Dominant hand", pr.hand)}${item("GPA", pr.gpa)}</div>` : ""}
-<h2>Season stats (${pm.sets} sets, tracked live)</h2><div class="g">${stats.map(([l, v]) => item(l, v)).join("")}</div>
+<h2>Season stats (${pm.sets} ${pm.sets === 1 ? "set" : "sets"}, tracked live)</h2><div class="g">${stats.map(([l, v]) => item(l, v)).join("")}</div>
 ${best.length ? `<h2>Best matches</h2><table><thead><tr><th>Date</th><th>Opponent</th><th>Kills</th><th>Digs</th><th>Assists</th><th>Aces</th></tr></thead><tbody>${best.map(({ r }) => `<tr><td>${esc(r.m.date)}</td><td>${esc(r.m.opp)}</td><td>${r.s?.K ?? 0}</td><td>${r.s?.D ?? 0}</td><td>${r.s?.AST ?? 0}</td><td>${r.s?.SA ?? 0}</td></tr>`).join("")}</tbody></table>` : ""}
 ${pr.video ? `<h2>Highlights</h2><p><a href="${esc(pr.video)}">${esc(pr.video)}</a></p>` : ""}
 ${pr.email || pr.phone || pr.coachContact ? `<h2>Contact</h2><div class="g">${item("Player email", pr.email)}${item("Player phone", pr.phone)}${item("Coach", pr.coachContact)}</div>` : ""}

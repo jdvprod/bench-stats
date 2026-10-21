@@ -22,6 +22,7 @@ import { createSampleTeam } from "../data/seed";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { WatchPage } from "../cloud/WatchPage";
 import { SeasonPage } from "../cloud/SeasonPage";
+import { RecruitPage } from "../cloud/RecruitPage";
 import { ClubPage } from "../features/club/ClubPage";
 import { JoinPage } from "../cloud/CloudCard";
 import { AccountChip, AccountPage, AuthPage, skipAccounts, syncDot, wantsAuthGate } from "../cloud/AuthPage";
@@ -36,6 +37,7 @@ export function App() {
   useEffect(() => { applyTheme(t?.color || "#2A78AE", state.prefs.theme, state.prefs.size, HOST_THEME); }, [t?.color, state.prefs.theme, state.prefs.size]);
   if (route.page === "watch" && route.id) return <><WatchPage code={route.id} /><Toast /></>;
   if (route.page === "season" && route.id) return <><SeasonPage code={route.id} /><Toast /></>;
+  if (route.page === "recruit" && route.id) return <RecruitPage code={route.id} />;
   if (!state.ready) return <div className="content"><p className="empty" style={{ padding: 24 }}>Loading…</p></div>;
   const user = currentUser();
   if (route.page === "sample") {

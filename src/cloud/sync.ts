@@ -176,6 +176,18 @@ export async function shareSeason(teamId: string, seasonId: string) {
   return { code: c, url: location.origin + location.pathname + "#/season/" + c };
 }
 
+/** Publish (or refresh) a player's recruiting page. The page is a snapshot: tap again after new matches. */
+export async function shareRecruit(teamId: string, playerId: string, html: string) {
+  const existing: any[] = await rest(`recruit_shares?select=code&team_id=eq.${encodeURIComponent(teamId)}&player_id=eq.${encodeURIComponent(playerId)}&limit=1`);
+  let c = existing[0]?.code;
+  if (c) await rest(`recruit_shares?code=eq.${c}`, { method: "PATCH", headers: { prefer: "return=minimal" } as any, body: JSON.stringify({ html, updated_at: new Date().toISOString() }) });
+  else { c = code(6); await rest("recruit_shares", { method: "POST", headers: { prefer: "return=minimal" } as any, body: JSON.stringify({ code: c, team_id: teamId, player_id: playerId, html }) }); }
+  return { code: c as string, url: location.origin + location.pathname + "#/recruit/" + c };
+}
+export async function unshareRecruit(teamId: string, playerId: string) {
+  await rest(`recruit_shares?team_id=eq.${encodeURIComponent(teamId)}&player_id=eq.${encodeURIComponent(playerId)}`, { method: "DELETE" });
+}
+
 /* ---------- start ---------- */
 let started = false;
 export function startSync() {

@@ -213,3 +213,27 @@ language sql security definer set search_path = public as $$
   returning n;
 $$;
 revoke execute on function public.ai_bump(uuid) from public, anon, authenticated;
+
+-- ---------- recruiting profile links: a snapshot page a coach shares with college coaches ----------
+create table if not exists public.recruit_shares (
+  code text primary key,
+  team_id text not null references public.teams_cloud(id) on delete cascade,
+  player_id text not null,
+  html text not null,
+  updated_at timestamptz not null default now(),
+  unique (team_id, player_id)
+);
+alter table public.recruit_shares enable row level security;
+drop policy if exists "recruit read" on public.recruit_shares;
+create policy "recruit read" on public.recruit_shares for select using (is_member(team_id));
+drop policy if exists "recruit create" on public.recruit_shares;
+create policy "recruit create" on public.recruit_shares for insert with check (can_edit(team_id));
+drop policy if exists "recruit update" on public.recruit_shares;
+create policy "recruit update" on public.recruit_shares for update using (can_edit(team_id));
+drop policy if exists "recruit delete" on public.recruit_shares;
+create policy "recruit delete" on public.recruit_shares for delete using (can_edit(team_id));
+create or replace function public.recruit_view(share text) returns jsonb
+language sql stable security definer set search_path = public as $$
+  select jsonb_build_object('html', html, 'updated_at', updated_at) from recruit_shares where code = upper(trim(share));
+$$;
+grant execute on function public.recruit_view(text) to anon, authenticated;
