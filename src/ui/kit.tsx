@@ -27,8 +27,10 @@ export function SetRow({ title, sub, children }: { title: ReactNode; sub?: React
   return <div className="setrow"><div className="t"><b>{title}</b>{sub && <span>{sub}</span>}</div>{children}</div>;
 }
 
-export function Kpi({ label, value, sub, color }: { label: string; value: ReactNode; sub?: ReactNode; color?: string }) {
-  return <div className="kpi"><div className="label">{label}</div><div className="v" style={color ? { color } : undefined}>{value}</div>{sub && <div className="s">{sub}</div>}</div>;
+export function Kpi({ label, value, sub, color, delta }: { label: string; value: ReactNode; sub?: ReactNode; color?: string; delta?: { text: string; better: boolean | null } | null }) {
+  return <div className="kpi"><div className="label">{label}</div><div className="v" style={color ? { color } : undefined}>{value}</div>
+    {delta && <div className={"dl " + (delta.better === true ? "up" : delta.better === false ? "down" : "")}>{delta.text}</div>}
+    {sub && <div className="s">{sub}</div>}</div>;
 }
 
 /** A button that asks for a second tap before doing something destructive. */

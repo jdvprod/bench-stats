@@ -1,11 +1,11 @@
 import { useState } from "react";
-import { patch, player, playerName, seasonsOf, team, teamPlayers, toast } from "../../data/store";
+import { patch, player, playerName, replayOf, seasonsOf, team, teamPlayers, toast } from "../../data/store";
 import { aggregate, Agg, Stat } from "../../sports/volleyball/engine";
 import { AttackContext, CONTEXT_LABEL } from "../../sports/volleyball/actions";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, fmtRatio, fmtSigned, hitting, passAvg, perfectPassPct, playerMetrics, ratio, serveAttempts, serveEfficiency, serveErrors, serveInPct, teamMetrics, netPoints } from "../../sports/volleyball/metrics";
 import { flags } from "../../sports/volleyball/flags";
 import { Card, copyText, download, fmtDate, Kpi, Seg } from "../../ui/kit";
-import { Diverge, StackBar } from "../../ui/charts";
+import { Diverge, LineChart, StackBar } from "../../ui/charts";
 import { AiCard } from "../../ui/ai";
 import { reportPrompt, snapshot, statLine } from "../../ai/prompts";
 import { setUi, ui } from "../../app/ui";
@@ -64,21 +64,25 @@ export function StatsPage() {
 function Overview({ S, A }: { S: Scope; A: Agg }) {
   const t = team()!, M = teamMetrics(A), T = A.T, single = S.single;
   const su = A.src.us, st = A.src.them, g = (k: string) => su[k] || 0, h = (k: string) => st[k] || 0;
+  // season baseline for comparison when looking at one match or set
+  const B = single && single.m.kind === "match" ? (() => { const ms = seasonMatches(ui.statsSeason, "games").filter((x) => x.id !== single.m.id); const sets = ms.flatMap((x) => replayOf(x)?.sets || []); return sets.length ? teamMetrics(aggregate(sets)) : null; })() : null;
   const fl = single && !single.setN ? flags(single.R, { us: t.name, them: single.m.opp, subLimit: t.settings.subLimit, playerIds: teamPlayers().map((p) => p.id), short: (id) => playerName(id) }) : [];
   return <div className="stack">
     {single && <AiCard key={single.m.id} title={single.m.kind === "match" ? "Match report" : "Practice report"} desc="What decided it, standouts, concerns and practice priorities, written from the stats. Saved with the match." button="Write the report" prompt={() => reportPrompt(single.m)} saved={single.m.report} savedAt={single.m.reportAt} onSave={(text) => patch("matches", single.m.id, { report: text, reportAt: Date.now() })} filename={`${t.name} vs ${single.m.opp} report`} />}
     <div className="kpis">
-      <Kpi label="Hitting %" value={fmtHit(M.hitting)} sub={`${T.K} kills · ${T.AE} errors · ${T.TA} att`} />
-      <Kpi label="Side-out" value={fmtPct(M.sideOut)} sub={`${A.so.w} of ${A.so.n} on their serve`} />
-      <Kpi label="First-ball side-out" value={fmtPct(M.firstBallSO)} sub="kill on the first attack after receive" />
-      <Kpi label="Point-scoring" value={fmtPct(M.pointScoring)} sub={`${A.psc.w} of ${A.psc.n} on our serve`} />
-      <Kpi label="Pass average" value={fmtAvg(M.passAvg)} sub={`${fmtPct(M.perfectPass)} perfect · ${T.P0} aced`} />
-      <Kpi label="Serving" value={fmtPct(M.serveIn)} sub={`in · ${T.SA} aces · ${serveErrors(T)} errors · eff ${fmtHit(M.serveEff)}`} />
-      <Kpi label="In-system %" value={fmtPct(M.inSystemPct)} sub="attacks off a 2 or 3 pass" />
-      <Kpi label="Dig success" value={fmtPct(M.digSuccess)} sub={`${T.D} digs · ${T.DE} dig errors`} />
+      <Kpi label="Hitting %" value={fmtHit(M.hitting)} delta={dv(M.hitting, B?.hitting, fmtHit, true)} sub={`${T.K} kills · ${T.AE} errors · ${T.TA} att`} />
+      <Kpi label="Side-out" value={fmtPct(M.sideOut)} delta={dv(M.sideOut, B?.sideOut, fmtPct, true)} sub={`${A.so.w} of ${A.so.n} on their serve`} />
+      <Kpi label="First-ball side-out" value={fmtPct(M.firstBallSO)} delta={dv(M.firstBallSO, B?.firstBallSO, fmtPct, true)} sub="kill on the first attack after receive" />
+      <Kpi label="Point-scoring" value={fmtPct(M.pointScoring)} delta={dv(M.pointScoring, B?.pointScoring, fmtPct, true)} sub={`${A.psc.w} of ${A.psc.n} on our serve`} />
+      <Kpi label="Pass average" value={fmtAvg(M.passAvg)} delta={dv(M.passAvg, B?.passAvg, (v) => fmtAvg(v), true)} sub={`${fmtPct(M.perfectPass)} perfect · ${T.P0} aced`} />
+      <Kpi label="Serving" value={fmtPct(M.serveIn)} delta={dv(M.serveIn, B?.serveIn, fmtPct, true)} sub={`in · ${T.SA} aces · ${serveErrors(T)} errors · eff ${fmtHit(M.serveEff)}`} />
+      <Kpi label="In-system %" value={fmtPct(M.inSystemPct)} delta={dv(M.inSystemPct, B?.inSystemPct, fmtPct, true)} sub="attacks off a 2 or 3 pass" />
+      <Kpi label="Dig success" value={fmtPct(M.digSuccess)} delta={dv(M.digSuccess, B?.digSuccess, fmtPct, true)} sub={`${T.D} digs · ${T.DE} dig errors`} />
       <Kpi label="Free points" value={<><span style={{ color: "var(--us)" }}>{M.freePoints.theirs}</span>–<span style={{ color: "var(--them)" }}>{M.freePoints.ours}</span></>} sub="their errors vs ours" />
-      {M.perSet && <Kpi label="Per set" value={fmtNum(M.perSet.K)} sub={`kills · ${fmtNum(M.perSet.SA)} aces · ${fmtNum(M.perSet.BLK)} blocks · ${fmtNum(M.perSet.D)} digs`} />}
+      {M.perSet && <Kpi label="Per set" value={fmtNum(M.perSet.K)} delta={dv(M.perSet.K, B?.perSet?.K, (v) => fmtNum(v), true)} sub={`kills · ${fmtNum(M.perSet.SA)} aces · ${fmtNum(M.perSet.BLK)} blocks · ${fmtNum(M.perSet.D)} digs`} />}
     </div>
+    {B && <p className="keys" style={{ marginTop: -4 }}>▲ / ▼ compare this {single?.setN ? "set" : "match"} with your season average.</p>}
+    {!single && S.items.length >= 2 && <Trends S={S} />}
     <div className="grid2">
       <Card title="Where points came from"><div className="stack">
         <div><div className="row between small"><b style={{ color: "var(--us)" }}>{t.name}</b><b className="num">{A.us}</b></div>
@@ -187,7 +191,7 @@ function Rotations({ A, S }: { A: Agg; S: Scope }) {
 /* ---------- opponent ---------- */
 function Opponent({ A }: { A: Agg }) {
   const rows = Object.entries(A.opp).sort((a, b) => b[1].K + b[1].A - (a[1].K + a[1].A));
-  return <Card title="Their players" actions={<button className="btn sm" onClick={() => go("court")}>Tendency court</button>}>
+  return <Card title="Their players" actions={<div className="row"><button className="btn sm" onClick={() => go("matchup")}>Matchups</button><button className="btn sm" onClick={() => go("court")}>Tendency court</button></div>}>
     {rows.length ? <div className="tbl"><table>
       <thead><tr><th className="l">#</th><th>Kills</th><th>Aces</th><th>Errors</th><th>Other pts</th><th className="l">Kills land most</th></tr></thead>
       <tbody>{rows.map(([n, o]) => { const z = Object.entries(o.z).filter((x) => x[0] !== "out").sort((a, b) => b[1] - a[1])[0]; return <tr key={n}><td className="l">#{n}</td><td>{o.K}</td><td>{o.A}</td><td>{o.E}</td><td>{o.P}</td><td className="l">{z ? `Zone ${z[0]} (${z[1]})` : "—"}</td></tr>; })}</tbody>
@@ -235,3 +239,29 @@ async function exportSheet(S: Scope, A: Agg) {
 }
 
 export { statLine };
+
+/** "▲ .041 vs season" */
+function dv(v: number | null, base: number | null | undefined, f: (v: number | null) => string, up: boolean): { text: string; better: boolean | null } | null {
+  if (v == null || base == null) return null;
+  const d = v - base; if (Math.abs(d) < 1e-9) return { text: "Same as season", better: null };
+  const better = (d > 0) === up;
+  return { text: `${better ? "▲" : "▼"} season ${f(base)}`, better };
+}
+
+/* Season trends: one point per match. */
+const TRENDS: [string, string, (M: ReturnType<typeof teamMetrics>) => number | null, (v: number) => string][] = [
+  ["hit", "Hitting %", (M) => M.hitting, (v) => fmtHit(v)],
+  ["so", "Side-out", (M) => M.sideOut, (v) => fmtPct(v)],
+  ["ps", "Point-scoring", (M) => M.pointScoring, (v) => fmtPct(v)],
+  ["pass", "Pass avg", (M) => M.passAvg, (v) => fmtAvg(v)],
+  ["srv", "Serve in", (M) => M.serveIn, (v) => fmtPct(v)],
+  ["err", "Errors/set", (M) => M.perSet?.errors ?? null, (v) => fmtNum(v, 1)],
+];
+function Trends({ S }: { S: Scope }) {
+  const [k, setK] = useState("hit");
+  const def = TRENDS.find((x) => x[0] === k)!;
+  const pts = S.items.slice().sort((a, b) => a.m.date.localeCompare(b.m.date)).map(({ m, R }) => ({ label: m.date.slice(5).replace("-", "/"), sub: m.opp, v: def[2](teamMetrics(aggregate(R.sets))) }));
+  return <Card title="Trend by match" actions={<Seg value={k} onChange={setK} options={TRENDS.map((x) => [x[0], x[1]] as [string, string])} />}>
+    <LineChart points={pts} format={def[3]} />
+  </Card>;
+}

@@ -5,6 +5,7 @@ const P: Record<string, string> = {
   practice: '<rect x="4" y="4" width="16" height="17" rx="2"/><path d="M8 2.5v3M16 2.5v3M4 9h16M8 13h5M8 17h8"/>',
   formations: '<rect x="3" y="3" width="18" height="18" rx="1.5"/><path d="M3 9h18"/><circle cx="7.5" cy="13" r="1.6"/><circle cx="16.5" cy="13" r="1.6"/><circle cx="12" cy="17.5" r="1.6"/><path d="M9 13.5l2 3" stroke-dasharray="1.5 1.5"/>',
   labs: '<path d="M9 3h6M10 3v6l-5.5 9.5A1.7 1.7 0 0 0 6 21h12a1.7 1.7 0 0 0 1.5-2.5L14 9V3"/><path d="M7.5 15h9"/>',
+  matchup: '<path d="M4 4l6 6M4 10l6-6"/><circle cx="17" cy="7" r="3"/><path d="M3 20c0-3 2.5-5 5.5-5s5.5 2 5.5 5"/><path d="M14.5 15.5c.8-.3 1.6-.5 2.5-.5 3 0 4.5 2 4.5 5"/>',
   stats: '<path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/>',
   court: '<rect x="5" y="2.5" width="14" height="19" rx="1"/><path d="M3 12h18M5 8.5h14M5 15.5h14"/>',
   team: '<circle cx="9" cy="8" r="3"/><path d="M3 20c0-3.3 2.7-6 6-6s6 2.7 6 6"/><circle cx="17" cy="9" r="2.3"/><path d="M16 14.2c2.9.3 5 2.7 5 5.8"/>',

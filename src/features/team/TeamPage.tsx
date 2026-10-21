@@ -110,7 +110,7 @@ function Opponents() {
         {o && <>
           <p className="small muted">{played.length ? `Played ${played.length}${rec[0] + rec[1] ? ` · record ${rec[0]}–${rec[1]}` : ""}` : "No matches recorded against them yet."}</p>
           <label className="field"><span className="label">Notes on {o.name} (kept for every match against them)</span><textarea rows={4} key={o.id} defaultValue={o.notes} placeholder="Best hitters, setter tendencies, serve targets, what worked last time…" onBlur={(e) => patch("opponents", o.id, { notes: e.target.value })} /></label>
-          <div className="row"><button className="btn sm" onClick={() => { setUi({ courtTab: "tendency" }); go("court", o.id); }}>Their tendencies on the court</button><ConfirmButton className="btn sm ghost" onConfirm={() => { remove("opponents", o.id); setSel(""); }}>Delete opponent</ConfirmButton></div>
+          <div className="row"><button className="btn sm primary" onClick={() => go("matchup", o.id)}>Open matchup</button><button className="btn sm" onClick={() => { setUi({ courtTab: "tendency" }); go("court", o.id); }}>Their tendencies on the court</button><ConfirmButton className="btn sm ghost" onConfirm={() => { remove("opponents", o.id); setSel(""); }}>Delete opponent</ConfirmButton></div>
         </>}
       </div>
     </Card>

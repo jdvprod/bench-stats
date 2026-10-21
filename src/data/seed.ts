@@ -70,6 +70,12 @@ export function createSampleTeam() {
     blocks: pick.map((n) => ds.find((d) => d.name === n)).filter(Boolean).map((d) => ({ id: uid("b"), title: d!.name, category: d!.category, minutes: d!.minutes, notes: d!.description, drillId: d!.id })) } as PracticePlan, true);
   const maya = all("players").find((p) => p.teamId === t.id && p.num === "7");
   if (maya) save("players", { ...maya, goals: [{ id: uid("g"), metric: "hitting", target: 0.3 }, { id: uid("g"), metric: "passAvg", target: 2.2 }] }, true);
+  const iso = (d: number) => new Date(now + d * day).toISOString().slice(0, 10);
+  setTeamPatch({ schedule: [
+    { id: uid("sc"), date: iso(3), time: "18:00", opp: "Lakeside", site: "away", event: "League" },
+    { id: uid("sc"), date: iso(7), time: "17:30", opp: "Westbrook", site: "home", event: "League" },
+    { id: uid("sc"), date: iso(12), time: "09:00", opp: "Valley Prep", site: "neutral", event: "Fall Classic" },
+  ] });
   const ids = SAMPLE_ROSTER.map((s) => idMap[s.id]);
   setTeamPatch({ currentMatchId: live.id, defLineup: { lu: ["1", "7", "9", "14", "4", "12"].map((n) => idMap["sp" + n]), lib: idMap.sp3, libSrv: null } });
   return { team: team()!, ids, all: all("players") };

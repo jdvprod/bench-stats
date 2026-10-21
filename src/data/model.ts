@@ -28,6 +28,8 @@ export interface Team {
   sample?: boolean;
   /** Where players stand in each rotation (serve receive, serving, base defense). */
   formations?: import("../sports/volleyball/formations").Formations | null;
+  /** Upcoming matches. */
+  schedule?: ScheduleItem[];
   formationPresets?: { id: string; name: string; f: import("../sports/volleyball/formations").Formations }[];
 }
 
@@ -72,7 +74,9 @@ export interface Match {
 /** Events recorded on one device for one match. Several devices can record the same match. */
 export interface EventLog { id: string; matchId: string; device: string; events: MatchEvent[] }
 
-export interface Opponent { id: string; teamId: string; name: string; notes: string; scout: string; scoutAt: number | null }
+export interface PlanItem { id: string; text: string; done?: boolean }
+export interface Opponent { id: string; teamId: string; name: string; notes: string; scout: string; scoutAt: number | null; plan?: PlanItem[] }
+export interface ScheduleItem { id: string; date: string; time: string; opp: string; site: "home" | "away" | "neutral" | ""; event: string }
 
 export const DRILL_CATEGORIES = ["Warm-up", "Serving", "Serve receive", "Setting", "Attacking", "Blocking", "Defense", "Transition", "Game play", "Conditioning", "Team talk"] as const;
 export interface Drill { id: string; teamId: string; name: string; category: string; minutes: number; description: string; focus: string[] }

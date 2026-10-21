@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { activePlayers, currentMatch, matchesOf, newMatch, opponentsOf, team, todayISO } from "../../data/store";
+import { activePlayers, currentMatch, ensureOpponent, matchesOf, newMatch, opponentsOf, team, todayISO } from "../../data/store";
 import { Card, fmtDate, Seg } from "../../ui/kit";
 import { Tracker } from "./Tracker";
 import { go } from "../../app/router";
@@ -19,6 +19,7 @@ export function StartMatch() {
   const t = team()!, opps = opponentsOf();
   const [opp, setOpp] = useState(""), [date, setDate] = useState(todayISO()), [site, setSite] = useState<"home" | "away" | "neutral">("home");
   const [event, setEvent] = useState(""), [bestOf, setBestOf] = useState(t.settings.bestOf);
+  const upcoming = (t.schedule || []).filter((x) => x.date >= todayISO()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 3);
   const recent = matchesOf().filter((x) => x.kind === "match" && x.status === "done").slice(0, 3);
   const start = (serve: "us" | "them") => {
     newMatch({ kind: "match", opp: opp.trim() || "Opponent", date, site, event: event.trim(), bestOf, serve });
@@ -40,10 +41,10 @@ export function StartMatch() {
     </Card>
     <div className="stack">
       <Card title="Recent matches">{recent.length ? <ul className="log">{recent.map((x) => <li key={x.id}><span>{fmtDate(x.date)} vs {x.opp}</span><span /><span /></li>)}</ul> : <p className="empty">Matches you track show up here and on the Stats tab.</p>}</Card>
-      <Card title="Before the match"><div className="stack small">
-        <p>Check the scouting report for this opponent on the Team tab, and review where their kills land on the Court tab.</p>
-        <div className="row"><button className="btn sm" onClick={() => go("court")}>Opponent tendencies</button><button className="btn sm" onClick={() => go("lineup")}>Lineup &amp; rotations</button></div>
-      </div></Card>
+      <Card title="Up next" actions={<button className="btn sm" onClick={() => go("matchup")}>Schedule</button>}>{upcoming.length ? <ul className="mu-sched">{upcoming.map((s) => <li key={s.id}>
+        <button className="mu-sched-main" onClick={() => { const o = ensureOpponent(s.opp); go("matchup", o.id); }}><span className="d"><b>{new Date(s.date + "T12:00").toLocaleDateString([], { month: "short", day: "numeric" })}</b>{new Date(s.date + "T12:00").toLocaleDateString([], { weekday: "short" })}</span><span className="o"><b>{s.site === "away" ? "at " : "vs "}{s.opp}</b><small>See the matchup</small></span></button>
+        {s.date === todayISO() && <button className="btn sm primary" onClick={() => { setOpp(s.opp); setSite((s.site || "home") as any); setEvent(s.event); }}>Use</button>}</li>)}</ul>
+        : <p className="empty">Add your schedule on the Matchups tab to get a scouting page before every game.</p>}</Card>
     </div>
   </div>;
 }
