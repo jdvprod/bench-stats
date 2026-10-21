@@ -524,3 +524,4 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .toast-act{background:none;border:0;color:var(--us-bright);font:inherit;font-weight:700;cursor:pointer;padding:2px 4px;margin:-2px -6px -2px 0}
 .blk-ctl{margin-left:auto;display:flex;gap:4px}.blk-ctl .btn{min-width:34px}
 .blk-head{display:flex;align-items:center;gap:6px;min-width:0}.blk-head .btn.sm{padding:4px 8px}@media (max-width:480px){.blk-head{flex-wrap:wrap}}
+th.sortable{cursor:pointer;user-select:none;white-space:nowrap}th.sortable:hover{color:var(--ink)}th.sortable.on{color:var(--accent)}

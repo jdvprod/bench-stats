@@ -112,24 +112,44 @@ const filmTime = (ts: number, base: number) => { let s = Math.max(0, Math.round(
 /* ---------- players ---------- */
 function Players({ A }: { A: Agg }) {
   const [mode, setMode] = useState<"totals" | "perset" | "advanced" | "compare">("totals");
-  const ids = teamPlayers().filter((p) => A.ps[p.id] || A.pm[p.id]).map((p) => p.id);
+  const S = useSort(), Z = {} as Stat;
+  const ids = S.apply(teamPlayers().filter((p) => A.ps[p.id] || A.pm[p.id]).map((p) => p.id), (id, k) => {
+    const s = A.ps[id] || Z, pm = playerMetrics(A, id), n = pm.sets || 1;
+    if (k.startsWith("t")) { const v = TOTAL_GET[+k.slice(1)](s); return v == null || Number.isNaN(v) ? null : v; }
+    switch (k) {
+      case "num": return -(+player(id)!.num || 0);
+      case "sets": return pm.sets; case "kps": return pm.kps; case "aps2": return pm.acesPs; case "bps": return pm.bps; case "dps": return pm.dps; case "asps": return pm.aps;
+      case "rps": return s.R != null ? s.R / n : null; case "eps": return s.AE != null ? (s.AE + serveErrors(s) + s.P0 + s.BE + s.BHE + s.DE) / n : null; case "nps": return pm.netPerSet;
+      case "kp": return pm.killPct; case "hit": return pm.hitting; case "pp": return pm.perfectPass; case "gp": return s.R ? (s.R3 + s.R2) / s.R : null; case "si": return pm.serveIn; case "se": return pm.serveEff; case "ae": return pm.aceErr; case "pmn": return pm.plusMinus; case "np": return pm.netPoints;
+    }
+    return null;
+  });
   const cls = (s: Stat) => ({ hc: s.TA >= 5 ? ((hitting(s) || 0) >= 0.3 ? "hi" : (hitting(s) || 0) < 0.1 ? "lo" : "") : "", pc: s.R >= 4 ? (s.RS / s.R >= 2.3 ? "hi" : s.RS / s.R < 1.7 ? "lo" : "") : "" });
   return <Card title="Players" actions={<Seg value={mode} onChange={setMode} options={[["totals", "Totals"], ["perset", "Per set"], ["advanced", "Advanced"], ["compare", "Compare"]]} />}>
     {mode === "compare" ? <Compare A={A} ids={ids} /> : <>
     <div className="tbl"><table>
       {mode === "totals" && <><thead>
         <tr><th /><th /><th colSpan={4} className="gh">Hitting</th><th colSpan={3} className="gh">Setting</th><th colSpan={5} className="gh">Serve</th><th colSpan={3} className="gh">Receive</th><th colSpan={2} className="gh">Defense</th><th colSpan={3} className="gh">Block</th><th colSpan={3} className="gh">Misc errors</th></tr>
-        <tr><th className="l">#</th><th className="l">Player</th><th>K</th><th>TA</th><th>E</th><th>Hit %</th><th>Att</th><th>Ast</th><th>E</th><th>Att</th><th>Ace</th><th>In</th><th>Net</th><th>Out</th><th>Avg</th><th>Rec</th><th>0s</th><th>Dig</th><th>Dig E</th><th>Solo</th><th>Ast</th><th>E</th><th>Comm</th><th>Eff</th><th>Pos</th></tr></thead>
+        <tr><th className="l">#</th><th className="l">Player</th>{["K", "TA", "E", "Hit %", "Att", "Ast", "E", "Att", "Ace", "In", "Net", "Out", "Avg", "Rec", "0s", "Dig", "Dig E", "Solo", "Ast", "E", "Comm", "Eff", "Pos"].map((l, i) => S.th(l, "t" + i))}</tr></thead>
         <tbody>{ids.map((id) => { const s = A.ps[id] || ({} as Stat), c = cls(s), p = player(id)!; return <tr key={id} className="click" onClick={() => go("player", id)}><td className="l">{p.num}</td><td className="l">{p.first} {p.last} <span className="label">{p.pos}</span></td>{totals(s, c.hc, c.pc)}</tr>; })}</tbody>
         <tfoot><tr><td /><td className="l">Team</td>{totals(A.T, "", "")}</tr></tfoot></>}
-      {mode === "perset" && <><thead><tr><th className="l">#</th><th className="l">Player</th><th>Sets</th><th>Kills/S</th><th>Aces/S</th><th>Blocks/S</th><th>Digs/S</th><th>Assists/S</th><th>Rec/S</th><th>Errors/S</th><th>Net pts/S</th></tr></thead>
+      {mode === "perset" && <><thead><tr><th className="l">#</th><th className="l">Player</th>{S.th("Sets", "sets")}{S.th("Kills/S", "kps")}{S.th("Aces/S", "aps2")}{S.th("Blocks/S", "bps")}{S.th("Digs/S", "dps")}{S.th("Assists/S", "asps")}{S.th("Rec/S", "rps")}{S.th("Errors/S", "eps")}{S.th("Net pts/S", "nps")}</tr></thead>
         <tbody>{ids.map((id) => { const s = A.ps[id], pm = playerMetrics(A, id), p = player(id)!, n = pm.sets || 1; return <tr key={id} className="click" onClick={() => go("player", id)}><td className="l">{p.num}</td><td className="l">{p.first} {p.last}</td><td>{pm.sets}</td><td>{fmtNum(pm.kps, 2)}</td><td>{fmtNum(pm.acesPs, 2)}</td><td>{fmtNum(pm.bps, 2)}</td><td>{fmtNum(pm.dps, 2)}</td><td>{fmtNum(pm.aps, 2)}</td><td>{s ? fmtNum(s.R / n, 2) : "—"}</td><td>{s ? fmtNum((s.AE + serveErrors(s) + s.P0 + s.BE + s.BHE + s.DE) / n, 2) : "—"}</td><td><b>{fmtNum(pm.netPerSet, 2)}</b></td></tr>; })}</tbody></>}
-      {mode === "advanced" && <><thead><tr><th className="l">#</th><th className="l">Player</th><th>Kill %</th><th>Hit %</th><th>Perfect pass %</th><th>Good pass %</th><th>Serve in %</th><th>Serve eff</th><th>Ace : error</th><th>+/−</th><th>Net points</th></tr></thead>
+      {mode === "advanced" && <><thead><tr><th className="l">#</th><th className="l">Player</th>{S.th("Kill %", "kp")}{S.th("Hit %", "hit")}{S.th("Perfect pass %", "pp")}{S.th("Good pass %", "gp")}{S.th("Serve in %", "si")}{S.th("Serve eff", "se")}{S.th("Ace : error", "ae")}{S.th("+/−", "pmn")}{S.th("Net points", "np")}</tr></thead>
         <tbody>{ids.map((id) => { const s = A.ps[id] || ({} as Stat), pm = playerMetrics(A, id), p = player(id)!; return <tr key={id} className="click" onClick={() => go("player", id)}><td className="l">{p.num}</td><td className="l">{p.first} {p.last}</td><td>{fmtPct(pm.killPct)}</td><td>{fmtHit(pm.hitting)}</td><td>{fmtPct(pm.perfectPass)}</td><td>{fmtPct(s.R ? (s.R3 + s.R2) / s.R : null)}</td><td>{fmtPct(pm.serveIn)}</td><td>{fmtHit(pm.serveEff)}</td><td>{fmtRatio(pm.aceErr)}</td><td><b style={{ color: (pm.plusMinus || 0) > 0 ? "var(--good)" : (pm.plusMinus || 0) < 0 ? "var(--muted)" : undefined }}>{fmtSigned(pm.plusMinus)}</b></td><td>{fmtSigned(pm.netPoints)}</td></tr>; })}</tbody></>}
     </table></div>
-    <p className="keys" style={{ marginTop: 8 }}>{mode === "totals" ? "Hit % = (kills − errors) ÷ attempts. Pass on a 0–3 scale. Green and red mark standouts once there are enough attempts. Tap a player for her page." : mode === "perset" ? "Per set uses the sets each player recorded a stat or was on court in. Net points = kills, aces and blocks minus errors." : "+/− counts rallies won minus lost while she was on court (needs a lineup). Serve eff = (aces − errors) ÷ serves. Ace : error above 1.0 is strong."}</p></>}
+    <p className="keys" style={{ marginTop: 8 }}>{mode === "totals" ? "Hit % = (kills − errors) ÷ attempts. Pass on a 0–3 scale. Green and red mark standouts once there are enough attempts. Tap a column to sort, or a player for their page." : mode === "perset" ? "Per set uses the sets each player recorded a stat or was on court in. Net points = kills, aces and blocks minus errors." : "+/− counts rallies won minus lost while she was on court (needs a lineup). Serve eff = (aces − errors) ÷ serves. Ace : error above 1.0 is strong."}</p></>}
   </Card>;
 }
+const TOTAL_GET: ((s: Stat) => number | null)[] = [(s) => s.K, (s) => s.TA, (s) => s.AE, (s) => hitting(s), (s) => s.SATT, (s) => s.AST, (s) => s.BHE, (s) => serveAttempts(s), (s) => s.SA, (s) => s.SI, (s) => s.SEN, (s) => s.SEO + s.SE, (s) => passAvg(s), (s) => s.R, (s) => s.P0, (s) => s.D, (s) => s.DE, (s) => s.BS, (s) => s.BA, (s) => s.BE, (s) => s.CE, (s) => s.EE, (s) => s.PE];
+/** Click-to-sort for stat tables: first click sorts high to low, second low to high, third clears. */
+function useSort() {
+  const [k, setK] = useState<string | null>(null), [d, setD] = useState(-1);
+  const th = (label: string, key: string, title?: string) => <th key={key} title={title} className={"sortable" + (k === key ? " on" : "")} aria-sort={k === key ? (d < 0 ? "descending" : "ascending") : undefined} onClick={() => { if (k !== key) { setK(key); setD(-1); } else if (d < 0) setD(1); else setK(null); }}>{label}{k === key ? (d < 0 ? " ▾" : " ▴") : ""}</th>;
+  const apply = <T,>(rows: T[], get: (r: T, key: string) => number | null | undefined) => !k ? rows : rows.slice().sort((a, b) => { const x = get(a, k), y = get(b, k); if (x == null && y == null) return 0; if (x == null) return 1; if (y == null) return -1; return d * (x - y); });
+  return { th, apply, reset: () => setK(null) };
+}
+
 function totals(s: Stat, hc: string, pc: string) {
   const v = [s.K, s.TA, s.AE, <b className={hc}>{fmtHit(hitting(s))}</b>, s.SATT, s.AST, s.BHE, serveAttempts(s), s.SA, s.SI, s.SEN, s.SEO + s.SE, <b className={pc}>{fmtAvg(passAvg(s))}</b>, s.R, s.P0, s.D, s.DE, s.BS, s.BA, s.BE, s.CE, s.EE, s.PE];
   return v.map((x, i) => <td key={i}>{x ?? 0}</td>);
