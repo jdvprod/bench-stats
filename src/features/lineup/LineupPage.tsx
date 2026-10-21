@@ -53,6 +53,10 @@ export function LineupPage() {
   const sets = matchesOf().filter((x) => x.kind === "match" && (!t.activeSeasonId || x.seasonId === t.activeSeasonId)).flatMap((x) => replayOf(x)?.sets || []);
   const same = sets.filter((s) => s.startLu && s.startLu.join() === lu.join());
   const A = aggregate(statsFrom === "lineup" ? same : sets);
+  // Rotation results keyed by who is in position 1 (the server), so they follow the players when the lineup is rotated or reordered.
+  const byP1 = new Map<string, { w: number; l: number; rw: number; rn: number; sw: number; sn: number }>();
+  for (const r of A.rallies) { const p1 = r.onCourt[0]; if (!p1 || r.onCourt.length < 6) continue; const x = byP1.get(p1) || { w: 0, l: 0, rw: 0, rn: 0, sw: 0, sn: 0 }; byP1.set(p1, x); const won = r.w === "us"; if (won) x.w++; else x.l++; if (r.server === "them") { x.rn++; if (won) x.rw++; } else { x.sn++; if (won) x.sw++; } }
+  const rotStat = (r: number) => byP1.get(rotateLineup(lu, r - 1)[0]) || null;
 
   const suggest = async () => {
     if (!aiAvailable()) return setErr(AI_ERRORS.no_key);
@@ -125,19 +129,20 @@ export function LineupPage() {
             <div className="row"><button className="btn sm" onClick={() => { setLu(adv.lineup.slice()); setLib(adv.libero); setLibSrv(null); toast("Loaded. Save it to keep it."); }}>Load into builder</button><span className="small muted">Suggested {new Date(adv.at).toLocaleDateString()}</span></div>
           </div> : <p className="small muted">Uses every player's hitting, passing, serving and your rotation results to suggest a starting six. You can load it, tweak it, and save.</p>}
         </Card>
+        <StartRotation rotStat={rotStat} lu={lu} valid={valid} onUse={(n) => { setLu(rotateLineup(lu, n - 1)); toast(`Rotated: what was rotation ${n} is now your starting rotation. Save it to keep it.`); }} />
       </div>
     </div>
     <SubPlan />
     <Card title="All six rotations" actions={<Seg value={statsFrom} onChange={setStatsFrom} options={[["season", "Season results"], ["lineup", `This lineup (${same.length} sets)`]]} />}>
       <div className="rots">{[1, 2, 3, 4, 5, 6].map((r) => {
-        const L = rotateLineup(lu, r - 1), li = liberoFor(L, lib, libSrv), x = A.rot[r], net = x ? x.w - x.l : 0;
+        const L = rotateLineup(lu, r - 1), li = liberoFor(L, lib, libSrv), x = rotStat(r), net = x ? x.w - x.l : 0;
         const cell = (i: number) => { const isL = li === i, id = isL ? lib : L[i]; return <div key={i} className={(i === 0 ? "srvp " : "") + (isL ? "libx" : "")} title={isL ? `${playerName(lib)} in for ${playerName(L[i])}` : undefined}><b>{player(id)?.num ?? "–"}</b>{id ? playerName(id, "first") : "—"}</div>; };
         return <div key={r} className="rotcard">
           <div className="hd"><span>Rotation {r}</span>{x && x.w + x.l > 0 && <span style={{ color: net > 0 ? "var(--good)" : net < 0 ? "var(--muted)" : undefined }}>{fmtSigned(net)}</span>}</div>
           <div className="mini3"><span className="net" />{FRONT.map(cell)}{BACK.map(cell)}</div>
           <div className="small muted" style={{ marginTop: 6 }}>Serving: {playerName(li === 0 ? lib : L[0]) || "—"}{x && x.rn ? ` · SO ${fmtPct(ratio(x.rw, x.rn))}` : ""}{x && x.sn ? ` · PS ${fmtPct(ratio(x.sw, x.sn))}` : ""}</div>
         </div>; })}</div>
-      <p className="keys" style={{ marginTop: 8 }}>Highlighted box = server. Dashed = libero in for that player. SO = side-out %, PS = point-scoring % in that rotation.</p>
+      <p className="keys" style={{ marginTop: 8 }}>Highlighted box = server. Dashed = libero in for that player. Results follow the player in the serving spot, so they stay right if you rotate or reorder the lineup. SO = side-out %, PS = point-scoring %.</p>
     </Card>
   </div>;
 }
@@ -176,5 +181,24 @@ function SubPlan() {
         <button className="btn sm primary" disabled={!out || !inn || out === inn} onClick={() => { save2(plan.concat({ id: uid("sp"), rot, out, in: inn })); setIn(""); setOut(""); toast("Planned sub added"); }}>Add</button>
       </div>
     </div>
+  </Card>;
+}
+
+/** Which rotation to start sets in: early rotations come up more often, so lead with the strongest. */
+function StartRotation({ rotStat, lu, valid, onUse }: { rotStat: (r: number) => { w: number; l: number } | null; lu: string[]; valid: boolean; onUse: (n: number) => void }) {
+  const rate = (r: number) => { const x = rotStat(r); const n = x ? x.w + x.l : 0; return x && n >= 8 ? (x.w - x.l) / n : null; };
+  const known = [1, 2, 3, 4, 5, 6].filter((r) => rate(r) != null).length;
+  if (known < 4) return null;
+  const W = [1.3, 1.2, 1.1, 1, 0.9, 0.8];
+  const score = (s: number) => W.reduce((sum, w, k) => sum + w * (rate(((s - 1 + k) % 6) + 1) ?? 0), 0);
+  const opts = [1, 2, 3, 4, 5, 6].map((s) => ({ s, v: score(s) })).sort((a, b) => b.v - a.v), best = opts[0], cur = opts.find((o) => o.s === 1)!;
+  const order = (s: number) => [0, 1, 2].map((k) => ((s - 1 + k) % 6) + 1);
+  const gain = (best.v - cur.v) / W.reduce((a, b) => a + b, 0);
+  return <Card title="Which rotation to start in">
+    {best.s === 1 ? <p className="small">Rotation 1 is already the best place to start. Your first three rotations are {order(1).map((r) => fmtSigned(Math.round((rate(r) ?? 0) * 100))).join(", ")} per 100 rallies.</p>
+      : <><p className="small">Start in <b>rotation {best.s}</b>. Sets spend the most time in the first few rotations, so lead with {order(best.s).map((r) => "R" + r).join(", ")} ({order(best.s).map((r) => fmtSigned(Math.round((rate(r) ?? 0) * 100))).join(", ")} per 100 rallies) instead of {order(1).map((r) => "R" + r).join(", ")} ({order(1).map((r) => fmtSigned(Math.round((rate(r) ?? 0) * 100))).join(", ")}).
+          {gain < 0.02 ? " The difference is small, about one point every few sets." : ` Worth about ${Math.max(1, Math.round(gain * 45))} point${Math.round(gain * 45) > 1 ? "s" : ""} a set.`}</p>
+        <div className="row"><button className="btn sm primary" disabled={!valid || !lu.every(Boolean)} onClick={() => onUse(best.s)}>Start in rotation {best.s}</button><span className="small muted">Rotates the lineup in the builder; same six, same order.</span></div></>}
+    <p className="keys" style={{ marginTop: 6 }}>Based on points won minus lost with each player in the serving spot, for the stats shown below, so it holds up when you rotate the lineup. Needs at least 8 rallies to count a rotation.</p>
   </Card>;
 }
