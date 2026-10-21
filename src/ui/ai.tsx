@@ -34,7 +34,7 @@ export function AiCard(props: {
           <button className="btn sm" onClick={() => copyText(shown).then((ok) => toast(ok ? "Copied" : "Couldn't copy here. Select the text instead."))}>Copy</button>
           <button className="btn sm" onClick={() => download((props.filename || props.title) + ".txt", shown, "text/plain")}>Download</button>
         </div></div>}
-      {!aiAvailable() && !shown && <p className="small muted" style={{ marginTop: 8 }}>AI features need an Anthropic API key. Add one in Settings.</p>}
+      {!aiAvailable() && !shown && <p className="small muted" style={{ marginTop: 8 }}>Sign in on the Team tab to use AI features, or add your own Anthropic key in Settings.</p>}
     </section>
   );
 }

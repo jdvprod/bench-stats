@@ -35,7 +35,7 @@ export function SettingsPage() {
     </Card>
     <Card title="AI features">
       <div className="stack">
-        <p className="small muted">Timeout talking points, match reports, scouting, lineup suggestions, practice plans and player report cards use Claude. Paste an Anthropic API key from console.anthropic.com. It stays on this device only. Typical cost is a few cents per report.</p>
+        <p className="small muted">Timeout talking points, match reports, scouting, lineup suggestions, practice plans and player report cards use Claude. Signed-in coaches can use them with no setup. To use your own Anthropic account instead (no daily limit), paste an API key from console.anthropic.com; it stays on this device only.</p>
         <div className="row">
           <input className="input grow" type={show ? "text" : "password"} value={key} onChange={(e) => setK(e.target.value)} placeholder="sk-ant-…" autoComplete="off" aria-label="API key" style={{ minWidth: 200 }} />
           <button className="btn sm" onClick={() => setShow(!show)}>{show ? "Hide" : "Show"}</button>

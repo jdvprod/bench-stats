@@ -104,6 +104,8 @@ export function signOut() { const s = session; setSession(null); if (s) call("/a
 
 /* ---------- data ---------- */
 export const rest = (path: string, init: RequestInit = {}) => call("/rest/v1/" + path, init);
+/** Call a Supabase Edge Function as the signed-in user. */
+export const fn = (name: string, body: unknown, signal?: AbortSignal) => call("/functions/v1/" + name, { method: "POST", body: JSON.stringify(body), signal });
 export const rpc = (fn: string, args: Record<string, unknown>, anon = false) => call("/rest/v1/rpc/" + fn, { method: "POST", body: JSON.stringify(args), auth: !anon });
 export const upsert = (table: string, rows: unknown[], onConflict?: string) =>
   rest(table + (onConflict ? "?on_conflict=" + onConflict : ""), { method: "POST", headers: { prefer: "resolution=merge-duplicates,return=minimal" } as any, body: JSON.stringify(rows) });

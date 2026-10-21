@@ -194,3 +194,22 @@ begin
   return out;
 end $$;
 grant execute on function public.season_view(text) to anon, authenticated;
+
+-- ---------- AI usage: a daily counter per coach, used by the "ai" edge function ----------
+create table if not exists public.ai_usage (
+  user_id uuid not null references auth.users(id) on delete cascade,
+  day date not null default current_date,
+  n int not null default 0,
+  primary key (user_id, day)
+);
+alter table public.ai_usage enable row level security;
+drop policy if exists "ai usage read own" on public.ai_usage;
+create policy "ai usage read own" on public.ai_usage for select using (user_id = auth.uid());
+-- called only by the edge function with the service role
+create or replace function public.ai_bump(uid uuid) returns int
+language sql security definer set search_path = public as $$
+  insert into ai_usage (user_id, day, n) values (uid, current_date, 1)
+  on conflict (user_id, day) do update set n = ai_usage.n + 1
+  returning n;
+$$;
+revoke execute on function public.ai_bump(uuid) from public, anon, authenticated;

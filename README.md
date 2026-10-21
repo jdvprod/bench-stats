@@ -43,7 +43,13 @@ Then coaches sign in on the Team tab, tap **Sync this team**, and invite assista
 
 ## AI features
 
-In Settings, paste an Anthropic API key from console.anthropic.com. It's stored on the device only. Before selling the app, move the call in `src/ai/client.ts` behind a small server function so customers don't need their own key.
+Signed-in coaches use AI through the `ai` Supabase Edge Function (`supabase/functions/ai/index.ts`), which holds your Anthropic key and limits each coach to 40 requests a day (`AI_DAILY_LIMIT` to change it). To turn it on:
+
+1. Run the latest `supabase/schema.sql` (adds the `ai_usage` counter).
+2. In Supabase → Edge Functions, create a function named `ai` and paste in `supabase/functions/ai/index.ts` (or `supabase functions deploy ai`).
+3. In Edge Functions → Secrets, add `ANTHROPIC_API_KEY`.
+
+A coach can still paste their own Anthropic key in Settings; then calls go straight from the browser with no daily limit.
 
 ## Code map
 
