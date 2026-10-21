@@ -455,3 +455,20 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .avatar.dot-ok::after,.avatar.dot-wait::after,.avatar.dot-err::after{content:"";position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bar)}
 .avatar.dot-ok::after{background:var(--us-bright)}.avatar.dot-wait::after{background:#8F959E}.avatar.dot-err::after{background:#F07167}
 .pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}
+
+/* ---------- home ---------- */
+.home-head{display:flex;justify-content:space-between;align-items:flex-end;gap:12px;flex-wrap:wrap}
+.home-head h1{font-size:30px}
+.home-top{display:grid;grid-template-columns:minmax(0,1fr);gap:14px}
+@media (min-width:760px){.home-top{grid-template-columns:minmax(0,1fr) minmax(0,1fr)}}
+.home-next,.home-last{display:flex;flex-direction:column;gap:6px}
+.home-next{background:#000;color:#F4F5F7;border-color:#000}.home-next .label,.home-next .muted{color:#9298A1}
+.home-next .btn{background:#141518;border-color:#26282D;color:#F4F5F7;box-shadow:none}.home-next .btn.primary{background:#9BD3F2;border-color:#9BD3F2;color:#000}
+.home-opp{font-family:var(--display);font-weight:700;font-size:28px;line-height:1.1}
+.home-opp .w{color:var(--us)}.home-opp .l{color:var(--muted)}
+.home-kpis{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:12px}
+.home-kpi{display:flex;flex-direction:column;gap:2px;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:var(--surface-2)}
+.home-kpi b{font-family:var(--display);font-size:26px;line-height:1.05;font-variant-numeric:tabular-nums}
+.spark{width:96px;height:28px;margin-top:4px}.spark path{fill:none;stroke:var(--us);stroke-width:2;stroke-linejoin:round}.spark circle{fill:var(--us)}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .home-next{background:var(--surface-2);border-color:color-mix(in srgb,var(--us) 45%,var(--line))}}
+:root[data-theme="dark"] .home-next{background:var(--surface-2);border-color:color-mix(in srgb,var(--us) 45%,var(--line))}

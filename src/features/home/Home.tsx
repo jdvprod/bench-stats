@@ -1,0 +1,78 @@
+/** Home (the Track tab when no match is live): next match, last match, season snapshot, what to work on. */
+import { ensureOpponent, matchesOf, newMatch, oppKey, playerName, replayOf, setTeamPatch, team, todayISO } from "../../data/store";
+import { aggregate } from "../../sports/volleyball/engine";
+import { fmtAvg, fmtHit, fmtPct, teamMetrics } from "../../sports/volleyball/metrics";
+import { Card, fmtDate } from "../../ui/kit";
+import { go } from "../../app/router";
+import { setUi } from "../../app/ui";
+import { StartMatch } from "../track/TrackPage";
+import { focusAreas } from "../practice/PracticePage";
+import { matchReportHtml } from "../stats/matchReport";
+import { download } from "../../ui/kit";
+
+const fmtTime = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
+
+function Spark({ vals }: { vals: (number | null)[] }) {
+  const v = vals.filter((x): x is number => x != null); if (v.length < 2) return null;
+  const W = 96, H = 28, lo = Math.min(...v), hi = Math.max(...v), r = hi - lo || 1;
+  const pts = vals.map((x, i) => (x == null ? null : [(i / (vals.length - 1)) * W, H - 3 - ((x - lo) / r) * (H - 6)] as [number, number])).filter(Boolean) as [number, number][];
+  const last = pts[pts.length - 1];
+  return <svg className="spark" viewBox={`0 0 ${W} ${H}`} aria-hidden="true"><path d={pts.map((p, i) => (i ? "L" : "M") + p[0].toFixed(1) + " " + p[1].toFixed(1)).join("")} /><circle cx={last[0]} cy={last[1]} r="2.6" /></svg>;
+}
+
+export function Home() {
+  const t = team()!, today = todayISO();
+  const games = matchesOf().filter((m) => m.kind === "match" && (!t.activeSeasonId || m.seasonId === t.activeSeasonId)).map((m) => ({ m, R: replayOf(m)! })).filter((x) => x.R && x.R.sets.length);
+  const done = games.filter((g) => g.R.matchOver || g.m.status === "done");
+  const W = done.filter((g) => g.R.wonUs > g.R.wonThem).length, L = done.filter((g) => g.R.wonThem > g.R.wonUs).length;
+  const last = done[0];
+  const next = (t.schedule || []).filter((s) => s.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
+  const vsNext = next ? games.filter((g) => oppKey(g.m.opp) === oppKey(next.opp)) : [];
+  const A = aggregate(games.flatMap((g) => g.R.sets)), M = teamMetrics(A);
+  const chron = games.slice().reverse().slice(-6).map((g) => teamMetrics(aggregate(g.R.sets)));
+  const focus = games.length ? focusAreas().slice(0, 3) : [];
+  const leaders = (f: (s: any) => number) => Object.entries(A.ps).map(([id, s]) => [id, f(s)] as [string, number]).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1])[0];
+  const startNext = () => { if (!next) return; newMatch({ kind: "match", opp: next.opp, date: today, site: next.site, event: next.event, bestOf: t.settings.bestOf, serve: "us" }); if (next.date === today) setTeamPatch({ schedule: (t.schedule || []).filter((x) => x.id !== next.id) }); setUi({ sel: null, panel: null, follow: null }); };
+  const lastA = last ? aggregate(last.R.sets) : null, lastM = lastA ? teamMetrics(lastA) : null;
+  const star = lastA ? Object.entries(lastA.ps).map(([id, s]) => [id, s.K + s.SA + s.BS + s.BA / 2 - s.AE - s.SE - s.SEN - s.SEO] as [string, number]).sort((a, b) => b[1] - a[1])[0] : null;
+
+  return <div className="stack">
+    <div className="home-head">
+      <div><h1>{t.name}</h1><p className="muted">{t.level}{done.length ? ` · ${W}–${L} this season` : ""}</p></div>
+      <button className="btn primary" onClick={() => document.getElementById("start-match")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Start a match</button>
+    </div>
+    <div className="home-top">
+      <section className="card home-next">
+        <div className="label">Next match</div>
+        {next ? <>
+          <div className="home-opp">{next.site === "away" ? "at " : "vs "}{next.opp}</div>
+          <p className="muted">{next.date === today ? "Today" : fmtDate(next.date)}{next.time ? " · " + fmtTime(next.time) : ""}{next.event ? " · " + next.event : ""}</p>
+          <p className="small">{vsNext.length ? `You're ${vsNext.filter((g) => g.R.wonUs > g.R.wonThem && g.R.matchOver).length}–${vsNext.filter((g) => g.R.wonThem > g.R.wonUs && g.R.matchOver).length} against them this season.` : "First meeting this season."}</p>
+          <div className="row"><button className="btn sm" onClick={() => go("matchup", ensureOpponent(next.opp).id)}>See the matchup</button>{next.date === today && <button className="btn sm primary" onClick={startNext}>Start now</button>}</div>
+        </> : <><p className="muted" style={{ margin: "6px 0 10px" }}>Nothing scheduled.</p><button className="btn sm" onClick={() => go("matchup")}>Add your schedule</button></>}
+      </section>
+      <section className="card home-last">
+        <div className="label">Last match</div>
+        {last && lastM ? <>
+          <div className="home-opp"><span className={last.R.wonUs > last.R.wonThem ? "w" : "l"}>{last.R.wonUs > last.R.wonThem ? "W" : "L"}</span> {last.R.wonUs}–{last.R.wonThem} vs {last.m.opp}</div>
+          <p className="muted">{fmtDate(last.m.date)} · {last.R.sets.map((s) => `${s.us}-${s.them}`).join(", ")}</p>
+          <p className="small">Hitting {fmtHit(lastM.hitting)} · side-out {fmtPct(lastM.sideOut)} · pass {fmtAvg(lastM.passAvg)}{star && star[1] > 0 ? ` · Top: ${playerName(star[0])}` : ""}</p>
+          <div className="row"><button className="btn sm" onClick={() => { setUi({ statsScope: "m:" + last.m.id }); go("stats"); }}>Full stats</button><button className="btn sm" onClick={() => download(`${t.name} vs ${last.m.opp} ${last.m.date} report.html`.replace(/[^\w\- .]+/g, ""), matchReportHtml(last.m, last.R), "text/html")}>Match report</button></div>
+        </> : <p className="muted" style={{ marginTop: 6 }}>Your most recent result shows up here.</p>}
+      </section>
+    </div>
+    {games.length > 0 && <section className="card">
+      <div className="row between" style={{ marginBottom: 10 }}><h3>Season so far</h3><button className="btn sm ghost" onClick={() => { setUi({ statsScope: "season" }); go("stats"); }}>All stats</button></div>
+      <div className="home-kpis">
+        {([["Hitting", fmtHit(M.hitting), chron.map((x) => x.hitting)], ["Side-out", fmtPct(M.sideOut), chron.map((x) => x.sideOut)], ["Pass avg", fmtAvg(M.passAvg), chron.map((x) => x.passAvg)], ["Serve in", fmtPct(M.serveIn), chron.map((x) => x.serveIn)]] as [string, string, (number | null)[]][]).map(([l, v, sp]) =>
+          <div key={l} className="home-kpi"><span className="label">{l}</span><b>{v}</b><Spark vals={sp} /></div>)}
+        <div className="home-kpi"><span className="label">Leaders</span>
+          {[["K", (s: any) => s.K], ["Aces", (s: any) => s.SA], ["Digs", (s: any) => s.D]].map(([l, f]) => { const x = leaders(f as any); return x ? <span key={l as string} className="small"><b>{x[1]}</b> {l as string} · {playerName(x[0])}</span> : null; })}</div>
+      </div>
+    </section>}
+    {focus.length > 0 && <Card title="What to work on" actions={<button className="btn sm" onClick={() => go("practice")}>Plan practice</button>}>
+      <ul className="recs">{focus.map((f, i) => <li key={i}><span><b>{f.cat}:</b> {f.text}</span></li>)}</ul>
+    </Card>}
+    <StartMatch formOnly />
+  </div>;
+}

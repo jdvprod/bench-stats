@@ -4,6 +4,7 @@ import { Card, fmtDate, Seg } from "../../ui/kit";
 import { Tracker } from "./Tracker";
 import { go } from "../../app/router";
 import { setUi } from "../../app/ui";
+import { Home } from "../home/Home";
 
 export function TrackPage() {
   const m = currentMatch();
@@ -12,10 +13,10 @@ export function TrackPage() {
     <StartMatch />
   </div>;
   if (m) return <div className="page"><Tracker m={m} /></div>;
-  return <div className="page"><StartMatch /></div>;
+  return <div className="page"><Home /></div>;
 }
 
-export function StartMatch() {
+export function StartMatch({ formOnly }: { formOnly?: boolean } = {}) {
   const t = team()!, opps = opponentsOf();
   const [opp, setOpp] = useState(""), [date, setDate] = useState(todayISO()), [site, setSite] = useState<"home" | "away" | "neutral">("home");
   const [event, setEvent] = useState(""), [bestOf, setBestOf] = useState(t.settings.bestOf);
@@ -25,8 +26,7 @@ export function StartMatch() {
     newMatch({ kind: "match", opp: opp.trim() || "Opponent", date, site, event: event.trim(), bestOf, serve });
     setUi({ sel: null, panel: null, follow: null });
   };
-  return <div className="grid2" style={{ alignItems: "start" }}>
-    <Card title="Start a match">
+  const form = <Card title="Start a match" id="start-match">
       <div className="stack">
         {!activePlayers().length && <div className="banner warn"><p>Add your roster first so you can record stats for each player.</p><button className="btn sm" onClick={() => go("team")}>Add players</button></div>}
         <label className="field"><span className="label">Opponent</span><input list="opp-list" value={opp} onChange={(e) => setOpp(e.target.value)} placeholder="e.g. Buchanan" /><datalist id="opp-list">{opps.map((o) => <option key={o.id} value={o.name} />)}</datalist></label>
@@ -38,7 +38,10 @@ export function StartMatch() {
         <p className="small muted">{t.defLineup ? "Your default lineup starts the first set. Change it on the Lineup tab." : "Tip: set a default lineup on the Lineup tab to track rotations and servers automatically."}</p>
         <div className="row"><button className="btn primary" onClick={() => start("us")}>Start · we serve first</button><button className="btn" onClick={() => start("them")}>Start · they serve first</button></div>
       </div>
-    </Card>
+    </Card>;
+  if (formOnly) return form;
+  return <div className="grid2" style={{ alignItems: "start" }}>
+    {form}
     <div className="stack">
       <Card title="Recent matches">{recent.length ? <ul className="log">{recent.map((x) => <li key={x.id}><span>{fmtDate(x.date)} vs {x.opp}</span><span /><span /></li>)}</ul> : <p className="empty">Matches you track show up here and on the Stats tab.</p>}</Card>
       <Card title="Up next" actions={<button className="btn sm" onClick={() => go("matchup")}>Schedule</button>}>{upcoming.length ? <ul className="mu-sched">{upcoming.map((s) => <li key={s.id}>

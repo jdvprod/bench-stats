@@ -1,6 +1,6 @@
 /** Live stat tracking for a match, drill session or scrimmage. */
 import { useCallback, useState } from "react";
-import { setPrefs, state, activePlayers, appendEvents, deleteEvent, eventsOf, isMine, patch, patchEvent, player, playerName, replayOf, save, team, toast, undoLast } from "../../data/store";
+import { setTeamPatch, setPrefs, state, activePlayers, appendEvents, deleteEvent, eventsOf, isMine, patch, patchEvent, player, playerName, replayOf, save, team, toast, undoLast } from "../../data/store";
 import { Match } from "../../data/model";
 import { ACTIONS, ActionCode, GROUPS, LOCATION_HALF, OPP_NUMBER } from "../../sports/volleyball/actions";
 import { aggregate, LogEntry, Replay, serverOf, SetState, zoneOf } from "../../sports/volleyball/engine";
@@ -135,7 +135,13 @@ function ControlBar({ m, c, names }: { m: Match; c: SetState; names: { us: strin
       <button className="ctrl" onClick={() => panel("tag")}>Film tag<small>bookmark</small></button>
       <button className="ctrl" onClick={undo}>Undo<small>your last entry</small></button>
       <FocusToggle />
+      <EndMatch m={m} />
     </div>);
+}
+
+function EndMatch({ m }: { m: Match }) {
+  const [arm, setArm] = useState(false);
+  return <button className="ctrl" onClick={() => { if (!arm) { setArm(true); setTimeout(() => setArm(false), 3000); return; } patch("matches", m.id, { status: "done" }); setTeamPatch({ currentMatchId: null }); toast("Match saved"); }}>{arm ? "Tap again" : "End match"}<small>{arm ? "to save and close" : "save & close"}</small></button>;
 }
 
 function FocusToggle() {

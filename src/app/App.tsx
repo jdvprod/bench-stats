@@ -24,7 +24,7 @@ import { AccountChip, AccountPage, AuthPage, skipAccounts, syncDot, wantsAuthGat
 import { currentUser } from "../cloud/client";
 
 const HOST_THEME = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
-const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["matchup", "Matchups"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"], ["labs", "Labs", "wide-only"]];
+const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["matchup", "Matchup"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"], ["labs", "Labs", "wide-only"]];
 
 export function App() {
   useVersion();
