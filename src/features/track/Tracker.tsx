@@ -80,7 +80,16 @@ export function Tracker({ m }: { m: Match }) {
     if (p) ev.p = p;
     if (o.op) ev.op = o.op;
     if (scr && p) ev.s = scr.b.ids.includes(p) ? "b" : "a";
-    if (jobOf(m) === "stats") ev.ns = true;
+    if (jobOf(m) === "stats") {
+      ev.ns = true;
+      if (ui.prevRally) {
+        // place it just before the point that ended the last rally, so it counts in that rally
+        const lastPt = R.log.slice().reverse().find((l) => l.kind === "stat" && l.w);
+        const t0 = lastPt ? eventsOf(m.id).find((x) => x.id === lastPt.id)?.ts : undefined;
+        if (t0) ev.ts = t0 - 1;
+        setUi({ prevRally: false });
+      }
+    }
     const e = appendEvents(m.id, [ev]); if (!e) return false;
     if (o.op && !m.oppPlayers.includes(o.op)) patch("matches", m.id, { oppPlayers: m.oppPlayers.concat(o.op) });
     if (o.quiet) return true;
@@ -365,7 +374,8 @@ function PlannedSub({ c, m }: { c: SetState; m: Match }) {
 
 function Hint({ c, m }: { c: SetState; m: Match }) {
   const srv = serverOf(c), job = jobOf(m);
-  if (job === "stats") return <p className="hint job-note"><b>Stats only.</b> What you enter here counts for players but never changes the score; another coach keeps score. {ui.sel ? <>Recording for <b>{playerName(ui.sel, "full")}</b>.</> : "Tap a player, then what they did."} <button className="linkish" onClick={() => setUi({ panel: "job" })}>Change</button></p>;
+  if (job === "stats") return <div className="hint job-note"><b>Stats only.</b> What you enter here counts for players but never changes the score; another coach keeps score. {ui.sel ? <>Recording for <b>{playerName(ui.sel, "full")}</b>.</> : "Tap a player, then what they did."} <button className="linkish" onClick={() => setUi({ panel: "job" })}>Change</button>
+    <label className="row small" style={{ gap: 6, marginTop: 6 }}><input type="checkbox" checked={ui.prevRally} onChange={(e) => setUi({ prevRally: e.target.checked })} /> Next entry belongs to the rally that just ended{c.rallies.length ? ` (${c.rallies[c.rallies.length - 1].w === "us" ? "our" : "their"} point)` : ""}</label></div>;
   if (job === "score") return <p className="hint job-note"><b>Score only.</b> Tap who won each rally; other coaches add the player stats. <button className="linkish" onClick={() => setUi({ panel: "job" })}>Change</button></p>;
   if (ui.sel) return <p className="hint">Recording for <b>{playerName(ui.sel, "full")}</b>{m.scrim ? ` (${m.scrim.b.ids.includes(ui.sel) ? m.scrim.b.name : m.scrim.a.name})` : ""}. Tap again to deselect.</p>;
   if (m.scrim) return <p className="hint">Tap a player from either team, then what they did. Points go to the right team automatically.</p>;

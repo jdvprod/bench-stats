@@ -8,6 +8,7 @@ export const ui = {
   follow: null as null | { id: string; half: "us" | "them" | null; askOpp: boolean; label: string },
   statsScope: "match" as string,       // season | practice | match | s1..s5
   statsSeason: "" as string,
+  prevRally: false,                    // stats-only device: put the next entry in the rally that just ended
   courtTab: "tendency" as "tendency" | "boards",
 };
 export function setUi(p: Partial<typeof ui>) { Object.assign(ui, p); emit(); }
