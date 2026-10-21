@@ -18,10 +18,8 @@ export function applyTheme(color: string, theme: "system" | "light" | "dark", si
   if (theme === "system") { if (hostTheme) r.setAttribute("data-theme", hostTheme); else r.removeAttribute("data-theme"); }
   else r.setAttribute("data-theme", theme);
   document.body.classList.toggle("big", size === "large");
-  const L = forLight(color), D = forDark(color);
-  const css = `:root{--us:${L};--accent:${L};--us-soft:${mix(color, "#FFFFFF", 0.88)};--accent-ink:${lum(L) > 0.18 ? "#111214" : "#FFFFFF"};--us-bright:${forDark(mix(color, "#FFFFFF", 0.35))}}
-@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){--us:${D};--accent:${D};--us-soft:${mix(color, "#000000", 0.72)};--accent-ink:${lum(D) > 0.18 ? "#06121B" : "#FFFFFF"}}}
-:root[data-theme="dark"]{--us:${D};--accent:${D};--us-soft:${mix(color, "#000000", 0.72)};--accent-ink:${lum(D) > 0.18 ? "#06121B" : "#FFFFFF"}}`;
+  // The app always uses the Benchboard palette (white, black, grey, Columbia blue); team colors no longer recolor it.
+  void color; const css = "";
   let el = document.getElementById("team-theme");
   if (!el) { el = document.createElement("style"); el.id = "team-theme"; document.head.appendChild(el); }
   el.textContent = css;

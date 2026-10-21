@@ -125,7 +125,7 @@ export function LineupPage() {
         const L = rotateLineup(lu, r - 1), li = liberoFor(L, lib, libSrv), x = A.rot[r], net = x ? x.w - x.l : 0;
         const cell = (i: number) => { const isL = li === i, id = isL ? lib : L[i]; return <div key={i} className={(i === 0 ? "srvp " : "") + (isL ? "libx" : "")} title={isL ? `${playerName(lib)} in for ${playerName(L[i])}` : undefined}><b>{player(id)?.num ?? "–"}</b>{id ? playerName(id, "first") : "—"}</div>; };
         return <div key={r} className="rotcard">
-          <div className="hd"><span>Rotation {r}</span>{x && x.w + x.l > 0 && <span style={{ color: net > 0 ? "var(--good)" : net < 0 ? "var(--bad)" : undefined }}>{fmtSigned(net)}</span>}</div>
+          <div className="hd"><span>Rotation {r}</span>{x && x.w + x.l > 0 && <span style={{ color: net > 0 ? "var(--good)" : net < 0 ? "var(--muted)" : undefined }}>{fmtSigned(net)}</span>}</div>
           <div className="mini3"><span className="net" />{FRONT.map(cell)}{BACK.map(cell)}</div>
           <div className="small muted" style={{ marginTop: 6 }}>Serving: {playerName(li === 0 ? lib : L[0]) || "—"}{x && x.rn ? ` · SO ${fmtPct(ratio(x.rw, x.rn))}` : ""}{x && x.sn ? ` · PS ${fmtPct(ratio(x.sw, x.sn))}` : ""}</div>
         </div>; })}</div>

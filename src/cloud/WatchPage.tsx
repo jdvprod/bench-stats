@@ -46,7 +46,7 @@ export function WatchPage({ code }: { code: string }) {
 
   return <div className="watch"><div className="page" style={{ maxWidth: 760, margin: "0 auto" }}>
     <div className="row between">
-      <div className="row"><span className="tag" style={{ marginLeft: 0, background: live ? "var(--bad)" : "var(--surface-2)", color: live ? "#fff" : "var(--muted)" }}>{live ? "● Live" : "Final"}</span><span className="small muted">{m.date}{m.event ? " · " + m.event : ""}</span></div>
+      <div className="row"><span className="tag" style={{ marginLeft: 0, background: live ? "var(--accent)" : "var(--surface-2)", color: live ? "var(--accent-ink)" : "var(--muted)" }}>{live ? "● Live" : "Final"}</span><span className="small muted">{m.date}{m.event ? " · " + m.event : ""}</span></div>
       <span className="small muted">{err ? err : live ? `Updated ${ago < 8 ? "just now" : ago + "s ago"}` : ""}</span>
     </div>
     <section className="card" style={{ background: "var(--bar)", color: "var(--bar-ink)", borderColor: "transparent" }}>

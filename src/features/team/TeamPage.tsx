@@ -33,7 +33,6 @@ function TeamInfo() {
         <label className="field"><span className="label">Team name</span><input defaultValue={t.name} onBlur={(e) => e.target.value.trim() && setTeamPatch({ name: e.target.value.trim() })} /></label>
         <label className="field"><span className="label">Level</span><input defaultValue={t.level} onBlur={(e) => setTeamPatch({ level: e.target.value.trim() })} /></label>
       </div>
-      <div><div className="label">Team color</div><div className="row" style={{ marginTop: 6 }}>{TEAM_COLORS.map(([c, n]) => <button key={c} className="swatch" style={{ background: c }} aria-pressed={t.color === c} title={n} aria-label={n} onClick={() => setTeamPatch({ color: c })} />)}<input type="color" value={t.color} onChange={(e) => setTeamPatch({ color: e.target.value })} aria-label="Custom color" style={{ width: 40, height: 34, border: 0, background: "none" }} /></div></div>
       <div><div className="label">Season</div>
         <div className="row" style={{ marginTop: 6 }}>
           <select className="input" style={{ width: "auto" }} value={t.activeSeasonId || ""} onChange={(e) => setTeamPatch({ activeSeasonId: e.target.value })}>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>

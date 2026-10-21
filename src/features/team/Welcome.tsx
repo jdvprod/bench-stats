@@ -2,7 +2,6 @@ import { useState } from "react";
 import { createTeam, toast } from "../../data/store";
 import { addStarterDrills, createSampleTeam } from "../../data/seed";
 import { importBackup } from "../../data/backup";
-import { TEAM_COLORS } from "../../app/theme";
 import { go } from "../../app/router";
 import { AuthShell } from "../../cloud/AuthPage";
 import { cloudAvailable, currentUser } from "../../cloud/client";
@@ -11,13 +10,10 @@ import { joinWithCode, linkTeam } from "../../cloud/sync";
 const LEVELS = ["Varsity", "JV", "Frosh/Soph", "Middle school", "14U Club", "15U Club", "16U Club", "17U Club", "18U Club", "College"];
 
 export function NewTeamForm({ onDone }: { onDone?: () => void }) {
-  const [name, setName] = useState(""), [level, setLevel] = useState("Varsity"), [color, setColor] = useState(TEAM_COLORS[0][0]);
-  return <form className="auth-form" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; const t = createTeam({ name: name.trim(), level, color }); addStarterDrills(t.id); toast("Team created"); if (cloudAvailable() && currentUser()) linkTeam(t.id).catch(() => {}); onDone?.(); go("team"); }}>
+  const [name, setName] = useState(""), [level, setLevel] = useState("Varsity");
+  return <form className="auth-form" onSubmit={(e) => { e.preventDefault(); if (!name.trim()) return; const t = createTeam({ name: name.trim(), level }); addStarterDrills(t.id); toast("Team created"); if (cloudAvailable() && currentUser()) linkTeam(t.id).catch(() => {}); onDone?.(); go("team"); }}>
     <div className="auth-field"><label htmlFor="nt-name">Team name</label><input id="nt-name" value={name} onChange={(e) => setName(e.target.value)} placeholder="Clovis North Broncos" autoFocus /></div>
     <div className="auth-field"><label htmlFor="nt-level">Level</label><input id="nt-level" list="levels" value={level} onChange={(e) => setLevel(e.target.value)} /><datalist id="levels">{LEVELS.map((l) => <option key={l} value={l} />)}</datalist></div>
-    <div className="auth-field"><span className="auth-lbl">Team color</span>
-      <div className="row" style={{ gap: 8 }}>{TEAM_COLORS.map(([c, n]) => <button type="button" key={c} className="swatch" style={{ background: c }} aria-pressed={color === c} aria-label={n} title={n} onClick={() => setColor(c)} />)}
-        <label className="swatch custom" title="Custom color" style={{ background: TEAM_COLORS.some((x) => x[0] === color) ? undefined : color }}><input type="color" value={color} onChange={(e) => setColor(e.target.value)} aria-label="Custom color" /></label></div></div>
     <button className="auth-btn" type="submit" disabled={!name.trim()}>Create team</button>
   </form>;
 }

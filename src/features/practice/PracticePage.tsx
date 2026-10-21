@@ -13,10 +13,10 @@ import { setUi } from "../../app/ui";
 import { go } from "../../app/router";
 
 const CAT_COLOR: Record<string, string> = {
-  "Warm-up": "#9AA5B1", Serving: "#2A78AE", "Serve receive": "#3FA796", Setting: "#8B6BD6", Attacking: "#D9534F", Blocking: "#E08A2E",
-  Defense: "#4C9F38", Transition: "#C2507E", "Game play": "#1F2A36", Conditioning: "#B5A642", "Team talk": "#6C7A89",
+  "Warm-up": "#C3C8CE", Serving: "#2B79B0", "Serve receive": "#5FA3D3", Setting: "#9BCBEB", Attacking: "#1D5A85", Blocking: "#7D838C",
+  Defense: "#3A3F46", Transition: "#4E95C7", "Game play": "#0B0C0E", Conditioning: "#A4AAB2", "Team talk": "#D8DBE0",
 };
-const catColor = (c: string) => CAT_COLOR[c] || "#9AA5B1";
+const catColor = (c: string) => CAT_COLOR[c] || "#A4AAB2";
 
 export function PracticePage() {
   const m = currentMatch();

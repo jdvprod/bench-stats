@@ -7,35 +7,48 @@ import { go } from "../app/router";
 import { Card } from "../ui/kit";
 import { Icon } from "../ui/icons";
 
-/* A real-looking set: down 9–15, comeback, wins 25–23. Drawn as the score margin after each rally. */
-const SET = [0, 1, 0, -1, -2, -1, -2, -3, -2, -3, -4, -3, -4, -5, -6, -5, -6, -5, -4, -3, -4, -3, -2, -1, 0, 1, 0, 1, 2, 1, 2, 3, 2, 1, 2, 1, 0, 1, 2, 1, 2, 3, 2, 1, 2, 3, 2];
+/* Sample numbers for the stat sheet on the sign-in panel. */
+const SHEET: [string, string, number, number, number, string, string][] = [
+  ["7", "Maya", 14, 2, 31, ".387", "2.41"],
+  ["9", "Riley", 11, 3, 24, ".333", "—"],
+  ["14", "Kenzie", 9, 4, 27, ".185", "—"],
+  ["4", "Jordan", 6, 1, 19, ".263", "2.18"],
+];
+const ROT: [string, number][] = [["R1", 64], ["R2", 58], ["R3", 41], ["R4", 71], ["R5", 55], ["R6", 62]];
 
-function Momentum() {
-  const W = 420, H = 120, mx = 7, x = (i: number) => (i / (SET.length - 1)) * W, y = (v: number) => H / 2 - (v / mx) * (H / 2 - 6);
-  const d = SET.map((v, i) => (i ? "L" : "M") + x(i).toFixed(1) + " " + y(v).toFixed(1)).join("");
-  return <svg className="auth-flow" viewBox={`0 0 ${W} ${H}`} aria-hidden="true">
-    <line x1="0" x2={W} y1={H / 2} y2={H / 2} className="mid" />
-    <path d={d + `L${W} ${H / 2}L0 ${H / 2}Z`} className="area" />
-    <path d={d} className="line" pathLength={1} />
-    <circle cx={x(SET.length - 1)} cy={y(SET[SET.length - 1])} r="4.5" className="dot" />
-  </svg>;
+function StatSheet() {
+  return <div className="auth-sheet" aria-hidden="true">
+    <div className="auth-sheet-hd"><span>vs Buchanan · Set 3</span><span className="live">Live</span></div>
+    <table><thead><tr><th>#</th><th>Player</th><th>K</th><th>E</th><th>TA</th><th>Hit %</th><th>Pass</th></tr></thead>
+      <tbody>{SHEET.map(([n, nm, k, e, ta, h, ps], i) => <tr key={n}><td>{n}</td><td>{nm}</td><td>{k}</td><td>{e}</td><td>{ta}</td><td className={i === 0 ? "hi" : ""}>{h}</td><td>{ps}</td></tr>)}</tbody></table>
+    <div className="auth-rot">
+      <div className="auth-rot-hd"><span>Side-out by rotation</span><b>59%</b></div>
+      <div className="auth-bars">{ROT.map(([r, v]) => <div key={r} className={v < 50 ? "low" : v === 71 ? "top" : ""}><i style={{ height: v + "%" }} /><span>{r}</span></div>)}</div>
+    </div>
+  </div>;
 }
 
-/** Dark scoreboard panel on the left (top on phones), content on the right. */
+/** Dark panel on the left (top on phones), content on the right. */
 export function AuthShell({ children, wide }: { children: ReactNode; wide?: boolean }) {
   return <div className="auth">
     <aside className="auth-board">
       <div className="auth-brand"><i><Icon name="brand" /></i><b>Benchboard</b></div>
-      <div className="auth-score" aria-hidden="true">
-        <div className="auth-nums"><span className="us">25</span><span className="sep">–</span><span className="them">23</span></div>
-        <p className="auth-caption">Fifth set, down 9–15. Rotation 4 sides out, the run starts, and you saw it coming on your own bench.</p>
-        <Momentum />
+      <div className="auth-hero">
+        <h2 className="auth-head">Live stats and advanced metrics for volleyball coaches.</h2>
+        <StatSheet />
       </div>
-      <ul className="auth-points">
-        <li>Track every touch from the bench, offline in any gym.</li>
-        <li>Side-out by pass grade, rotation results and where their kills land.</li>
-        <li>Assistants track on their phones. Parents follow live.</li>
-      </ul>
+      <div className="auth-feats">
+        <ul>
+          <li>Tap-to-track stats, offline in any gym</li>
+          <li>Hitting, passing, side-out and rotation metrics</li>
+          <li>Lineups, rotations and practice plans</li>
+          <li>Assistants track together. Parents follow live.</li>
+        </ul>
+        <ul className="soon">
+          <li>Recruiting profiles <span>Coming soon</span></li>
+          <li>Video clips and AI film review <span>Coming soon</span></li>
+        </ul>
+      </div>
     </aside>
     <main className={"auth-main" + (wide ? " wide" : "")}><div className="auth-inner">{children}</div></main>
   </div>;

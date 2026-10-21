@@ -28,7 +28,7 @@ export function LivePage() {
 
   return <div className="page">
     <div className="row between">
-      <div className="row"><span className="tag" style={{ marginLeft: 0, background: live ? "var(--bad)" : "var(--surface-2)", color: live ? "#fff" : "var(--muted)" }}>{live ? "● Live" : "Final"}</span><span className="small muted">{fmtDate(m.date)}{m.event ? " · " + m.event : ""}{m.site ? " · " + m.site : ""}</span></div>
+      <div className="row"><span className="tag" style={{ marginLeft: 0, background: live ? "var(--accent)" : "var(--surface-2)", color: live ? "var(--accent-ink)" : "var(--muted)" }}>{live ? "● Live" : "Final"}</span><span className="small muted">{fmtDate(m.date)}{m.event ? " · " + m.event : ""}{m.site ? " · " + m.site : ""}</span></div>
       <div className="row"><ShareLive matchId={m.id} />
       <select className="input" style={{ width: "auto", maxWidth: 260 }} value={m.id} onChange={(e) => setPick(e.target.value)} aria-label="Match">{games.slice(0, 40).map((g) => <option key={g.id} value={g.id}>{fmtDate(g.date)} vs {g.opp}</option>)}</select></div>
     </div>
