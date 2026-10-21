@@ -1,6 +1,8 @@
 /** Home (the Track tab when no match is live): next match, last match, season snapshot, what to work on. */
 import { useState } from "react";
-import { ensureOpponent, matchesOf, newMatch, oppKey, playerName, replayOf, setTeamPatch, team, todayISO } from "../../data/store";
+import { ensureOpponent, matchesOf, newMatch, oppKey, playerName, replayOf, setTeamPatch, team, teamPlayers, todayISO } from "../../data/store";
+import { cloudAvailable, currentUser } from "../../cloud/client";
+import { isLinked } from "../../cloud/sync";
 import { aggregate } from "../../sports/volleyball/engine";
 import { fmtAvg, fmtHit, fmtPct, teamMetrics } from "../../sports/volleyball/metrics";
 import { Card, fmtDate } from "../../ui/kit";
@@ -42,6 +44,7 @@ export function Home() {
       <div><h1>{t.name}</h1><p className="muted">{t.level}{done.length ? ` · ${W}–${L} this season` : ""}</p></div>
       <button className="btn primary" onClick={() => document.getElementById("start-match")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Start a match</button>
     </div>
+    <Setup />
     <div className="home-top">
       <section className="card home-next">
         <div className="label">Next match</div>
@@ -96,4 +99,25 @@ function TeamGoals({ M }: { M: ReturnType<typeof teamMetrics> }) {
         return <div key={k} className="goal"><div className="row between"><span><b>{label}</b> <span className="small muted">goal {f(target)}</span></span><span className={hit ? "hi" : ""}>{f(v)}{hit ? " ✓" : ""}</span></div><div className="meter"><i style={{ width: prog * 100 + "%" }} /></div></div>; })}
         {!active.length && <p className="small muted">Suggested goals. Tap Set goals to make them yours.</p>}</div>}
   </Card>;
+}
+
+/* Getting started: the five things that make Benchboard useful, checked off automatically. */
+function Setup() {
+  const t = team()!;
+  if (t.sample || t.setupDone) return null;
+  const players = teamPlayers().filter((p) => p.active).length;
+  const steps: [string, string, boolean, () => void][] = [
+    ["Add your roster", players ? `${players} players so far` : "Type them in, paste a list, or import a CSV", players >= 6, () => go("team")],
+    ["Set your starting lineup", "So the app tracks rotations and who's serving", !!t.defLineup, () => go("lineup")],
+    ["Add your schedule", "Get a scouting page before every game", !!(t.schedule && t.schedule.length), () => go("matchup")],
+    ["Track your first match", "Tap a player, then what they did", matchesOf().some((m) => m.kind === "match"), () => document.getElementById("start-match")?.scrollIntoView({ behavior: "smooth" })],
+    ["Invite your assistant", "Sign in, then share an invite code from the Team tab", cloudAvailable() && !!currentUser() && isLinked(t.id), () => go(currentUser() ? "team" : "account")],
+  ];
+  const done = steps.filter((x) => x[2]).length;
+  if (done === steps.length) return null;
+  return <section className="card setup">
+    <div className="row between"><div><h3>Get set up</h3><p className="small muted">{done} of {steps.length} done</p></div><button className="btn sm ghost" onClick={() => setTeamPatch({ setupDone: true })}>Hide</button></div>
+    <div className="meter" style={{ margin: "10px 0 6px" }}><i style={{ width: (100 * done) / steps.length + "%" }} /></div>
+    <ol className="setup-list">{steps.map(([title, sub, ok, act]) => <li key={title} className={ok ? "ok" : ""}><button onClick={act}><span className="chk" aria-hidden="true">{ok ? "✓" : ""}</span><span><b>{title}</b><small>{sub}</small></span></button></li>)}</ol>
+  </section>;
 }

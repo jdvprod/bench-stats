@@ -77,6 +77,7 @@ export function Tracker({ m }: { m: Match }) {
         <div className="stack">
           <Panels m={m} R={R} c={c} />
           {scr ? <ScrimPlayers m={m} /> : <CourtPlayers c={c} />}
+          <PlannedSub c={c} m={m} />
           <Hint c={c} m={m} />
           <Pad m={m} c={c} setA={setA} mA={mA} record={record} />
           <div className="legend"><span><span className="sw" style={{ background: "var(--us)" }} />Point to {names.us}</span><span><span className="sw" style={{ background: "var(--them)" }} />Point to {names.them}</span><span><span className="sw" style={{ background: "var(--line)" }} />No point, rally continues</span></div>
@@ -320,6 +321,14 @@ function ScrimPlayers({ m }: { m: Match }) {
     <div className="players" style={{ marginTop: 6 }}>{S[k].ids.filter((id) => player(id)).map((id) => <PlayerButton key={id} id={id} cls={k} />)}</div>
   </div>;
   return <div className="grid2">{col("a")}{col("b")}</div>;
+}
+
+function PlannedSub({ c, m }: { c: SetState; m: Match }) {
+  const plan = (team()!.subPlan || []).filter((x) => x.rot === c.rot && c.lu && c.lu.includes(x.out) && !c.lu.includes(x.in) && x.in !== c.lib);
+  if (m.scrim || !plan.length) return null;
+  const lim = team()!.settings.subLimit;
+  return <>{plan.map((x) => <div key={x.id} className="banner accent"><p><b>Planned sub, rotation {c.rot}:</b> {playerName(x.in)} in for {playerName(x.out)}.</p>
+    <button className="btn sm primary" disabled={!!lim && c.subs >= lim} onClick={() => { appendEvents(m.id, [{ t: "SUB", out: x.out, in: x.in } as any]); toast(`${playerName(x.in)} in for ${playerName(x.out)}`); }}>Make sub</button></div>)}</>;
 }
 
 function Hint({ c, m }: { c: SetState; m: Match }) {

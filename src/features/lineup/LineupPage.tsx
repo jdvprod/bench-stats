@@ -1,6 +1,6 @@
 /** Lineup builder: six starters, libero, all six rotations, rotation results, AI suggestion. */
 import { useState } from "react";
-import { activePlayers, appendEvents, currentMatch, matchesOf, patch, player, playerName, replayOf, setTeamPatch, team, toast } from "../../data/store";
+import { activePlayers, appendEvents, currentMatch, matchesOf, patch, player, playerName, replayOf, setTeamPatch, team, toast, uid } from "../../data/store";
 import { Lineup } from "../../data/model";
 import { aggregate, rotateLineup } from "../../sports/volleyball/engine";
 import { fmtPct, fmtSigned, ratio } from "../../sports/volleyball/metrics";
@@ -120,6 +120,7 @@ export function LineupPage() {
         </Card>
       </div>
     </div>
+    <SubPlan />
     <Card title="All six rotations" actions={<Seg value={statsFrom} onChange={setStatsFrom} options={[["season", "Season results"], ["lineup", `This lineup (${same.length} sets)`]]} />}>
       <div className="rots">{[1, 2, 3, 4, 5, 6].map((r) => {
         const L = rotateLineup(lu, r - 1), li = liberoFor(L, lib, libSrv), x = A.rot[r], net = x ? x.w - x.l : 0;
@@ -149,4 +150,24 @@ function LineupChecks({ lu }: { lu: string[] }) {
   if (s < 0) notes.push("No setter in the six.");
   if (!notes.length) return <p className="hint">Balanced: setter, middles and outsides are across from each other.</p>;
   return <div className="hint warn">{notes.map((n, i) => <div key={i}>{n}</div>)}</div>;
+}
+
+/** Planned substitutions by rotation. The Track screen reminds you when that rotation comes up. */
+function SubPlan() {
+  const t = team()!, ps = activePlayers(), plan = t.subPlan || [];
+  const [rot, setRot] = useState(4), [out, setOut] = useState(""), [inn, setIn] = useState("");
+  const save2 = (p: typeof plan) => setTeamPatch({ subPlan: p });
+  return <Card title="Planned subs">
+    <div className="stack">
+      {plan.length ? <ul className="log">{plan.slice().sort((a, b) => a.rot - b.rot).map((x) => <li key={x.id} style={{ gridTemplateColumns: "60px 1fr 28px" }}><b>R{x.rot}</b><span>{playerName(x.in)} in for {playerName(x.out)}</span><button className="x" aria-label="Remove" onClick={() => save2(plan.filter((y) => y.id !== x.id))}>✕</button></li>)}</ul>
+        : <p className="small muted">Plan your regular subs, like a defensive specialist in for the opposite when she rotates to the back row. Track reminds you when that rotation comes up.</p>}
+      <div className="row">
+        <select className="input" style={{ width: "auto" }} value={rot} onChange={(e) => setRot(+e.target.value)} aria-label="Rotation">{[1, 2, 3, 4, 5, 6].map((r) => <option key={r} value={r}>Rotation {r}</option>)}</select>
+        <select className="input" style={{ width: "auto" }} value={inn} onChange={(e) => setIn(e.target.value)} aria-label="Sub in"><option value="">Sub in…</option>{ps.map((p) => <option key={p.id} value={p.id}>#{p.num} {p.first}</option>)}</select>
+        <span className="small muted">for</span>
+        <select className="input" style={{ width: "auto" }} value={out} onChange={(e) => setOut(e.target.value)} aria-label="Sub out"><option value="">Player out…</option>{ps.map((p) => <option key={p.id} value={p.id}>#{p.num} {p.first}</option>)}</select>
+        <button className="btn sm primary" disabled={!out || !inn || out === inn} onClick={() => { save2(plan.concat({ id: uid("sp"), rot, out, in: inn })); setIn(""); setOut(""); toast("Planned sub added"); }}>Add</button>
+      </div>
+    </div>
+  </Card>;
 }

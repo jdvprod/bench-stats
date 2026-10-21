@@ -48,11 +48,16 @@ function TeamInfo() {
 
 function Roster() {
   const t = team()!, ps = teamPlayers();
-  const [showInactive, setShowInactive] = useState(false);
+  const [showInactive, setShowInactive] = useState(false), [paste, setPaste] = useState<string | null>(null);
   const add = () => { const p: Player = { id: uid("p"), teamId: t.id, num: "", first: "", last: "", pos: "OH", grad: null, height: "", active: true, goals: [], notes: "" }; save("players", p); setTimeout(() => document.getElementById("num-" + p.id)?.focus(), 30); };
   const upd = (id: string, k: keyof Player, v: any) => patch("players", id, { [k]: v } as any);
   const shown = ps.filter((p) => showInactive || p.active);
-  return <Card title={`Roster · ${ps.filter((p) => p.active).length} players`} actions={<><label className="btn sm" style={{ cursor: "pointer" }}>Import CSV<input type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) f.text().then((txt) => toast(importRosterCsv(txt))); e.target.value = ""; }} /></label><button className="btn sm" disabled={!ps.length} onClick={() => download(`${t.name} roster.csv`, rosterCsv(), "text/csv")}>Export CSV</button><button className="btn sm primary" onClick={add}>Add player</button></>}>
+  return <Card title={`Roster · ${ps.filter((p) => p.active).length} players`} actions={<><label className="btn sm" style={{ cursor: "pointer" }}>Import CSV<input type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) f.text().then((txt) => toast(importRosterCsv(txt))); e.target.value = ""; }} /></label><button className="btn sm" disabled={!ps.length} onClick={() => download(`${t.name} roster.csv`, rosterCsv(), "text/csv")}>Export CSV</button><button className="btn sm" onClick={() => setPaste(paste == null ? "" : null)}>Paste list</button><button className="btn sm primary" onClick={add}>Add player</button></>}>
+    {paste != null && <div className="stack" style={{ marginBottom: 12 }}>
+      <label className="field"><span className="label">One player per line: number, name, position, grad year (any order after the number)</span>
+        <textarea rows={6} value={paste} onChange={(e) => setPaste(e.target.value)} placeholder={"7 Maya Chen OH 2027\n12 Sofia Nguyen MB\n#1 Ava Ramirez setter"} autoFocus /></label>
+      <div className="row"><button className="btn sm primary" disabled={!paste.trim()} onClick={() => { toast(addPasted(paste)); setPaste(null); }}>Add players</button><button className="btn sm" onClick={() => setPaste(null)}>Cancel</button></div>
+    </div>}
     {!ps.length && <p className="empty">No players yet. Add your roster to start tracking.</p>}
     {shown.length > 0 && <div className="tbl"><table>
       <thead><tr><th className="l">#</th><th className="l">First</th><th className="l">Last</th><th className="l">Pos</th><th className="l">Grad</th><th className="l">Height</th><th /></tr></thead>
@@ -176,4 +181,27 @@ function importRosterCsv(text: string): string {
     else { save("players", { id: uid("p"), teamId: t.id, num, first, last, pos, grad, height: g(cH), active: true, goals: [], notes: "" } as Player); added++; }
   }
   return `Roster imported: ${added} added, ${updated} updated.`;
+}
+
+/** "7 Maya Chen OH 2027" per line. Updates players with the same number. */
+function addPasted(text: string): string {
+  const t = team()!, existing = teamPlayers(); let added = 0, updated = 0;
+  const POS: Record<string, string> = { OH: "OH", OUTSIDE: "OH", MB: "MB", MIDDLE: "MB", OPP: "OPP", OPPOSITE: "OPP", RS: "OPP", RIGHT: "OPP", S: "S", SETTER: "S", L: "L", LIBERO: "L", DS: "DS" };
+  for (const line of text.split(/\r?\n/)) {
+    const tok = line.replace(/[,\t|]/g, " ").split(/\s+/).filter(Boolean); if (!tok.length) continue;
+    let num = "", pos = "", grad: number | null = null; const names: string[] = [];
+    for (const w of tok) {
+      const u = w.toUpperCase().replace(/[.()]/g, "");
+      if (!num && /^#?\d{1,3}$/.test(w)) num = w.replace("#", "");
+      else if (/^(19|20)\d\d$/.test(w)) grad = +w;
+      else if (POS[u] && !pos) pos = POS[u];
+      else names.push(w);
+    }
+    if (!num && !names.length) continue;
+    const first = names[0] || "", last = names.slice(1).join(" ");
+    const match = existing.find((p) => num && p.num === num);
+    if (match) { patch("players", match.id, { first: first || match.first, last: last || match.last, pos: pos || match.pos, grad: grad ?? match.grad, active: true }); updated++; }
+    else { save("players", { id: uid("p"), teamId: t.id, num, first, last, pos: pos || "OH", grad, height: "", active: true, goals: [], notes: "" } as Player); added++; }
+  }
+  return `${added} added${updated ? `, ${updated} updated` : ""}.`;
 }

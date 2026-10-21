@@ -28,6 +28,10 @@ export interface Team {
   sample?: boolean;
   /** Where players stand in each rotation (serve receive, serving, base defense). */
   formations?: import("../sports/volleyball/formations").Formations | null;
+  /** Substitutions planned by rotation, e.g. a DS in for the opposite in rotation 4. */
+  subPlan?: { id: string; rot: number; out: string; in: string }[];
+  /** Getting-started checklist dismissed. */
+  setupDone?: boolean;
   /** Season targets the team is chasing, shown on Home. */
   targets?: Partial<Record<"hitting" | "sideOut" | "pointScoring" | "passAvg" | "serveIn" | "firstBallSO", number>>;
   /** Upcoming matches. */
