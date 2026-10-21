@@ -138,7 +138,7 @@ function Players({ A }: { A: Agg }) {
       {mode === "advanced" && <><thead><tr><th className="l">#</th><th className="l">Player</th>{S.th("Kill %", "kp")}{S.th("Hit %", "hit")}{S.th("Perfect pass %", "pp")}{S.th("Good pass %", "gp")}{S.th("Serve in %", "si")}{S.th("Serve eff", "se")}{S.th("Ace : error", "ae")}{S.th("+/−", "pmn")}{S.th("Net points", "np")}</tr></thead>
         <tbody>{ids.map((id) => { const s = A.ps[id] || ({} as Stat), pm = playerMetrics(A, id), p = player(id)!; return <tr key={id} className="click" onClick={() => go("player", id)}><td className="l">{p.num}</td><td className="l">{p.first} {p.last}</td><td>{fmtPct(pm.killPct)}</td><td>{fmtHit(pm.hitting)}</td><td>{fmtPct(pm.perfectPass)}</td><td>{fmtPct(s.R ? (s.R3 + s.R2) / s.R : null)}</td><td>{fmtPct(pm.serveIn)}</td><td>{fmtHit(pm.serveEff)}</td><td>{fmtRatio(pm.aceErr)}</td><td><b style={{ color: (pm.plusMinus || 0) > 0 ? "var(--good)" : (pm.plusMinus || 0) < 0 ? "var(--muted)" : undefined }}>{fmtSigned(pm.plusMinus)}</b></td><td>{fmtSigned(pm.netPoints)}</td></tr>; })}</tbody></>}
     </table></div>
-    <p className="keys" style={{ marginTop: 8 }}>{mode === "totals" ? "Hit % = (kills − errors) ÷ attempts. Pass on a 0–3 scale. Green and red mark standouts once there are enough attempts. Tap a column to sort, or a player for their page." : mode === "perset" ? "Per set uses the sets each player recorded a stat or was on court in. Net points = kills, aces and blocks minus errors." : "+/− counts rallies won minus lost while she was on court (needs a lineup). Serve eff = (aces − errors) ÷ serves. Ace : error above 1.0 is strong."}</p></>}
+    <p className="keys" style={{ marginTop: 8 }}>{mode === "totals" ? "Hit % = (kills − errors) ÷ attempts. Pass on a 0–3 scale. Green and red mark standouts once there are enough attempts. Tap a column to sort, or a player for their page." : mode === "perset" ? "Per set uses the sets each player recorded a stat or was on court in. Net points = kills, aces and blocks minus errors." : "+/− counts rallies won minus lost while that player was on court (needs a lineup). Serve eff = (aces − errors) ÷ serves. Ace : error above 1.0 is strong."}</p></>}
   </Card>;
 }
 const TOTAL_GET: ((s: Stat) => number | null)[] = [(s) => s.K, (s) => s.TA, (s) => s.AE, (s) => hitting(s), (s) => s.SATT, (s) => s.AST, (s) => s.BHE, (s) => serveAttempts(s), (s) => s.SA, (s) => s.SI, (s) => s.SEN, (s) => s.SEO + s.SE, (s) => passAvg(s), (s) => s.R, (s) => s.P0, (s) => s.D, (s) => s.DE, (s) => s.BS, (s) => s.BA, (s) => s.BE, (s) => s.CE, (s) => s.EE, (s) => s.PE];
@@ -384,7 +384,7 @@ function Distribution({ A }: { A: Agg }) {
         const top = hitters.reduce((b, id) => ((row[id]?.TA || 0) > (row[b]?.TA || 0) ? id : b), hitters[0]);
         return <tr key={r}><td className="l"><b>R{r}</b></td><td>{n}</td>{hitters.map((id) => { const x = row[id]; return <td key={id} className={x && id === top && n >= 5 ? "cmp-best" : ""}>{x && n ? <>{Math.round((100 * x.TA) / n)}% <span className="muted small">{fmtHit(hitting({ K: x.K, AE: x.E, TA: x.TA }))}</span></> : "—"}</td>; })}</tr>; })}</tbody>
     </table></div>
-    <p className="keys" style={{ marginTop: 8 }}>Share of attacks each hitter gets in each rotation, with her hitting % there. Spot rotations where the offense leans on one hitter or where a hot hitter isn't getting the ball.</p>
+    <p className="keys" style={{ marginTop: 8 }}>Share of attacks each hitter gets in each rotation, with that hitter's hitting % there. Spot rotations where the offense leans on one hitter or where a hot hitter isn't getting the ball.</p>
   </Card>;
 }
 
@@ -400,7 +400,7 @@ function ReceiveRot({ A }: { A: Agg }) {
       <tbody>{[1, 2, 3, 4, 5, 6].map((r) => { const row = A.rcvRot[r] || {}, n = Object.values(row).reduce((a, x) => a + x.R, 0), rs = Object.values(row).reduce((a, x) => a + x.RS, 0), x = A.rot[r];
         return <tr key={r}><td className="l"><b>R{r}</b></td><td>{fmtPct(ratio(x.rw, x.rn))}</td><td><b>{n ? fmtAvg(rs / n) : "—"}</b></td>{passers.map((id) => { const q = row[id]; return <td key={id} className={q && q.R >= 3 && q.RS / q.R < 1.7 ? "lo" : ""}>{q ? <>{fmtAvg(q.RS / q.R)} <span className="muted small">({q.R})</span></> : "—"}</td>; })}</tr>; })}</tbody>
     </table></div>
-    <p className="keys" style={{ marginTop: 8 }}>Each passer's average in each rotation (number of serves in brackets). Underlined = struggling there: hide her in that rotation's serve-receive pattern or move the libero over.</p>
+    <p className="keys" style={{ marginTop: 8 }}>Each passer's average in each rotation (number of serves in brackets). Underlined = struggling there: hide that passer in that rotation's serve-receive pattern or move the libero over.</p>
   </Card>;
 }
 

@@ -87,10 +87,10 @@ export function PlayerPage({ id }: { id: string }) {
         <thead><tr><th className="l">Date</th><th className="l">Opponent</th><th>Sets</th><th>K</th><th>E</th><th>TA</th><th>Hit %</th><th>Ace</th><th>SE</th><th>Pass</th><th>Dig</th><th>Blk</th><th>Ast</th><th>+/−</th></tr></thead>
         <tbody>{rows.slice().reverse().map((r) => { const x = r.s || ({} as Stat); return <tr key={r.m.id}><td className="l">{fmtDate(r.m.date)}</td><td className="l">{r.m.opp}</td><td>{r.pm.sets}</td><td>{x.K ?? 0}</td><td>{x.AE ?? 0}</td><td>{x.TA ?? 0}</td><td>{r.s ? fmtHit(hitting(x)) : "—"}</td><td>{x.SA ?? 0}</td><td>{r.s ? serveErrors(x) : 0}</td><td>{r.s ? fmtAvg(passAvg(x)) : "—"}</td><td>{x.D ?? 0}</td><td>{r.s ? fmtNum(blocks(x)) : 0}</td><td>{x.AST ?? 0}</td><td>{fmtSigned(r.pm.plusMinus)}</td></tr>; })}</tbody>
       </table></div></Card>
-      <AiCard key={id} title="Report card" desc="Strengths, growth areas and one measurable goal, written for the player from her numbers." button="Write report card" prompt={() => reportCardPrompt(id)} filename={`${p.first} ${p.last} report card`} />
+      <AiCard key={id} title="Report card" desc="Strengths, growth areas and one measurable goal, written for the player from their numbers." button="Write report card" prompt={() => reportCardPrompt(id)} filename={`${p.first} ${p.last} report card`} />
     </>}
     <Recruiting id={id} rows={rows} A={A} />
-    <Card title="Coach notes"><textarea className="input" rows={3} value={p.notes} onChange={(e) => patch("players", id, { notes: e.target.value })} placeholder="Private notes: what she's working on, recruiting contacts, injuries…" /></Card>
+    <Card title="Coach notes"><textarea className="input" rows={3} value={p.notes} onChange={(e) => patch("players", id, { notes: e.target.value })} placeholder="Private notes: what they're working on, recruiting contacts, injuries…" /></Card>
   </div>;
 }
 
@@ -152,9 +152,9 @@ function Recruiting({ id, rows, A }: { id: string; rows: Row[]; A: Agg }) {
     <button className="btn sm primary" onClick={() => { download(`${p.first} ${p.last} recruiting profile.html`, recruitHtml(id, rows, A), "text/html"); toast("Recruiting sheet saved. Send it to college coaches or attach it to emails."); }}>Download recruiting sheet</button></div>}>
     {open ? <div className="stack">
       <div className="pf-grid">{PF.map(([k, label, ph]) => <label key={k} className="field"><span className="label">{label}</span><input key={id + k} defaultValue={pr[k] || ""} placeholder={ph} onBlur={(e) => set(k, e.target.value.trim())} /></label>)}</div>
-      <label className="field"><span className="label">About</span><textarea key={id + "about"} rows={3} defaultValue={pr.about || ""} placeholder="Strengths, leadership, what she's looking for in a program" onBlur={(e) => set("about", e.target.value.trim())} /></label>
+      <label className="field"><span className="label">About</span><textarea key={id + "about"} rows={3} defaultValue={pr.about || ""} placeholder="Strengths, leadership, what they're looking for in a program" onBlur={(e) => set("about", e.target.value.trim())} /></label>
       <p className="keys">Stays private on your account. Only what's in the downloaded sheet is shared. Full recruiting profiles and college-coach sharing are coming soon.</p>
-    </div> : <p className="small muted">Measurables, contact info and a highlight link, combined with her verified season stats into a one-page sheet for college coaches.</p>}
+    </div> : <p className="small muted">Measurables, contact info and a highlight link, combined with verified season stats into a one-page sheet for college coaches.</p>}
   </Card>;
 }
 
@@ -180,7 +180,7 @@ ${pr.email || pr.phone || pr.coachContact ? `<h2>Contact</h2><div class="g">${it
 <footer>Stats recorded with Benchboard · ${new Date().toLocaleDateString()}</footer></main></body></html>`;
 }
 
-/** Where her attacks land, plus hitting and passing by rotation. */
+/** Where this player's attacks land, plus hitting and passing by rotation. */
 function PlayerCourt({ id, A }: { id: string; A: Agg }) {
   const T = tendencies(A.locs, "ourAttack", { p: id });
   const rots = [1, 2, 3, 4, 5, 6].map((r) => ({ r, a: A.atkRot[r]?.[id], p: A.rcvRot[r]?.[id] })).filter((x) => (x.a && x.a.TA) || (x.p && x.p.R));

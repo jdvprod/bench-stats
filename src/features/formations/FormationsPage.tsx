@@ -101,7 +101,7 @@ export function FormationsPage() {
             : faults.length ? <ul className="flags">{faults.map((f, i) => <li key={i} className="flag bad"><span><b>Overlap:</b> {f.text}</span></li>)}</ul>
               : <p className="hint">✓ Legal. No overlaps in rotation {rot}.</p>}
           {faultRots.length > 0 && phase !== "base" && <p className="small" style={{ marginTop: 8 }}>Rotations with overlaps: {faultRots.map((r) => "R" + r).join(", ")}</p>}
-          <p className="keys" style={{ marginTop: 8 }}>Rule: each front-row player must be closer to the net than the back-row player behind her, and players in a row keep their left-to-right order. {phase === "serve" ? "The server is exempt." : ""} The libero takes the spot of the player she replaces.</p>
+          <p className="keys" style={{ marginTop: 8 }}>Rule: each front-row player must be closer to the net than the back-row player behind them, and players in a row keep their left-to-right order. {phase === "serve" ? "The server is exempt." : ""} The libero takes the spot of the player she replaces.</p>
         </Card>
         <Card title="Tools">
           <div className="stack">

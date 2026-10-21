@@ -167,7 +167,7 @@ function SubPlan() {
   return <Card title="Planned subs">
     <div className="stack">
       {plan.length ? <ul className="log">{plan.slice().sort((a, b) => a.rot - b.rot).map((x) => <li key={x.id} style={{ gridTemplateColumns: "60px 1fr 28px" }}><b>R{x.rot}</b><span>{playerName(x.in)} in for {playerName(x.out)}</span><button className="x" aria-label="Remove" onClick={() => save2(plan.filter((y) => y.id !== x.id))}>✕</button></li>)}</ul>
-        : <p className="small muted">Plan your regular subs, like a defensive specialist in for the opposite when she rotates to the back row. Track reminds you when that rotation comes up.</p>}
+        : <p className="small muted">Plan your regular subs, like a defensive specialist in for the opposite when that player rotates to the back row. Track reminds you when that rotation comes up.</p>}
       <div className="row">
         <select className="input" style={{ width: "auto" }} value={rot} onChange={(e) => setRot(+e.target.value)} aria-label="Rotation">{[1, 2, 3, 4, 5, 6].map((r) => <option key={r} value={r}>Rotation {r}</option>)}</select>
         <select className="input" style={{ width: "auto" }} value={inn} onChange={(e) => setIn(e.target.value)} aria-label="Sub in"><option value="">Sub in…</option>{ps.map((p) => <option key={p.id} value={p.id}>#{p.num} {p.first}</option>)}</select>

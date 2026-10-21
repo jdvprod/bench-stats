@@ -96,7 +96,7 @@ function recommend(view: TendencyView, zones: Record<string, ZoneCount>, total: 
   const byP: Record<string, number> = {};
   if (view === "theirAttack") for (const l of pts) if (l.t === "OK" && l.op) byP[l.op] = (byP[l.op] || 0) + 1;
   const topOpp = Object.entries(byP).sort((a, b) => b[1] - a[1])[0];
-  if (topOpp && topOpp[1] >= 3) recs.push(`Their #${topOpp[0]} has the most marked kills (${topOpp[1]}). Filter by her number to see her spots.`);
+  if (topOpp && topOpp[1] >= 3) recs.push(`Their #${topOpp[0]} has the most marked kills (${topOpp[1]}). Filter by that number to see their spots.`);
   return recs;
 }
 

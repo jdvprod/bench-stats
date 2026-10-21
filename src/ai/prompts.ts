@@ -114,7 +114,7 @@ export function reportCardPrompt(playerId: string) {
   for (const m of games) { const R = replayOf(m); if (!R) continue; const A = aggregate(R.sets); if (!A.ps[p.id]) continue; all.push(...R.sets); L.push(`- ${m.date} vs ${m.opp}: ${statLine(A.ps[p.id])}`); }
   if (all.length) { const A = aggregate(all), pm = playerMetrics(A, p.id); L.push(`SEASON: ${statLine(A.ps[p.id])}; ${pm.sets} sets; kills/set ${pm.kps?.toFixed(2)}, digs/set ${pm.dps?.toFixed(2)}, +/- ${pm.plusMinus ?? "n/a"}, net points ${pm.netPoints}`); }
   if (p.goals.length) L.push("GOALS SET BY COACH: " + p.goals.map((g) => `${g.metric} target ${g.target}`).join(", "));
-  return `Write a player report card a coach can share with the athlete. Sections: Strengths:, Growth areas:, Goal for next match:, Coach's note:. 2-3 bullets in the first two sections, one specific measurable goal, and a 1-2 sentence encouraging note to the player by first name. Mention trends across matches when the data shows them. Only judge skills that fit her position and that have enough attempts. ${FORMAT} Under 220 words.\n\n${L.join("\n")}`;
+  return `Write a player report card a coach can share with the athlete. Sections: Strengths:, Growth areas:, Goal for next match:, Coach's note:. 2-3 bullets in the first two sections, one specific measurable goal, and a 1-2 sentence encouraging note to the player by first name. Mention trends across matches when the data shows them. Only judge skills that fit the player's position and that have enough attempts. ${FORMAT} Under 220 words.\n\n${L.join("\n")}`;
 }
 
 export function lineupPrompt() {

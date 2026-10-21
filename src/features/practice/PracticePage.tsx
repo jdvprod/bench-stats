@@ -183,7 +183,7 @@ function ScrimSetup() {
       <div className="stack">
         <div><div className="label">Games to</div><Seg value={to} onChange={setTo} options={[[25, "25"], [21, "21"], [15, "15"], [11, "11"]]} label="Points to win" /></div>
         <div><div className="label">Format</div><Seg value={games} onChange={setGames} options={[[1, "1 game"], [3, "Best of 3"], [5, "Best of 5"]]} label="Games" /></div>
-        <p className="small muted">Every stat is credited to the player and her scrimmage team, so you get head-to-head numbers plus individual stats that count toward practice totals (not match stats).</p>
+        <p className="small muted">Every stat is credited to the player and their scrimmage team, so you get head-to-head numbers plus individual stats that count toward practice totals (not match stats).</p>
         <button className="btn primary" onClick={start}>Start scrimmage</button>
       </div>
     </Card>

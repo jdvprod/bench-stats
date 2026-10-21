@@ -156,7 +156,7 @@ function newSet(n: number, serve: Side, lu: string[] | null, lib: string | null)
   };
 }
 
-/** Who is serving for us right now (the libero if she serves for the player in position 1). */
+/** Who is serving for us right now (the libero if serving for the player in position 1). */
 export function serverOf(c: SetState | null): string | null {
   if (!c || c.serve !== "us" || !c.lu) return null;
   const p = c.lu[0];
