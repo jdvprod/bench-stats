@@ -546,3 +546,8 @@ kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--
 .sh-player{display:flex;gap:14px;align-items:center}.sh-num{width:64px;height:64px;border-radius:12px;background:var(--bar);color:var(--us-bright);display:grid;place-items:center;font-family:var(--display);font-size:34px;font-weight:700}
 .sh-k{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}.sh-k div{display:flex;flex-direction:column}.sh-k b{font-family:var(--display);font-size:28px;line-height:1.1}.sh-k small{color:var(--muted);font-size:12px}
 @media (max-width:560px){.sh-k{grid-template-columns:repeat(2,1fr)}.sh-list li{grid-template-columns:92px 1fr auto}}
+/* club */
+.club-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+.club-card{display:flex;flex-direction:column;gap:10px}.club-rec{font-family:var(--display);font-size:28px;line-height:1}
+.club-k{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.club-k div{display:flex;flex-direction:column}.club-k b{font-family:var(--display);font-size:20px}
+.club-card .pt-us{color:var(--us)}.club-card .pt-them{color:var(--them)}

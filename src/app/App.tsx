@@ -22,6 +22,7 @@ import { createSampleTeam } from "../data/seed";
 import { ErrorBoundary } from "./ErrorBoundary";
 import { WatchPage } from "../cloud/WatchPage";
 import { SeasonPage } from "../cloud/SeasonPage";
+import { ClubPage } from "../features/club/ClubPage";
 import { JoinPage } from "../cloud/CloudCard";
 import { AccountChip, AccountPage, AuthPage, skipAccounts, syncDot, wantsAuthGate } from "../cloud/AuthPage";
 import { currentUser } from "../cloud/client";
@@ -61,13 +62,15 @@ export function App() {
   const showBoard = !!currentMatch() && ["track", "practice", "lineup", "formations", "stats", "court", "matchup"].includes(page) && !(page === "practice" && currentMatch()?.kind === "match");
   const teams = all("teams").sort((a, b) => a.createdAt - b.createdAt);
   const switcher = (cls: string) => (
-    <select className={cls} value={t.id} aria-label="Team" onChange={(e) => { if (e.target.value === "__new") location.hash = "#/team/new"; else setPrefs({ teamId: e.target.value }); }}>
+    <select className={cls} value={t.id} aria-label="Team" onChange={(e) => { if (e.target.value === "__new") location.hash = "#/team/new"; else if (e.target.value === "__club") location.hash = "#/club"; else setPrefs({ teamId: e.target.value }); }}>
       {teams.map((x) => <option key={x.id} value={x.id}>{x.name}{x.level ? " · " + x.level : ""}</option>)}
+      {teams.filter((x) => !x.sample).length > 1 && <option value="__club">All teams overview</option>}
       <option value="__new">+ Add a team</option>
     </select>
   );
   let body;
   switch (page) {
+    case "club": body = <ClubPage />; break;
     case "lineup": body = <LineupPage />; break;
     case "formations": body = <FormationsPage />; break;
     case "labs": body = <LabsPage />; break;
