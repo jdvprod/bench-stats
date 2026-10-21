@@ -454,3 +454,4 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .avatar{position:relative}
 .avatar.dot-ok::after,.avatar.dot-wait::after,.avatar.dot-err::after{content:"";position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bar)}
 .avatar.dot-ok::after{background:var(--us-bright)}.avatar.dot-wait::after{background:#8F959E}.avatar.dot-err::after{background:#F07167}
+.pf-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(190px,1fr));gap:10px}

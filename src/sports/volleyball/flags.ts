@@ -1,5 +1,6 @@
 /** Coach flags: plain-language alerts computed from the live match. */
-import { aggregate, Replay, runOf } from "./engine";
+import { aggregate, Replay, runOf, zoneOf } from "./engine";
+const zoneKey = (x: number, y: number) => { const z = zoneOf(x, y); return z && z !== "out" ? String(z) : null; };
 import { CtxLine } from "./engine";
 import { fmtAvg, fmtHit, fmtPct, hitting, miscErrors, ratio, serveErrors, teamErrorsGiven } from "./metrics";
 
@@ -49,6 +50,21 @@ export function flags(R: Replay, x: FlagContext): Flag[] {
   if (mis >= 3) out.push({ lvl: "warn", title: `${mis} communication / effort / positioning errors this set.`, detail: "Worth a reset in the next timeout." });
   const ours = teamErrorsGiven(setA);
   if (cur.them >= 6 && ours / cur.them >= 0.5) out.push({ lvl: "warn", title: `${ours} of their ${cur.them} points this set were our errors.`, detail: "" });
+  // Stuck in a rotation: lost several straight on their serve without siding out
+  let stuck = 0;
+  for (let i = cur.rallies.length - 1; i >= 0; i--) { const r = cur.rallies[i]; if (r.rot !== cur.rot || r.server !== "them") break; if (r.w === "them") stuck++; else break; }
+  if (stuck === 0 && cur.serve === "them") { for (let i = cur.rallies.length - 1; i >= 0; i--) { const r = cur.rallies[i]; if (r.rot !== cur.rot) break; if (r.w === "them") stuck++; else break; } }
+  if (cur.serve === "them" && stuck >= 3) out.push({ lvl: "bad", title: `Stuck in rotation ${cur.rot}:`, detail: `${stuck} straight points on their serve. A timeout, a sub or a serve-receive change can break it.` });
+  // Next server for us, and how they're serving today
+  if (cur.lu && cur.serve === "them") {
+    const next = cur.lu[1], st = mA.ps[next];
+    if (st) { const att = st.SA + st.SI + serveErrors(st); if (att >= 4 && (st.SA + st.SI) / att < 0.8) out.push({ lvl: "warn", title: `Next server ${x.short(next)} is ${st.SA + st.SI} of ${att} today.`, detail: "A safe, in serve wins more than a missed tough one." }); }
+  }
+  // Where our aces land: keep serving there
+  const aceZ: Record<string, number> = {};
+  for (const s2 of R.sets) for (const l of s2.locs) if (l.t === "SA") { const z = zoneKey(l.x, l.y); if (z) aceZ[z] = (aceZ[z] || 0) + 1; }
+  const az = Object.entries(aceZ).sort((a, b) => b[1] - a[1])[0];
+  if (az && az[1] >= 2) out.push({ lvl: "good", title: `${az[1]} aces into their zone ${az[0]}.`, detail: "Keep serving there until they adjust." });
   const order = { bad: 0, warn: 1, good: 2 };
   return out.sort((a, b) => order[a.lvl] - order[b.lvl]);
 }

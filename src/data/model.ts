@@ -46,7 +46,10 @@ export interface Player {
   active: boolean;
   goals: Goal[];
   notes: string;
+  /** Recruiting profile (shared only when the coach downloads the sheet). */
+  profile?: RecruitProfile;
 }
+export interface RecruitProfile { club?: string; gpa?: string; email?: string; phone?: string; reach?: string; approach?: string; block?: string; hand?: string; video?: string; about?: string; coachContact?: string }
 
 export type MatchKind = "match" | "scrimmage" | "drills";
 export interface ScrimSetup { a: { name: string; ids: string[] }; b: { name: string; ids: string[] }; to: number }

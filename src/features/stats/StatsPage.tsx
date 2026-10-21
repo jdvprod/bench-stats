@@ -14,6 +14,7 @@ import { activeSeason, defaultScope, resolveScope, Scope, seasonMatches } from "
 import { buildXlsx } from "../../lib/xlsx";
 import { logText } from "../track/Tracker";
 import { matchReportHtml } from "./matchReport";
+import { seasonAwards, seasonReportHtml } from "./seasonReport";
 
 type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "opponent";
 
@@ -32,6 +33,7 @@ export function StatsPage() {
     <div className="pagehead"><h1>Stats</h1>
       <div className="row">
         <button className="btn sm" onClick={() => exportSheet(S, A)}>Download spreadsheet</button>
+        {!single && S.kind === "games" && S.items.length > 0 && <button className="btn sm" onClick={() => { const se = seasonsOf().find((x) => x.id === ui.statsSeason); download(`${t.name} ${se?.name || "season"} report.html`.replace(/[^\w\- .]+/g, ""), seasonReportHtml(S.items, se), "text/html"); toast("Season report saved. Open it to print or share."); }}>Season report</button>}
         {single && !isScrim && <button className="btn sm" onClick={() => { download(`${t.name} vs ${single.m.opp} ${single.m.date} report.html`.replace(/[^\w\- .]+/g, ""), matchReportHtml(single.m, single.R), "text/html"); toast("Match report saved. Open it to print or share."); }}>Match report</button>}
         {single && <button className="btn sm" onClick={() => copyText(snapshot(single.m)).then((ok) => toast(ok ? "Summary copied" : "Couldn't copy here"))}>Copy summary</button>}
       </div>
@@ -83,7 +85,7 @@ function Overview({ S, A }: { S: Scope; A: Agg }) {
     </div>
     {B && <p className="keys" style={{ marginTop: -4 }}>▲ / ▼ compare this {single?.setN ? "set" : "match"} with your season average.</p>}
     {!single && S.items.length >= 2 && <Trends S={S} />}
-    {!single && S.items.length >= 1 && <div className="grid2" style={{ alignItems: "start" }}><Leaders A={A} /><Highs S={S} /></div>}
+    {!single && S.items.length >= 1 && <div className="grid2" style={{ alignItems: "start" }}><Leaders A={A} /><div className="stack"><Awards S={S} /><Highs S={S} /></div></div>}
     <div className="grid2">
       <Card title="Where points came from"><div className="stack">
         <div><div className="row between small"><b style={{ color: "var(--us)" }}>{t.name}</b><b className="num">{A.us}</b></div>
@@ -333,4 +335,12 @@ function Compare({ A, ids }: { A: Agg; ids: string[] }) {
     </table></div> : <p className="empty">Pick two or three players to compare.</p>}
     <p className="keys">Blue marks the best number in each row. Per-set numbers use the sets each player actually played.</p>
   </div>;
+}
+
+function Awards({ S }: { S: Scope }) {
+  const aw = S.kind === "games" ? seasonAwards(S.items) : [];
+  if (!aw.length) return null;
+  return <Card title="Season awards so far">
+    <ul className="log">{aw.map((a) => <li key={a.title} className="click" style={{ gridTemplateColumns: "1fr auto", cursor: "pointer" }} onClick={() => go("player", a.id)}><span><span className="small muted">{a.title}</span><br /><b>{playerName(a.id, "full")}</b></span><span className="small muted" style={{ textAlign: "right", maxWidth: 220 }}>{a.why}</span></li>)}</ul>
+  </Card>;
 }

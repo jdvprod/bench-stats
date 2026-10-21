@@ -1,7 +1,7 @@
 /** Player portal: season numbers, trends, match log, goals, AI report card and a shareable report. */
 import { useState } from "react";
 import { matchesOf, patch, plansOf, player, replayOf, team, toast, uid } from "../../data/store";
-import { Goal, GoalMetric, Match } from "../../data/model";
+import { Goal, GoalMetric, Match, RecruitProfile } from "../../data/model";
 import { aggregate, Agg, SetState, Stat } from "../../sports/volleyball/engine";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, fmtSigned, hitting, passAvg, playerMetrics, PlayerMetrics, serveAttempts, serveErrors } from "../../sports/volleyball/metrics";
 import { Card, download, fmtDate, Kpi, Seg } from "../../ui/kit";
@@ -85,6 +85,7 @@ export function PlayerPage({ id }: { id: string }) {
       </table></div></Card>
       <AiCard key={id} title="Report card" desc="Strengths, growth areas and one measurable goal, written for the player from her numbers." button="Write report card" prompt={() => reportCardPrompt(id)} filename={`${p.first} ${p.last} report card`} />
     </>}
+    <Recruiting id={id} rows={rows} A={A} />
     <Card title="Coach notes"><textarea className="input" rows={3} value={p.notes} onChange={(e) => patch("players", id, { notes: e.target.value })} placeholder="Private notes: what she's working on, recruiting contacts, injuries…" /></Card>
   </div>;
 }
@@ -130,4 +131,47 @@ table{border-collapse:collapse;width:100%;font-size:13.5px}th,td{padding:6px;tex
 <footer>Made with Benchboard · ${new Date().toLocaleDateString()}</footer></main></body></html>`;
   download(`${p.first} ${p.last} - ${t.name}.html`, html, "text/html");
   toast("Report saved. Text or email the file to share it.");
+}
+
+/* ---------- recruiting profile (preview of the recruiting add-on) ---------- */
+const PF: [keyof RecruitProfile, string, string][] = [
+  ["club", "Club team", "e.g. Central Valley 16 Elite"], ["gpa", "GPA", "3.8"], ["hand", "Dominant hand", "Right"],
+  ["reach", "Standing reach", `7'6"`], ["approach", "Approach jump", `9'8"`], ["block", "Block jump", `9'2"`],
+  ["email", "Player email", "name@email.com"], ["phone", "Player phone", ""], ["video", "Highlight video link", "https://…"], ["coachContact", "Coach contact", "Your name and email"],
+];
+function Recruiting({ id, rows, A }: { id: string; rows: Row[]; A: Agg }) {
+  const p = player(id)!, pr = p.profile || {};
+  const [open, setOpen] = useState(!!Object.values(pr).some(Boolean));
+  const set = (k: keyof RecruitProfile, v: string) => patch("players", id, { profile: { ...pr, [k]: v } });
+  return <Card title={<>Recruiting profile <span className="tag" style={{ verticalAlign: 2 }}>Preview</span></>} actions={<div className="row">
+    {!open && <button className="btn sm" onClick={() => setOpen(true)}>Fill in</button>}
+    <button className="btn sm primary" onClick={() => { download(`${p.first} ${p.last} recruiting profile.html`, recruitHtml(id, rows, A), "text/html"); toast("Recruiting sheet saved. Send it to college coaches or attach it to emails."); }}>Download recruiting sheet</button></div>}>
+    {open ? <div className="stack">
+      <div className="pf-grid">{PF.map(([k, label, ph]) => <label key={k} className="field"><span className="label">{label}</span><input key={id + k} defaultValue={pr[k] || ""} placeholder={ph} onBlur={(e) => set(k, e.target.value.trim())} /></label>)}</div>
+      <label className="field"><span className="label">About</span><textarea key={id + "about"} rows={3} defaultValue={pr.about || ""} placeholder="Strengths, leadership, what she's looking for in a program" onBlur={(e) => set("about", e.target.value.trim())} /></label>
+      <p className="keys">Stays private on your account. Only what's in the downloaded sheet is shared. Full recruiting profiles and college-coach sharing are coming soon.</p>
+    </div> : <p className="small muted">Measurables, contact info and a highlight link, combined with her verified season stats into a one-page sheet for college coaches.</p>}
+  </Card>;
+}
+
+function recruitHtml(id: string, rows: Row[], A: Agg): string {
+  const p = player(id)!, t = team()!, pr = p.profile || {}, s = A.ps[id], pm = playerMetrics(A, id);
+  const esc = (x: any) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
+  const item = (l: string, v?: string) => (v ? `<div><span>${esc(l)}</span><b>${esc(v)}</b></div>` : "");
+  const stats = s ? [["Kills/set", fmtNum(pm.kps, 2)], ["Hitting %", s.TA ? fmtHit(hitting(s)) : ""], ["Aces/set", fmtNum(pm.acesPs, 2)], ["Serve in", serveAttempts(s) ? fmtPct(pm.serveIn) : ""], ["Pass avg", s.R ? fmtAvg(passAvg(s)) : ""], ["Digs/set", fmtNum(pm.dps, 2)], ["Blocks/set", fmtNum(pm.bps, 2)], ["Assists/set", s.AST ? fmtNum(pm.aps, 2) : ""]].filter((x) => x[1] && x[1] !== "—" && x[1] !== "0") : [];
+  const best = rows.map((r) => ({ r, k: r.s?.K || 0, d: r.s?.D || 0, a: r.s?.AST || 0 })).sort((a, b) => b.k + b.d + b.a / 3 - (a.k + a.d + a.a / 3)).slice(0, 3);
+  return `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${esc(p.first + " " + p.last)} · Recruiting profile</title>
+<style>:root{--c:#2B79B0;--ink:#0B0C0E;--mut:#686E77;--line:#E2E4E8}*{box-sizing:border-box}body{margin:0;color:var(--ink);background:#fff;font:14px/1.45 system-ui,-apple-system,Segoe UI,sans-serif}main{max-width:820px;margin:0 auto;padding:24px 18px}
+.hero{display:flex;gap:18px;align-items:center;border-bottom:4px solid var(--c);padding-bottom:16px}.n{width:86px;height:86px;border-radius:14px;background:#000;color:#9BD3F2;display:grid;place-items:center;font-size:44px;font-weight:800;flex:none}
+h1{margin:0;font-size:30px}.sub{color:var(--mut)}h2{font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);margin:20px 0 8px}
+.g{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px}.g div{border:1px solid var(--line);border-radius:10px;padding:8px 10px}.g span{display:block;font-size:12px;color:var(--mut)}.g b{font-size:18px}
+table{border-collapse:collapse;width:100%}td,th{border-bottom:1px solid var(--line);padding:6px;text-align:left}th{font-size:12px;color:var(--mut)}a{color:var(--c)}footer{margin-top:22px;color:var(--mut);font-size:12px}</style></head><body><main>
+<div class="hero"><div class="n">${esc(p.num)}</div><div><h1>${esc(p.first + " " + p.last)}</h1><div class="sub">${esc([p.pos, p.height, p.grad ? "Class of " + p.grad : ""].filter(Boolean).join(" · "))}</div><div class="sub">${esc([t.name, t.level, pr.club].filter(Boolean).join(" · "))}</div></div></div>
+${pr.about ? `<p style="margin-top:14px">${esc(pr.about)}</p>` : ""}
+${p.height || pr.reach || pr.approach || pr.block || pr.hand || pr.gpa ? `<h2>Measurables</h2><div class="g">${item("Height", p.height)}${item("Standing reach", pr.reach)}${item("Approach jump", pr.approach)}${item("Block jump", pr.block)}${item("Dominant hand", pr.hand)}${item("GPA", pr.gpa)}</div>` : ""}
+<h2>Season stats (${pm.sets} sets, tracked live)</h2><div class="g">${stats.map(([l, v]) => item(l, v)).join("")}</div>
+${best.length ? `<h2>Best matches</h2><table><thead><tr><th>Date</th><th>Opponent</th><th>Kills</th><th>Digs</th><th>Assists</th><th>Aces</th></tr></thead><tbody>${best.map(({ r }) => `<tr><td>${esc(r.m.date)}</td><td>${esc(r.m.opp)}</td><td>${r.s?.K ?? 0}</td><td>${r.s?.D ?? 0}</td><td>${r.s?.AST ?? 0}</td><td>${r.s?.SA ?? 0}</td></tr>`).join("")}</tbody></table>` : ""}
+${pr.video ? `<h2>Highlights</h2><p><a href="${esc(pr.video)}">${esc(pr.video)}</a></p>` : ""}
+${pr.email || pr.phone || pr.coachContact ? `<h2>Contact</h2><div class="g">${item("Player email", pr.email)}${item("Player phone", pr.phone)}${item("Coach", pr.coachContact)}</div>` : ""}
+<footer>Stats recorded with Benchboard · ${new Date().toLocaleDateString()}</footer></main></body></html>`;
 }

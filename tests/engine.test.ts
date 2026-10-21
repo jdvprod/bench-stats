@@ -118,3 +118,9 @@ test("quick codes parse players, pass grades and their numbers", () => {
   assert.deepEqual(r.errors, ["zz", "7p3x"]);
   assert.equal(parseQuick("k5").errors.length, 1, "a number after a non-opponent code is rejected");
 });
+
+test("flags a rotation stuck on their serve and a shaky next server", () => {
+  const R0 = replay([ev("NS", { serve: "them", lu: LU }), ev("OK"), ev("OA"), ev("TP")]);
+  const f0 = flags(R0, { us: "Us", them: "Them", subLimit: 15, playerIds: LU, short: (id) => id });
+  assert.ok(f0.some((f) => /Stuck in rotation 1/.test(f.title)), "3 straight on their serve");
+});
