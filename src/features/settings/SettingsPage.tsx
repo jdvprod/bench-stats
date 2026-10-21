@@ -1,4 +1,5 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
+import { canPrompt, installed, isIOS, onInstallChange, promptInstall } from "../../app/install";
 import { all, setPrefs, setSettings, state, team, toast } from "../../data/store";
 import { Card, Seg, SetRow, Switch } from "../../ui/kit";
 import { ask, AiError, getKey, setKey } from "../../ai/client";
@@ -33,6 +34,7 @@ export function SettingsPage() {
     <Card title="Labs">
       <SetRow title="Try new features" sub="Formations, type-in stat codes and focus mode. Turn on only what you want."><button className="btn sm" onClick={() => go("labs")}>Open Labs</button></SetRow>
     </Card>
+    <InstallCard />
     <Card title="AI features">
       <div className="stack">
         <p className="small muted">Timeout talking points, match reports, scouting, lineup suggestions, practice plans and player report cards use Claude. Signed-in coaches can use them with no setup. To use your own Anthropic account instead (no daily limit), paste an API key from console.anthropic.com; it stays on this device only.</p>
@@ -73,5 +75,17 @@ function CloudSettings() {
       </div>
       <div className="row"><button className="btn sm primary" onClick={() => { setConfig(url.trim() && key.trim() ? { url: url.trim(), key: key.trim() } : null); toast("Saved. Reloading…"); setTimeout(() => location.reload(), 600); }}>Save</button></div>
     </div>}
+  </Card>;
+}
+
+function InstallCard() {
+  const [, setN] = useState(0);
+  useEffect(() => onInstallChange(() => setN((x) => x + 1)), []);
+  if (installed()) return null;
+  return <Card title="Install the app">
+    <p className="small muted">Put Benchboard on your home screen. It opens full screen, works without signal in the gym, and keeps your data on the device.</p>
+    {canPrompt() ? <button className="btn primary" onClick={async () => { if (await promptInstall()) toast("Installed"); }}>Install Benchboard</button>
+      : isIOS() ? <p className="small">On iPhone or iPad: tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>.</p>
+      : <p className="small">In Chrome or Edge, use the install icon in the address bar, or the browser menu → <b>Install Benchboard</b>.</p>}
   </Card>;
 }
