@@ -50,7 +50,7 @@ function Schedule({ items, onOpen, current }: { items: ScheduleItem[]; onOpen: (
   const save = (list: ScheduleItem[]) => setTeamPatch({ schedule: list });
   const today = todayISO(), upcoming = items.filter((s) => s.date >= today), past = items.filter((s) => s.date < today);
   const start = (s: ScheduleItem) => { newMatch({ kind: "match", opp: s.opp, date: todayISO(), site: s.site, event: s.event, bestOf: t.settings.bestOf, serve: "us" }); save(items.filter((x) => x.id !== s.id)); setUi({ sel: null, panel: null, follow: null }); go("track"); };
-  return <Card title="Schedule" actions={!adding ? <button className="btn sm" onClick={() => setAdding(true)}>Add match</button> : undefined}>
+  return <Card title="Schedule" actions={!adding ? <div className="row" style={{ gap: 6 }}>{upcoming.length > 0 && <button className="btn sm ghost" onClick={() => { download(`${t.name} schedule.ics`.replace(/[^\w\- .]+/g, ""), scheduleIcs(upcoming, t.name), "text/calendar"); toast("Calendar file saved. Open it to add the games to your calendar, or send it to parents."); }}>Calendar</button>}<button className="btn sm" onClick={() => setAdding(true)}>Add match</button></div> : undefined}>
     <div className="stack">
       {adding && <form className="stack" onSubmit={(e) => { e.preventDefault(); if (!f.opp.trim()) return; ensureOpponent(f.opp.trim()); save(items.concat({ ...f, id: uid("sc"), opp: f.opp.trim() })); setF({ ...f, opp: "", event: "" }); setAdding(false); toast("Added to schedule"); }}>
         <label className="field"><span className="label">Opponent</span><input list="mu-opps" value={f.opp} onChange={(e) => setF({ ...f, opp: e.target.value })} placeholder="e.g. Buchanan" autoFocus /><datalist id="mu-opps">{opps.map((x) => <option key={x.id} value={x.name} />)}</datalist></label>
@@ -266,4 +266,19 @@ export function PlanPanel({ m, onClose }: { m: Match; onClose: () => void }) {
       <div><div className="label" style={{ marginBottom: 4 }}>Past matches vs them</div>{past && top(past.A).length ? top(past.A).map((x) => <div key={x.n} className="small"><b>#{x.n}{o?.roster?.[x.n]?.name ? " " + o!.roster![x.n].name : ""}</b> {x.K} kills, {x.A} aces{zoneOf(x.z)}</div>) : <p className="small muted">No history yet.</p>}</div>
     </div>
   </div>;
+}
+
+/** .ics file so coaches and parents can put the schedule in any calendar app. */
+function scheduleIcs(items: ScheduleItem[], teamName: string): string {
+  const esc = (x: string) => x.replace(/[\\,;]/g, (c) => "\\" + c).replace(/\n/g, "\\n");
+  const d = (s: string) => s.replace(/-/g, "");
+  const stamp = new Date().toISOString().replace(/[-:]/g, "").replace(/\.\d+/, "");
+  const ev = items.map((s) => {
+    const title = `${teamName} ${s.site === "away" ? "at" : "vs"} ${s.opp}`;
+    let when: string;
+    if (s.time) { const [h, m] = s.time.split(":").map(Number); const start = `${d(s.date)}T${String(h).padStart(2, "0")}${String(m).padStart(2, "0")}00`; const endH = h + 2; const end = `${d(s.date)}T${String(Math.min(endH, 23)).padStart(2, "0")}${String(m).padStart(2, "0")}00`; when = `DTSTART:${start}\r\nDTEND:${end}`; }
+    else { const nd = new Date(s.date + "T12:00"); nd.setDate(nd.getDate() + 1); when = `DTSTART;VALUE=DATE:${d(s.date)}\r\nDTEND;VALUE=DATE:${nd.toISOString().slice(0, 10).replace(/-/g, "")}`; }
+    return `BEGIN:VEVENT\r\nUID:${s.id}@benchboard\r\nDTSTAMP:${stamp}\r\n${when}\r\nSUMMARY:${esc(title)}\r\n${s.event ? "DESCRIPTION:" + esc(s.event) + "\r\n" : ""}END:VEVENT`;
+  }).join("\r\n");
+  return `BEGIN:VCALENDAR\r\nVERSION:2.0\r\nPRODID:-//Benchboard//Schedule//EN\r\nCALSCALE:GREGORIAN\r\n${ev}\r\nEND:VCALENDAR\r\n`;
 }

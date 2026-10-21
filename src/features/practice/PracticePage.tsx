@@ -1,5 +1,5 @@
 /** Practice: plan builder with drill library, stat-based focus, scrimmages and drill tracking. */
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { activePlayers, currentMatch, drillsOf, get, matchesOf, newMatch, patch, plansOf, remove, replayOf, save, setTeamPatch, team, toast, todayISO, uid } from "../../data/store";
 import { Drill, DRILL_CATEGORIES, PlanBlock, PracticePlan } from "../../data/model";
 import { aggregate } from "../../sports/volleyball/engine";
@@ -108,8 +108,10 @@ function FocusCard({ onPlan }: { onPlan: (p: PracticePlan) => void }) {
 }
 
 function PlanEditor({ plan, onDelete }: { plan: PracticePlan; onDelete: () => void }) {
+  const [running, setRunning] = useState(false);
   const drills = drillsOf();
   const [pick, setPick] = useState("");
+  if (running) return <RunPractice plan={plan} onExit={() => setRunning(false)} />;
   const set = (p: Partial<PracticePlan>) => save("plans", { ...plan, ...p });
   const setB = (i: number, p: Partial<PlanBlock>) => set({ blocks: plan.blocks.map((b, j) => (j === i ? { ...b, ...p } : b)) });
   const move = (i: number, d: number) => { const b = plan.blocks.slice(); const j = i + d; if (j < 0 || j >= b.length) return; [b[i], b[j]] = [b[j], b[i]]; set({ blocks: b }); };
@@ -154,6 +156,7 @@ function PlanEditor({ plan, onDelete }: { plan: PracticePlan; onDelete: () => vo
       <label className="field"><span className="label">Notes</span><textarea rows={2} value={plan.notes} onChange={(e) => set({ notes: e.target.value })} /></label>
       <div className="row">
         <button className="btn" onClick={() => set({ status: plan.status === "done" ? "planned" : "done" })}>{plan.status === "done" ? "Mark not done" : "Mark practice done"}</button>
+        <button className="btn primary" disabled={!plan.blocks.length} onClick={() => setRunning(true)}>Run practice</button>
         <button className="btn" onClick={() => { newMatch({ kind: "drills", opp: plan.title, planId: plan.id }); setUi({ sel: null, panel: null, follow: null }); startScrim(); }}>Track drill stats</button>
       </div>
     </div>
@@ -237,4 +240,40 @@ function Attendance({ plan, onChange }: { plan: PracticePlan; onChange: (a: Prac
     <div className="row between"><span className="label">Attendance</span><span className="small muted">{counts.in} here · {counts.late} late · {counts.out} out{ps.length ? "" : ""} <button type="button" className="btn sm ghost" onClick={() => onChange(Object.fromEntries(ps.map((p) => [p.id, "in"])) as any)}>All here</button></span></div>
     <div className="att-grid">{ps.map((p) => { const st = a[p.id] || "none"; return <button type="button" key={p.id} className={"att-b " + st} onClick={() => cycle(p.id)} aria-label={`${p.first} ${p.last}: ${ATT[st].label}. Tap to change.`}><b>{p.num}</b><span>{p.first || p.last}</span><i>{ATT[st].label}</i></button>; })}</div>
   </div>;
+}
+
+/* ---------- run practice: a big timer that walks through the plan ---------- */
+function RunPractice({ plan, onExit }: { plan: PracticePlan; onExit: () => void }) {
+  const [i, setI] = useState(() => Math.max(0, plan.blocks.findIndex((b) => !b.done)));
+  const [left, setLeft] = useState(() => (plan.blocks[Math.max(0, plan.blocks.findIndex((b) => !b.done))]?.minutes || 0) * 60);
+  const [on, setOn] = useState(false);
+  useEffect(() => {
+    if (!on) return;
+    const end = Date.now() + left * 1000;
+    const tm = setInterval(() => { const l = Math.max(0, Math.round((end - Date.now()) / 1000)); setLeft(l); if (l === 0) { setOn(false); try { navigator.vibrate?.([300, 150, 300]); } catch { /* ignore */ } } }, 250);
+    return () => clearInterval(tm);
+  }, [on]);
+  const b = plan.blocks[i], next = plan.blocks[i + 1];
+  const go2 = (j: number, markDone = false) => {
+    if (markDone && b) save("plans", { ...plan, blocks: plan.blocks.map((x, k) => (k === i ? { ...x, done: true } : x)) });
+    if (j >= plan.blocks.length) { save("plans", { ...plan, blocks: plan.blocks.map((x) => ({ ...x, done: true })), status: "done" }); toast("Practice done"); onExit(); return; }
+    setI(j); setLeft(plan.blocks[j].minutes * 60); setOn(false);
+  };
+  if (!b) return null;
+  const mm = Math.floor(left / 60), ss = String(left % 60).padStart(2, "0"), frac = 1 - left / (b.minutes * 60 || 1);
+  return <section className="card run">
+    <div className="row between"><span className="small muted">{plan.title} · block {i + 1} of {plan.blocks.length}</span><button className="btn sm" onClick={onExit}>Exit</button></div>
+    <div className="run-cat"><span className="sw" style={{ background: catColor(b.category) }} />{b.category}</div>
+    <h2 className="run-title">{b.title}</h2>
+    {b.notes && <p className="muted">{b.notes}</p>}
+    <div className={"run-clock" + (left === 0 ? " up" : "")}>{mm}:{ss}</div>
+    <div className="meter"><i style={{ width: frac * 100 + "%" }} /></div>
+    <div className="row" style={{ justifyContent: "center" }}>
+      <button className="btn" disabled={i === 0} onClick={() => go2(i - 1)}>Back</button>
+      <button className="btn primary run-go" onClick={() => setOn(!on)}>{on ? "Pause" : left === b.minutes * 60 ? "Start" : left === 0 ? "Time's up" : "Resume"}</button>
+      <button className="btn" onClick={() => setLeft((l) => l + 60)}>+1 min</button>
+      <button className="btn" onClick={() => go2(i + 1, true)}>{next ? "Next" : "Finish"}</button>
+    </div>
+    {next && <p className="small muted" style={{ textAlign: "center" }}>Up next: <b>{next.title}</b> · {next.minutes} min</p>}
+  </section>;
 }

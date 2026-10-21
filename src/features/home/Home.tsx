@@ -1,4 +1,5 @@
 /** Home (the Track tab when no match is live): next match, last match, season snapshot, what to work on. */
+import { useState } from "react";
 import { ensureOpponent, matchesOf, newMatch, oppKey, playerName, replayOf, setTeamPatch, team, todayISO } from "../../data/store";
 import { aggregate } from "../../sports/volleyball/engine";
 import { fmtAvg, fmtHit, fmtPct, teamMetrics } from "../../sports/volleyball/metrics";
@@ -70,9 +71,29 @@ export function Home() {
           {[["K", (s: any) => s.K], ["Aces", (s: any) => s.SA], ["Digs", (s: any) => s.D]].map(([l, f]) => { const x = leaders(f as any); return x ? <span key={l as string} className="small"><b>{x[1]}</b> {l as string} · {playerName(x[0])}</span> : null; })}</div>
       </div>
     </section>}
+    {games.length > 0 && <TeamGoals M={M} />}
     {focus.length > 0 && <Card title="What to work on" actions={<button className="btn sm" onClick={() => go("practice")}>Plan practice</button>}>
       <ul className="recs">{focus.map((f, i) => <li key={i}><span><b>{f.cat}:</b> {f.text}</span></li>)}</ul>
     </Card>}
     <StartMatch formOnly />
   </div>;
+}
+
+const TARGETS: ["hitting" | "sideOut" | "pointScoring" | "passAvg" | "serveIn" | "firstBallSO", string, number, (v: number | null) => string, number][] = [
+  ["hitting", "Hitting %", 0.25, fmtHit, 0.001], ["sideOut", "Side-out", 0.6, fmtPct, 0.01], ["pointScoring", "Point-scoring", 0.45, fmtPct, 0.01],
+  ["passAvg", "Pass average", 2.2, (v) => fmtAvg(v), 0.01], ["serveIn", "Serve in", 0.9, fmtPct, 0.01], ["firstBallSO", "First-ball side-out", 0.35, fmtPct, 0.01],
+];
+function TeamGoals({ M }: { M: ReturnType<typeof teamMetrics> }) {
+  const t = team()!, tg = t.targets || {};
+  const [edit, setEdit] = useState(false);
+  const active = TARGETS.filter(([k]) => tg[k] != null);
+  const list = active.length ? active : TARGETS.slice(0, 4);
+  return <Card title="Team goals" actions={<button className="btn sm ghost" onClick={() => setEdit(!edit)}>{edit ? "Done" : active.length ? "Edit" : "Set goals"}</button>}>
+    {edit ? <div className="pf-grid">{TARGETS.map(([k, label, def, f]) => <label key={k} className="field"><span className="label">{label}</span>
+      <input inputMode="decimal" defaultValue={tg[k] != null ? (k === "hitting" ? String(tg[k]).replace(/^0/, "") : k === "passAvg" ? String(tg[k]) : Math.round(tg[k]! * 100) + "%") : ""} placeholder={"e.g. " + f(def)}
+        onBlur={(e) => { const raw = e.target.value.trim(); const n = { ...tg }; if (!raw) delete n[k]; else { let v = parseFloat(raw.replace("%", "")); if (k !== "hitting" && k !== "passAvg" && v > 1) v /= 100; if (isFinite(v)) n[k] = v; } setTeamPatch({ targets: n }); }} /></label>)}</div>
+      : <div className="goals-grid">{list.map(([k, label, def, f]) => { const target = tg[k] ?? def, v = (M as any)[k] as number | null, hit = v != null && v >= target, prog = v == null ? 0 : Math.max(0, Math.min(1, target > 0 ? v / target : 0));
+        return <div key={k} className="goal"><div className="row between"><span><b>{label}</b> <span className="small muted">goal {f(target)}</span></span><span className={hit ? "hi" : ""}>{f(v)}{hit ? " ✓" : ""}</span></div><div className="meter"><i style={{ width: prog * 100 + "%" }} /></div></div>; })}
+        {!active.length && <p className="small muted">Suggested goals. Tap Set goals to make them yours.</p>}</div>}
+  </Card>;
 }

@@ -28,6 +28,8 @@ export interface Team {
   sample?: boolean;
   /** Where players stand in each rotation (serve receive, serving, base defense). */
   formations?: import("../sports/volleyball/formations").Formations | null;
+  /** Season targets the team is chasing, shown on Home. */
+  targets?: Partial<Record<"hitting" | "sideOut" | "pointScoring" | "passAvg" | "serveIn" | "firstBallSO", number>>;
   /** Upcoming matches. */
   schedule?: ScheduleItem[];
   formationPresets?: { id: string; name: string; f: import("../sports/volleyball/formations").Formations }[];

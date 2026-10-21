@@ -487,3 +487,10 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .tv-sets-row{display:flex;gap:3vw;color:#9298A1;font-size:clamp(14px,1.8vw,26px)}.tv-sets-row b{color:#F4F5F7}
 .tv-plays{display:flex;flex-direction:column;gap:6px;align-items:center;color:#C9CDD3;font-size:clamp(14px,1.8vw,26px)}.tv-plays div:first-child{color:#F4F5F7;font-weight:600}
 .tv-hint{position:absolute;bottom:2vh;color:#4A4E55;font-size:13px}
+.run{display:grid;gap:12px;text-align:center}
+.run-cat{font-weight:700;font-size:13px;color:var(--muted)}
+.run-title{font-family:var(--display);font-size:clamp(28px,5vw,44px);line-height:1.05}
+.run-clock{font-family:var(--display);font-weight:700;font-size:clamp(90px,20vw,190px);line-height:.9;font-variant-numeric:tabular-nums}
+.run-clock.up{color:var(--us)}
+.run-go{min-width:130px}
+.goals-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:12px 20px}
