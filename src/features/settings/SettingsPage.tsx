@@ -2,6 +2,7 @@ import { useState } from "react";
 import { all, setPrefs, setSettings, state, team, toast } from "../../data/store";
 import { Card, Seg, SetRow, Switch } from "../../ui/kit";
 import { ask, AiError, getKey, setKey } from "../../ai/client";
+import { cloudAvailable, currentUser, setConfig, signOut } from "../../cloud/client";
 import { go } from "../../app/router";
 
 export function SettingsPage() {
@@ -46,6 +47,7 @@ export function SettingsPage() {
         {msg && <p className="hint">{msg}</p>}
       </div>
     </Card>
+    <CloudSettings />
     <Card title="Your data">
       <p className="small">Saved on this device: {counts.teams} teams, {counts.players} players, {counts.matches} matches and practices, {counts.events.toLocaleString()} recorded plays.</p>
       <p className="small muted" style={{ marginTop: 6 }}>{state.persistent ? "Your browser has agreed to keep this data." : "Your browser may clear this data if space runs low."} Save a backup from Team → Backup to move data to another device or keep a copy.</p>
@@ -53,4 +55,23 @@ export function SettingsPage() {
     </Card>
     <p className="small muted" style={{ textAlign: "center" }}>Benchboard 2.0</p>
   </div>;
+}
+
+function CloudSettings() {
+  const own = (() => { try { return JSON.parse(localStorage.getItem("bs-cloud-config") || "null"); } catch { return null; } })();
+  const [url, setUrl] = useState(own?.url || ""), [key, setKeyV] = useState(own?.key || ""), [open, setOpen] = useState(!!own);
+  const user = currentUser();
+  return <Card title="Cloud">
+    <SetRow title="Account" sub={cloudAvailable() ? (user ? "Signed in as " + user.email + ". Sync and sharing are on the Team tab." : "Sign in on the Team tab to sync teams and share them with other coaches.") : "Cloud sync isn't set up in this version."}>
+      {user ? <button className="btn sm" onClick={() => { signOut(); toast("Signed out"); }}>Sign out</button> : <button className="btn sm" onClick={() => go("team")}>Team tab</button>}
+    </SetRow>
+    {!open ? <button className="btn sm ghost" style={{ marginTop: 8 }} onClick={() => setOpen(true)}>Use my own Supabase project</button> : <div className="stack" style={{ marginTop: 8 }}>
+      <p className="small muted">For developers and testing. Paste the Project URL and anon public key from Supabase → Project Settings → API. Leave empty to use the app's built-in project.</p>
+      <div className="two">
+        <label className="field"><span className="label">Project URL</span><input value={url} onChange={(e) => setUrl(e.target.value)} placeholder="https://xxxx.supabase.co" /></label>
+        <label className="field"><span className="label">Anon public key</span><input value={key} onChange={(e) => setKeyV(e.target.value)} placeholder="eyJ…" /></label>
+      </div>
+      <div className="row"><button className="btn sm primary" onClick={() => { setConfig(url.trim() && key.trim() ? { url: url.trim(), key: key.trim() } : null); toast("Saved. Reloading…"); setTimeout(() => location.reload(), 600); }}>Save</button></div>
+    </div>}
+  </Card>;
 }

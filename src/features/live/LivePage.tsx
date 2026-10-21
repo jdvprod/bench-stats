@@ -7,6 +7,7 @@ import { Card, fmtDate } from "../../ui/kit";
 import { MomentumChart } from "../../ui/charts";
 import { logText } from "../track/Tracker";
 import { sideNames } from "../../app/Scoreboard";
+import { ShareLive } from "../../cloud/CloudCard";
 
 export function LivePage() {
   const t = team()!, cur = currentMatch();
@@ -28,7 +29,8 @@ export function LivePage() {
   return <div className="page">
     <div className="row between">
       <div className="row"><span className="tag" style={{ marginLeft: 0, background: live ? "var(--bad)" : "var(--surface-2)", color: live ? "#fff" : "var(--muted)" }}>{live ? "● Live" : "Final"}</span><span className="small muted">{fmtDate(m.date)}{m.event ? " · " + m.event : ""}{m.site ? " · " + m.site : ""}</span></div>
-      <select className="input" style={{ width: "auto", maxWidth: 260 }} value={m.id} onChange={(e) => setPick(e.target.value)} aria-label="Match">{games.slice(0, 40).map((g) => <option key={g.id} value={g.id}>{fmtDate(g.date)} vs {g.opp}</option>)}</select>
+      <div className="row"><ShareLive matchId={m.id} />
+      <select className="input" style={{ width: "auto", maxWidth: 260 }} value={m.id} onChange={(e) => setPick(e.target.value)} aria-label="Match">{games.slice(0, 40).map((g) => <option key={g.id} value={g.id}>{fmtDate(g.date)} vs {g.opp}</option>)}</select></div>
     </div>
     <section className="card" style={{ background: "var(--bar)", color: "var(--bar-ink)", borderColor: "transparent" }}>
       <div className="gc-score">

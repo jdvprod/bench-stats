@@ -32,6 +32,15 @@ npm test         # engine tests
 
 The `dist/` folder is a static website. Drag it onto **Netlify Drop** (app.netlify.com/drop) or **Cloudflare Pages**, or push it to **GitHub Pages**. Then open the link on any device and choose "Install" or "Add to Home Screen".
 
+## Accounts, sync and live links (Supabase, free tier)
+
+1. Create a project at supabase.com.
+2. In **SQL Editor → New query**, paste all of `supabase/schema.sql` and click **Run**.
+3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key into `src/cloud/config.ts` (both are safe to publish; Row Level Security protects the data).
+4. Optional: in **Authentication → Providers → Email**, turn off "Confirm email" for the smoothest sign-up while testing.
+
+Then coaches sign in on the Team tab, tap **Sync this team**, and invite assistants with a code. Every match is an event log per device, so several coaches can track the same match and their entries merge. **Share live link** on the Live screen gives parents a public gamecast (`#/watch/CODE`) that shows only that match, player numbers, first names and last initials.
+
 ## AI features
 
 In Settings, paste an Anthropic API key from console.anthropic.com. It's stored on the device only. Before selling the app, move the call in `src/ai/client.ts` behind a small server function so customers don't need their own key.
@@ -50,7 +59,6 @@ Every match is an append-only event log, so stats can be recomputed with new met
 
 ## Roadmap
 
-1. Accounts and cloud sync so assistants can track on several devices and parents can follow a public live link.
-2. A server AI proxy, then paid plans.
-3. Rankings and recruiting profiles.
-4. Video clips and AI video analysis.
+1. A server AI proxy, then paid plans.
+2. Rankings and recruiting profiles.
+3. Video clips and AI video analysis.

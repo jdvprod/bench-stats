@@ -51,16 +51,22 @@ export function setPrefs(p: Partial<Prefs>) {
 /* ---------- generic table access ---------- */
 export function all<K extends StoreName>(s: K): StoreTypes[K][] { return Array.from(state.tables[s].values()) as StoreTypes[K][]; }
 export function get<K extends StoreName>(s: K, id: string | null | undefined): StoreTypes[K] | undefined { return id ? (state.tables[s].get(id) as StoreTypes[K] | undefined) : undefined; }
-export function save<K extends StoreName>(s: K, v: StoreTypes[K], silent = false) {
+/** Cloud sync listens here: every local change (not ones that came from the cloud). */
+export const hooks = { change: null as null | ((s: StoreName, v: any, deleted: boolean) => void), paused: false, teamRemoved: null as null | ((teamId: string) => void) };
+
+export function save<K extends StoreName>(s: K, v: StoreTypes[K], silent = false, fromCloud = false) {
+  if (!fromCloud) (v as any)._u = Math.max(Date.now(), ((state.tables[s].get((v as any).id) as any)?._u || 0) + 1);
   (state.tables[s] as Map<string, StoreTypes[K]>).set((v as any).id, v);
   db.put(s, v);
   if (s === "logs") replayCache.delete((v as unknown as EventLog).matchId);
+  if (!fromCloud && !hooks.paused) hooks.change?.(s, v, false);
   if (!silent) emit();
 }
-export function remove(s: StoreName, id: string, silent = false) {
+export function remove(s: StoreName, id: string, silent = false, fromCloud = false) {
   const v: any = state.tables[s].get(id);
   state.tables[s].delete(id); db.del(s, id);
   if (s === "logs" && v) replayCache.delete(v.matchId);
+  if (!fromCloud && !hooks.paused && v) hooks.change?.(s, { ...v, _u: Date.now() }, true);
   if (!silent) emit();
 }
 export function patch<K extends StoreName>(s: K, id: string, p: Partial<StoreTypes[K]>) {
@@ -161,12 +167,16 @@ export function createTeam(p: { name: string; level?: string; color?: string; sa
 }
 export function defaultSeasonName(d = new Date()) { const m = d.getMonth(); return (m >= 6 ? "Fall " : m <= 1 ? "Winter " : "Spring ") + d.getFullYear(); }
 
+/** Removes a team from this device. A team synced to the cloud stays in the cloud for the other coaches. */
 export function deleteTeam(teamId: string) {
+  hooks.paused = true;
   for (const s of ["seasons", "players", "matches", "opponents", "drills", "plans", "boards"] as StoreName[])
     for (const v of all(s) as any[]) if (v.teamId === teamId) remove(s, v.id, true);
   const matchIds = new Set(all("matches").filter((m) => m.teamId === teamId).map((m) => m.id));
   for (const l of all("logs")) if (matchIds.has(l.matchId)) remove("logs", l.id, true);
   remove("teams", teamId, true);
+  hooks.paused = false;
+  hooks.teamRemoved?.(teamId);
   if (state.prefs.teamId === teamId) state.prefs.teamId = all("teams")[0]?.id || null;
   setPrefs({ teamId: state.prefs.teamId });
 }

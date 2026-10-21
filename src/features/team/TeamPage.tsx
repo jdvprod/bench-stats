@@ -10,6 +10,8 @@ import { go } from "../../app/router";
 import { setUi } from "../../app/ui";
 import { AiCard } from "../../ui/ai";
 import { scoutPrompt } from "../../ai/prompts";
+import { CloudCard } from "../../cloud/CloudCard";
+import { isLinked } from "../../cloud/sync";
 
 export function TeamPage({ sub }: { sub?: string }) {
   if (sub === "new") return <div className="page"><Card title="Add a team"><NewTeamForm /></Card></div>;
@@ -17,7 +19,7 @@ export function TeamPage({ sub }: { sub?: string }) {
     <div className="pagehead"><h1>{team()!.name}</h1></div>
     <div className="grid2" style={{ alignItems: "start" }}>
       <div className="stack"><Roster /><History /></div>
-      <div className="stack"><TeamInfo /><Opponents /><Backup /></div>
+      <div className="stack"><TeamInfo /><CloudCard /><Opponents /><Backup /></div>
     </div>
   </div>;
 }
@@ -130,7 +132,7 @@ function Backup() {
         <label className="btn sm" style={{ cursor: "pointer" }}>Restore a backup<input type="file" accept=".json,application/json" hidden onChange={(e) => { onFile(e.target.files?.[0]); e.target.value = ""; }} /></label>
       </div>
       {msg && <p className="hint">{msg}</p>}
-      {!t.sample && <div className="row" style={{ marginTop: 6 }}><ConfirmButton className="btn sm ghost" confirmText="Delete this team and all its data?" onConfirm={() => { deleteTeam(t.id); toast("Team deleted"); go("track"); }}>Delete team</ConfirmButton></div>}
+      {!t.sample && <div className="row" style={{ marginTop: 6 }}><ConfirmButton className="btn sm ghost" confirmText={isLinked(t.id) ? "Remove from this device? It stays in the cloud." : "Delete this team and all its data?"} onConfirm={() => { deleteTeam(t.id); toast(isLinked(t.id) ? "Removed from this device" : "Team deleted"); go("track"); }}>{isLinked(t.id) ? "Remove from this device" : "Delete team"}</ConfirmButton></div>}
     </div>
   </Card>;
 }

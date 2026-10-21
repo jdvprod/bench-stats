@@ -17,6 +17,8 @@ import { SettingsPage } from "../features/settings/SettingsPage";
 import { PlayerPage } from "../features/player/PlayerPage";
 import { LivePage } from "../features/live/LivePage";
 import { Welcome } from "../features/team/Welcome";
+import { WatchPage } from "../cloud/WatchPage";
+import { JoinPage } from "../cloud/CloudCard";
 
 const HOST_THEME = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
 const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"], ["labs", "Labs", "wide-only"]];
@@ -25,8 +27,9 @@ export function App() {
   useVersion();
   const route = useRoute(), t = team();
   useEffect(() => { applyTheme(t?.color || "#2A78AE", state.prefs.theme, state.prefs.size, HOST_THEME); }, [t?.color, state.prefs.theme, state.prefs.size]);
+  if (route.page === "watch" && route.id) return <><WatchPage code={route.id} /><Toast /></>;
   if (!state.ready) return <div className="content"><p className="empty" style={{ padding: 24 }}>Loading…</p></div>;
-  if (!t) return <><div className="content"><Welcome /></div><Toast /></>;
+  if (!t) return <><div className="content">{route.page === "join" && route.id ? <JoinPage code={route.id} /> : <Welcome />}</div><Toast /></>;
 
   const page = route.page;
   const showBoard = !!currentMatch() && ["track", "practice", "lineup", "formations", "stats", "court"].includes(page) && !(page === "practice" && currentMatch()?.kind === "match");
@@ -42,6 +45,7 @@ export function App() {
     case "lineup": body = <LineupPage />; break;
     case "formations": body = <FormationsPage />; break;
     case "labs": body = <LabsPage />; break;
+    case "join": body = <JoinPage code={route.id || ""} />; break;
     case "practice": body = <PracticePage />; break;
     case "stats": body = <StatsPage />; break;
     case "court": body = <CourtPage />; break;
