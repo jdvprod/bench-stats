@@ -4,6 +4,7 @@ import { Match } from "../../data/model";
 import { aggregate, momentum, Replay, Stat } from "../../sports/volleyball/engine";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, hitting, passAvg, serveErrors, teamMetrics } from "../../sports/volleyball/metrics";
 import { sideNames } from "../../app/Scoreboard";
+import { rate, situations } from "../../sports/volleyball/situations";
 
 const esc = (x: unknown) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
 
@@ -46,6 +47,13 @@ table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:ta
 <div class="k"><div class="l">Digs</div><div class="v">${T.D}</div><div class="s">${fmtNum(M.perSet?.D ?? null)} per set</div></div>
 <div class="k"><div class="l">Passing</div><div class="v">${fmtAvg(M.passAvg)}</div><div class="s">${fmtPct(M.perfectPass)} perfect</div></div>
 <div class="k"><div class="l">Side-out</div><div class="v">${fmtPct(M.sideOut)}</div><div class="s">on their serve</div></div></div></section>
+${(() => { const X = situations(R.sets), p = (x: { w: number; n: number }) => x.n ? fmtPct(rate(x)) : "–";
+  return `<section><h3>Situations</h3><div class="ks">
+<div class="k"><div class="l">Late side-out</div><div class="v">${p(X.phase.late.so)}</div><div class="s">at 20+ · ${X.phase.late.so.w}/${X.phase.late.so.n}</div></div>
+<div class="k"><div class="l">Late point-scoring</div><div class="v">${p(X.phase.late.ps)}</div><div class="s">${X.phase.late.ps.w}/${X.phase.late.ps.n}</div></div>
+<div class="k"><div class="l">Our runs of 3+</div><div class="v">${X.runs.us.three}</div><div class="s">longest ${X.runs.us.longest}</div></div>
+<div class="k"><div class="l">Their runs of 3+</div><div class="v">${X.runs.them.three}</div><div class="s">longest ${X.runs.them.longest}</div></div>
+<div class="k"><div class="l">After our timeouts</div><div class="v">${p(X.afterTO.us)}</div><div class="s">next rally won</div></div></div></section>`; })()}
 <section><h3>Leaders</h3><div class="ks">${lead((s) => s.K, "Kills")}${lead((s) => s.SA, "Aces")}${lead((s) => s.D, "Digs")}${lead((s) => blocks(s), "Blocks")}${lead((s) => s.AST, "Assists")}</div></section>
 <section><h3>Box score</h3><table><thead><tr><th>#</th><th>Player</th><th>K</th><th>E</th><th>TA</th><th>Hit %</th><th>Ast</th><th>Ace</th><th>SE</th><th>Pass</th><th>Dig</th><th>Blk</th></tr></thead><tbody>${ids.map(row).join("")}</tbody></table></section>
 ${report}

@@ -15,8 +15,9 @@ import { buildXlsx } from "../../lib/xlsx";
 import { logText } from "../track/Tracker";
 import { matchReportHtml } from "./matchReport";
 import { seasonAwards, seasonReportHtml } from "./seasonReport";
+import { rate, situationNotes, situations, WN } from "../../sports/volleyball/situations";
 
-type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "opponent";
+type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "situations" | "opponent";
 
 export function StatsPage() {
   const t = team()!;
@@ -51,12 +52,13 @@ export function StatsPage() {
       </div>
     </div>
     {!S.sets.length ? <Card><p className="empty">No stats recorded yet for this selection.</p></Card> : isScrim ? <ScrimStats S={S} A={A} /> : <>
-      <Seg value={view} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["opponent", "Opponent"]]} label="Section" />
+      <Seg value={view} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"]]} label="Section" />
       {view === "overview" && <Overview S={S} A={A} />}
       {view === "players" && <Players A={A} />}
       {view === "offense" && <Offense A={A} />}
       {view === "servepass" && <ServePass A={A} />}
       {view === "rotations" && <Rotations A={A} S={S} />}
+      {view === "situations" && <SituationsView S={S} />}
       {view === "opponent" && <Opponent A={A} />}
     </>}
   </div>;
@@ -380,4 +382,67 @@ function ReceiveRot({ A }: { A: Agg }) {
     </table></div>
     <p className="keys" style={{ marginTop: 8 }}>Each passer's average in each rotation (number of serves in brackets). Underlined = struggling there: hide her in that rotation's serve-receive pattern or move the libero over.</p>
   </Card>;
+}
+
+/* ---------- situations ---------- */
+function SituationsView({ S }: { S: Scope }) {
+  const X = situations(S.sets), notes = situationNotes(X);
+  const cell = (x: WN) => <td>{x.n ? <><b>{fmtPct(rate(x))}</b> <span className="muted small">{x.w}/{x.n}</span></> : <span className="muted">—</span>}</td>;
+  const target = S.sets[0]?.target || 25, late = target - 5, early = Math.round(target * 0.4);
+  const servers = Object.entries(X.serveRuns).filter(([id]) => player(id)).sort((a, b) => b[1].longest - a[1].longest || b[1].runs3 - a[1].runs3).slice(0, 6);
+  const rec = (x: WN) => x.n ? `${x.w}–${x.n - x.w}` : "—";
+  return <div className="stack">
+    {notes.length > 0 && <Card title="What stands out"><ul className="flags">{notes.map((n, i) => <li key={i}>{n}</li>)}</ul></Card>}
+    <div className="grid2" style={{ alignItems: "start" }}>
+      <Card title="By score">
+        <div className="tbl"><table>
+          <thead><tr><th className="l">When</th><th>Side-out</th><th>Point-scoring</th></tr></thead>
+          <tbody>
+            <tr><td className="l">Early (0–{early - 1})</td>{cell(X.phase.early.so)}{cell(X.phase.early.ps)}</tr>
+            <tr><td className="l">Middle ({early}–{late - 1})</td>{cell(X.phase.mid.so)}{cell(X.phase.mid.ps)}</tr>
+            <tr><td className="l">Late ({late}+)</td>{cell(X.phase.late.so)}{cell(X.phase.late.ps)}</tr>
+            <tr><td className="l"><b>Late and within 2</b></td>{cell(X.phase.clutch.so)}{cell(X.phase.clutch.ps)}</tr>
+            <tr><td className="l">Leading</td>{cell(X.state.ahead.so)}{cell(X.state.ahead.ps)}</tr>
+            <tr><td className="l">Tied</td>{cell(X.state.tied.so)}{cell(X.state.tied.ps)}</tr>
+            <tr><td className="l">Trailing</td>{cell(X.state.behind.so)}{cell(X.state.behind.ps)}</tr>
+          </tbody>
+        </table></div>
+        <p className="keys" style={{ marginTop: 8 }}>Score bands use the higher of the two scores. Side-out = rallies won on their serve; point-scoring = rallies won on your serve.</p>
+      </Card>
+      <div className="stack">
+        <Card title="Runs">
+          <div className="tbl"><table>
+            <thead><tr><th className="l" /><th>Runs of 3+</th><th>Per set</th><th>Longest</th></tr></thead>
+            <tbody>{(["us", "them"] as const).map((s) => <tr key={s}><td className="l"><b style={{ color: s === "us" ? "var(--us)" : "var(--them)" }}>{s === "us" ? team()!.name : "Opponents"}</b></td><td>{X.runs[s].three}</td><td>{X.sets ? (X.runs[s].three / X.sets).toFixed(1) : "—"}</td><td>{X.runs[s].longest}</td></tr>)}</tbody>
+          </table></div>
+        </Card>
+        <Card title="Timeouts and resets">
+          <div className="tbl"><table>
+            <thead><tr><th className="l">Next rally after</th><th>Won by us</th></tr></thead>
+            <tbody>
+              <tr><td className="l">Our timeout</td>{cell(X.afterTO.us)}</tr>
+              <tr><td className="l">Their timeout</td>{cell(X.afterTO.them)}</tr>
+              <tr><td className="l">Our own error</td>{cell(X.bounce.afterOwnError)}</tr>
+              <tr><td className="l">Their earned point</td>{cell(X.bounce.afterTheirPoint)}</tr>
+            </tbody>
+          </table></div>
+        </Card>
+        <Card title="Starts and finishes">
+          <div className="tbl"><table><tbody>
+            <tr><td className="l">Sets when we reached 5 first</td><td><b>{rec(X.first5)}</b></td></tr>
+            <tr><td className="l">Sets when they reached 5 first</td><td><b>{rec(X.behind5)}</b></td></tr>
+            <tr><td className="l">Close sets (decided by 3 or less)</td><td><b>{rec(X.close)}</b></td></tr>
+            <tr><td className="l">Lopsided sets (8+)</td><td><b>{rec(X.big)}</b></td></tr>
+          </tbody></table></div>
+        </Card>
+      </div>
+    </div>
+    {servers.length > 0 && <Card title="Serving runs">
+      <div className="tbl"><table>
+        <thead><tr><th className="l">Server</th><th>Longest run</th><th>Runs of 3+</th></tr></thead>
+        <tbody>{servers.map(([id, v]) => <tr key={id}><td className="l">{playerName(id)}</td><td><b>{v.longest}</b></td><td>{v.runs3}</td></tr>)}</tbody>
+      </table></div>
+      <p className="keys" style={{ marginTop: 8 }}>Consecutive points won while that player served.</p>
+    </Card>}
+  </div>;
 }

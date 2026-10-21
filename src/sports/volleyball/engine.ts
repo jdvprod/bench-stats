@@ -92,6 +92,8 @@ export interface Rally {
   /** What ended it, e.g. "K", "OK", "SEN". */
   end: string;
   p: string | null;
+  /** Score before the rally, and which side (if any) called a timeout just before it. */
+  us?: number; them?: number; to?: Side | null;
 }
 
 export interface Loc { t: ActionCode; p: string | null; op: string | null; x: number; y: number; set: number; rot: number; serve: Side; mid?: string }
@@ -164,7 +166,7 @@ export function serverOf(c: SetState | null): string | null {
 export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
   const bestOf = info.bestOf || 5, scr = info.scrim || null;
   const sets: SetState[] = [], log: LogEntry[] = [];
-  let cur: SetState | null = null, lastBA = false;
+  let cur: SetState | null = null, lastBA = false, lastTO: Side | null = null;
   let rally = { ctx: "OTH" as AttackContext, firstAtk: null as Rally["firstAtk"], hasFBR: false, pass: null as Rally["pass"] };
   const startRally = () => { rally = { ctx: "OTH", firstAtk: null, hasFBR: false, pass: null }; };
 
@@ -176,7 +178,7 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
       cur = newSet(sets.length + 1, e.serve || "us", lu, lib);
       cur.libSrv = e.lu ? e.libSrv || null : e.libSrv !== undefined ? e.libSrv || null : (prev && prev.startLibSrv) || null;
       cur.startLibSrv = cur.libSrv;
-      sets.push(cur); lastBA = false; startRally();
+      sets.push(cur); lastBA = false; lastTO = null; startRally();
       log.push({ id: e.id, set: cur.n, kind: "set", serve: cur.serve });
       continue;
     }
@@ -184,7 +186,7 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
     switch (e.t) {
       case "ROT": { const v = +e.v; const steps = (v - cur.rot + 6) % 6; cur.rot = v; if (cur.lu) cur.lu = rotateLineup(cur.lu, steps); log.push({ id: e.id, set: cur.n, kind: "rot", v }); continue; }
       case "SRV": cur.serve = e.v; log.push({ id: e.id, set: cur.n, kind: "srv", v: e.v }); continue;
-      case "TO": cur.to[e.v as Side]++; log.push({ id: e.id, set: cur.n, kind: "to", v: e.v }); continue;
+      case "TO": cur.to[e.v as Side]++; lastTO = e.v as Side; log.push({ id: e.id, set: cur.n, kind: "to", v: e.v }); continue;
       case "ADJ": cur.us = Math.max(0, +e.us || 0); cur.them = Math.max(0, +e.them || 0); log.push({ id: e.id, set: cur.n, kind: "adj", us: cur.us, them: cur.them }); continue;
       case "LU":
         cur.lu = e.lu.slice(); cur.lib = e.lib || null; cur.libSrv = e.libSrv || null;
@@ -237,7 +239,7 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
     if (wn) {
       const srvP = serverOf(cur);
       const onCourt = cur.lu ? cur.lu.concat(cur.lib ? [cur.lib] : []) : [];
-      cur.rallies.push({ w: wn, server: cur.serve, rot: cur.rot, rotB: cur.rotB, srvP, pass: rally.pass, firstAtk: rally.firstAtk, onCourt, end: t, p: ev.p || null });
+      cur.rallies.push({ w: wn, server: cur.serve, rot: cur.rot, rotB: cur.rotB, srvP, pass: rally.pass, firstAtk: rally.firstAtk, onCourt, end: t, p: ev.p || null, us: cur.us, them: cur.them, to: lastTO }); lastTO = null;
       for (const id of onCourt) { const m = cur.pm[id] || (cur.pm[id] = { w: 0, l: 0 }); if (wn === "us") m.w++; else m.l++; }
       if (srvP) { const s = cur.srv[srvP] || (cur.srv[srvP] = { n: 0, w: 0 }); s.n++; if (wn === "us") s.w++; }
       if (cur.serve === "them") { cur.fbso.n++; if (wn === "us" && rally.firstAtk === "K") cur.fbso.w++; }

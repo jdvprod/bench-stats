@@ -138,3 +138,19 @@ test("serve-receive passes are split by rotation", () => {
   assert.deepEqual(A.rcvRot[1].oh1, { R: 1, RS: 3 });
   assert.deepEqual(A.rcvRot[2].oh2, { R: 1, RS: 1 }, "after siding out we receive in rotation 2");
 });
+
+import { situations } from "../src/sports/volleyball/situations";
+test("situations: runs, timeouts, score bands and serving runs", () => {
+  // We receive; side out (K), then serve 3 straight (oh1 rotates to server spot in R2 => server = LU rotated), they score 1, take TO, we win next
+  const R = replay([ev("NS", { serve: "them", lu: LU }), ev("K", { p: "oh1" }), ev("SA", { p: "x" }), ev("SA", { p: "x" }), ev("SA", { p: "x" }), ev("SEN", { p: "x" }), ev("TO", { v: "us" }), ev("K", { p: "oh1" })]);
+  const X = situations(R.sets);
+  assert.equal(X.rallies, 6);
+  assert.equal(X.runs.us.longest, 4);
+  assert.equal(X.runs.us.three, 1);
+  assert.deepEqual(X.afterTO.us, { w: 1, n: 1 });
+  assert.deepEqual(X.bounce.afterOwnError, { w: 1, n: 1 });
+  assert.equal(X.phase.early.so.n + X.phase.early.ps.n, 6);
+  assert.equal(R.sets[0].rallies[2].us, 2, "score before rally is stored");
+  const srv = Object.values(X.serveRuns)[0];
+  assert.equal(srv.longest, 3); assert.equal(srv.runs3, 1);
+});

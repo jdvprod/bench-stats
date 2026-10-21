@@ -46,14 +46,7 @@ export function CourtSvg(props: {
       {[3, 6].map((x) => <line key={"v" + x} x1={x} y1={top} x2={x} y2={bot} stroke="var(--muted)" strokeWidth={0.04} strokeDasharray=".25 .2" opacity={0.6} />)}
       {(["them", "us"] as const).filter((h) => (h === "them" && top < 9) || (h === "us" && bot > 9)).map((h) =>
         Object.entries(ZONE_POS[h]).map(([z, [zx, zy]]) => {
-          if (c && c.half === h) {
-            const n = c.byZone[z] || 0;
-            return <g key={h + z}>
-              <text x={zx - 1.3} y={zy - 1.05} fontSize={0.5} fill="var(--muted)" fontWeight={700}>Z{z}</text>
-              {c.total > 0 && <><text x={zx} y={zy + 0.15} textAnchor="middle" fontSize={1.2} fontWeight={700} fill="var(--ink)" fontFamily="var(--display)">{n}</text>
-                <text x={zx} y={zy + 0.95} textAnchor="middle" fontSize={0.5} fill="var(--muted)">{Math.round((100 * n) / c.total)}%</text></>}
-            </g>;
-          }
+          if (c && c.half === h) return null;
           return <text key={h + z} x={zx} y={zy + 0.5} textAnchor="middle" fontSize={1.4} fontWeight={700} fill="var(--ink)" opacity={0.25} fontFamily="var(--display)">{z}</text>;
         }))}
       {line(0, top, 0, bot)}{line(9, top, 9, bot)}
@@ -61,6 +54,15 @@ export function CourtSvg(props: {
       {[6, 12].filter((y) => y > top && y < bot).map((y) => line(0, y, 9, y))}
       {top <= 9 && bot >= 9 && line(-0.6, 9, 9.6, 9, 0.16)}
       {(props.dots || []).map((d, i) => <circle key={i} cx={d.x} cy={d.y} r={d.r || 0.3} fill={d.color} opacity={d.opacity ?? 0.85} stroke="var(--surface)" strokeWidth={0.05}>{d.title && <title>{d.title}</title>}</circle>)}
+      {c && Object.entries(ZONE_POS[c.half]).filter(() => (c.half === "them" && top < 9) || (c.half === "us" && bot > 9)).map(([z, [zx, zy]]) => {
+        const n = c.byZone[z] || 0, yy = c.half === "them" ? (zy > 5 ? 6 : 0) : zy < 12 ? 9 : 12, h = (c.half === "them" ? (zy > 5 ? 3 : 6) : zy < 12 ? 3 : 6);
+        const halo = { stroke: "var(--surface)", strokeWidth: 0.16, paintOrder: "stroke" as const, strokeLinejoin: "round" as const };
+        return <g key={"c" + z} pointerEvents="none">
+          <text x={zx - 1.32} y={yy + h - 0.28} fontSize={0.45} fill="var(--muted)" fontWeight={700} {...halo} strokeWidth={0.1}>Z{z}</text>
+          {c.total > 0 && <><text x={zx} y={zy + 0.15} textAnchor="middle" fontSize={1.2} fontWeight={700} fill="var(--ink)" fontFamily="var(--display)" {...halo}>{n}</text>
+            <text x={zx} y={zy + 0.95} textAnchor="middle" fontSize={0.5} fill="var(--muted)" {...halo} strokeWidth={0.1}>{Math.round((100 * n) / c.total)}%</text></>}
+        </g>;
+      })}
       {props.mark && <><circle cx={props.mark[0]} cy={props.mark[1]} r={0.42} fill="none" stroke="var(--ink)" strokeWidth={0.12} /><circle cx={props.mark[0]} cy={props.mark[1]} r={0.14} fill="var(--ink)" /></>}
       {props.labels?.top && <text x={4.5} y={y0 + 0.75} textAnchor="middle" fontSize={0.55} fontWeight={600} fill="var(--them)" fontFamily="var(--display)" letterSpacing=".05">{props.labels.top.toUpperCase()}</text>}
       {props.labels?.bottom && <text x={4.5} y={y1 - 0.5} textAnchor="middle" fontSize={0.55} fontWeight={600} fill="var(--us)" fontFamily="var(--display)">{props.labels.bottom.toUpperCase()}</text>}
