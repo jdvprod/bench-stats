@@ -14,6 +14,7 @@ self.addEventListener("fetch", (e) => {
       .catch(() => caches.match(req.mode === "navigate" ? "./index.html" : req, { ignoreSearch: true })));
     return;
   }
-  // Fonts: cached copy first.
+  // Fonts: cached copy first. Everything else (cloud sync, AI) always goes to the network.
+  if (!/fonts\.(googleapis|gstatic)\.com$/.test(url.hostname)) return;
   e.respondWith(caches.match(req).then((hit) => hit || fetch(req).then((r) => { const copy = r.clone(); caches.open(CACHE).then((c) => c.put(req, copy)); return r; })));
 });
