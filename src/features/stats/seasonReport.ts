@@ -2,6 +2,7 @@
 import { player, playerName, team } from "../../data/store";
 import { Match, Season } from "../../data/model";
 import { aggregate, Agg, Replay, Stat } from "../../sports/volleyball/engine";
+import { rate, situations } from "../../sports/volleyball/situations";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, hitting, passAvg, playerMetrics, serveAttempts, serveEfficiency, serveErrors, teamMetrics } from "../../sports/volleyball/metrics";
 
 export interface Award { title: string; id: string; why: string }
@@ -56,6 +57,11 @@ footer{color:var(--mut);font-size:12px;text-align:center;margin-top:16px}@media 
 <div><b>${fmtPct(M.sideOut)}</b><span>Side-out</span></div><div><b>${fmtPct(M.pointScoring)}</b><span>Point-scoring</span></div><div><b>${fmtAvg(M.passAvg)}</b><span>Pass average</span></div>
 <div><b>${fmtPct(M.serveIn)}</b><span>Serve in</span></div><div><b>${fmtNum(M.perSet?.K ?? null)}</b><span>Kills per set</span></div><div><b>${fmtNum(M.perSet?.SA ?? null)}</b><span>Aces per set</span></div>
 <div><b>${fmtNum(M.perSet?.BLK ?? null)}</b><span>Blocks per set</span></div><div><b>${fmtNum(M.perSet?.D ?? null)}</b><span>Digs per set</span></div></div></section>
+${(() => { const X = situations(items.flatMap((x) => x.R.sets)), p = (x: { w: number; n: number }) => x.n ? fmtPct(rate(x)) : "–", rec = (x: { w: number; n: number }) => x.n ? `${x.w}–${x.n - x.w}` : "–";
+  return `<section><h2>Situations</h2><div class="k">
+<div><b>${p(X.phase.late.so)}</b><span>Side-out at 20+</span></div><div><b>${p(X.phase.clutch.ps)}</b><span>Point-scoring, late and within 2</span></div>
+<div><b>${X.runs.us.three}–${X.runs.them.three}</b><span>Runs of 3+ (us–them)</span></div><div><b>${rec(X.close)}</b><span>Sets decided by 3 or less</span></div>
+<div><b>${rec(X.first5)}</b><span>When we reach 5 first</span></div><div><b>${p(X.afterTO.us)}</b><span>Rally won after our timeouts</span></div></div></section>`; })()}
 ${awards ? `<section><h2>Season awards</h2><div class="awards">${awards}</div></section>` : ""}
 <section><h2>Match by match</h2><table><thead><tr><th>Date</th><th>Opponent</th><th>Result</th><th>Hit %</th><th>Side-out</th><th>Pass</th><th>Serve in</th></tr></thead><tbody>${log}</tbody></table></section>
 <section><h2>Players</h2><table><thead><tr><th>#</th><th>Player</th><th>Sets</th><th>K</th><th>Hit %</th><th>Ace</th><th>SE</th><th>Pass</th><th>Dig</th><th>Blk</th><th>Ast</th></tr></thead><tbody>${ids.map(prow).join("")}</tbody></table></section>
