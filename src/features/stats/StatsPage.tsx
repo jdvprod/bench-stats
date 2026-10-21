@@ -65,7 +65,7 @@ export function StatsPage() {
       {vw === "servepass" && <ServePass A={A} />}
       {vw === "rotations" && <><Rotations A={A} S={S} /><Units A={A} /></>}
       {vw === "situations" && <SituationsView S={S} />}
-      {vw === "opponent" && <Opponent A={A} />}
+      {vw === "opponent" && <><Opponent A={A} /><TheirRotations A={A} /></>}
       {vw === "film" && single && <FilmCard key={single.m.id} m={single.m} R={single.R} />}
     </>}
   </div>;
@@ -512,5 +512,25 @@ function EventCard({ S }: { S: Scope }) {
       <Kpi label="Point ratio" value={pa ? (pf / pa).toFixed(3) : "—"} sub="pool tiebreaker" />
     </div>
     <p className="keys" style={{ marginTop: 8 }}>Pool play usually breaks ties by match record, then set percentage, then point ratio. Matches are grouped by the event name you enter when starting a match.</p>
+  </Card>;
+}
+
+/* ---------- their rotations ---------- */
+function TheirRotations({ A }: { A: Agg }) {
+  const R: Record<number, { sw: number; sn: number; aces: number; rw: number; rn: number }> = {};
+  for (const r of A.rallies) {
+    const x = R[r.rotB] || (R[r.rotB] = { sw: 0, sn: 0, aces: 0, rw: 0, rn: 0 });
+    if (r.server === "them") { x.sn++; if (r.w === "them") x.sw++; if (r.end === "OA" || r.end === "P0") x.aces++; }
+    else { x.rn++; if (r.w === "them") x.rw++; }
+  }
+  const rots = [1, 2, 3, 4, 5, 6].filter((n) => R[n] && R[n].sn + R[n].rn > 0);
+  if (!rots.length) return null;
+  const worst = rots.filter((n) => R[n].sn >= 8).sort((a, b) => R[b].sw / R[b].sn - R[a].sw / R[a].sn)[0];
+  return <Card title="Their rotations">
+    <div className="tbl"><table>
+      <thead><tr><th className="l">Their rotation</th><th>On their serve</th><th>They scored</th><th>Aces / 0 passes</th><th>On our serve</th><th>They sided out</th></tr></thead>
+      <tbody>{rots.map((n) => { const x = R[n], ps = ratio(x.sw, x.sn); return <tr key={n} style={n === worst ? { fontWeight: 700 } : undefined}><td className="l">R{n}{n === 1 ? " (first server)" : ""}</td><td>{x.sn}</td><td style={{ color: ps != null && ps >= 0.5 ? "var(--them)" : undefined }}>{fmtPct(ps)} <span className="muted small">{x.sw}/{x.sn}</span></td><td>{x.aces}</td><td>{x.rn}</td><td>{fmtPct(ratio(x.rw, x.rn))} <span className="muted small">{x.rw}/{x.rn}</span></td></tr>; })}</tbody>
+    </table></div>
+    <p className="keys" style={{ marginTop: 8 }}>Their rotation counts from their first server each set and moves each time they side out.{worst ? ` Their R${worst} server hurt you most: ${fmtPct(ratio(R[worst].sw, R[worst].sn))} of rallies won on that serve. Note who it is and plan your serve-receive for that turn.` : ""}</p>
   </Card>;
 }
