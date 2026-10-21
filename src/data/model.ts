@@ -26,6 +26,9 @@ export interface Team {
   scrimSplit?: { aName: string; bName: string; a: string[]; b: string[]; out: string[]; to: number; games: number } | null;
   luAdvice?: { lineup: string[]; libero: string | null; summary: string; reasons: string[]; serveReceive: string[]; at: number } | null;
   sample?: boolean;
+  /** Where players stand in each rotation (serve receive, serving, base defense). */
+  formations?: import("../sports/volleyball/formations").Formations | null;
+  formationPresets?: { id: string; name: string; f: import("../sports/volleyball/formations").Formations }[];
 }
 
 export interface Season { id: string; teamId: string; name: string; createdAt: number }
@@ -83,7 +86,7 @@ export interface PracticePlan {
 export interface Board { id: string; teamId: string; name: "hit" | "serve" | "def"; strokes: Stroke[] }
 export interface Stroke { tool: "pen" | "arrow" | "dot" | "hl"; color: string; pts: [number, number][] }
 
-export interface Prefs { theme: "system" | "light" | "dark"; size: "normal" | "large"; teamId: string | null }
+export interface Prefs { theme: "system" | "light" | "dark"; size: "normal" | "large"; teamId: string | null; focus?: boolean; quick?: boolean }
 
 export const STORES = ["teams", "seasons", "players", "matches", "logs", "opponents", "drills", "plans", "boards", "kv"] as const;
 export type StoreName = (typeof STORES)[number];

@@ -4,6 +4,7 @@ declare module "react" {
   export type MouseEvent<T = any> = any;
   export type PointerEvent<T = any> = any;
   export type ChangeEvent<T = any> = any;
+  export type KeyboardEvent<T = any> = any;
   export function useState<S>(init: S | (() => S)): [S, (v: S | ((p: S) => S)) => void];
   export function useState<S = undefined>(): [S | undefined, (v: S | undefined | ((p: S | undefined) => S | undefined)) => void];
   export function useEffect(f: () => void | (() => void), deps?: any[]): void;

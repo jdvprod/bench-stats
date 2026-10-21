@@ -1,6 +1,6 @@
 /** Live stat tracking for a match, drill session or scrimmage. */
 import { useCallback, useState } from "react";
-import { activePlayers, appendEvents, deleteEvent, eventsOf, isMine, patch, patchEvent, player, playerName, replayOf, save, team, toast, undoLast } from "../../data/store";
+import { setPrefs, state, activePlayers, appendEvents, deleteEvent, eventsOf, isMine, patch, patchEvent, player, playerName, replayOf, save, team, toast, undoLast } from "../../data/store";
 import { Match } from "../../data/model";
 import { ACTIONS, ActionCode, GROUPS, LOCATION_HALF, OPP_NUMBER } from "../../sports/volleyball/actions";
 import { aggregate, LogEntry, Replay, serverOf, SetState, zoneOf } from "../../sports/volleyball/engine";
@@ -16,6 +16,7 @@ import { AiCard } from "../../ui/ai";
 import { timeoutPrompt } from "../../ai/prompts";
 import { go } from "../../app/router";
 import { SplitEditor, SplitState } from "../practice/SplitEditor";
+import { parseQuick, QUICK_HELP } from "../../sports/volleyball/quickcodes";
 
 const TAGS = ["Great play", "Review this", "Serve receive", "Rotation breakdown", "Defense", "Coachable moment"];
 
@@ -40,31 +41,38 @@ export function Tracker({ m }: { m: Match }) {
   const setA = aggregate([c]), mA = aggregate(R.sets);
   const srv = serverOf(c);
 
-  const record = (code: ActionCode) => {
+  const record = (code: ActionCode, o: { p?: string | null; op?: string; quiet?: boolean } = {}) => {
     const a: any = ACTIONS[code];
     let p: string | null = null;
     if (!a.team) {
-      if (ui.sel) p = ui.sel;
+      if (o.p) p = o.p;
+      else if (ui.sel && !o.quiet) p = ui.sel;
       else if (!scr && a.serve && srv) p = srv;
-      else if (scr || !a.optionalPlayer) { toast("Pick a player first."); return; }
+      else if (scr || !a.optionalPlayer) { toast("Pick a player first."); return false; }
     }
     const ev: any = { t: code };
     if (p) ev.p = p;
+    if (o.op) ev.op = o.op;
     if (scr && p) ev.s = scr.b.ids.includes(p) ? "b" : "a";
-    const e = appendEvents(m.id, [ev]); if (!e) return;
+    const e = appendEvents(m.id, [ev]); if (!e) return false;
+    if (o.op && !m.oppPlayers.includes(o.op)) patch("matches", m.id, { oppPlayers: m.oppPlayers.concat(o.op) });
+    if (o.quiet) return true;
     let half = t.settings.askLoc ? LOCATION_HALF[code] || null : null;
     if (code === "D" && !t.settings.askLocDigs) half = null;
     if (scr && half && ev.s === "b") half = half === "them" ? "us" : "them";
     const askOpp = !scr && t.settings.askOpp && !!OPP_NUMBER[code];
     if (half || askOpp) setUi({ follow: { id: e.id, half, askOpp, label: (p ? playerName(p) + " · " : "") + a.long } });
     else { setUi({ follow: null }); toast((p ? playerName(p) + " · " : "") + a.long); }
+    return true;
   };
+  const focus = !!state.prefs.focus;
 
   return (
-    <div className="stack">
+    <div className={"stack" + (focus ? " focus" : "")}>
       <Banners m={m} R={R} />
       <ControlBar m={m} c={c} names={names} />
-      <div className="split">
+      <QuickEntry m={m} record={record} />
+      <div className={focus ? "stack" : "split"}>
         <div className="stack">
           <Panels m={m} R={R} c={c} />
           {scr ? <ScrimPlayers m={m} /> : <CourtPlayers c={c} />}
@@ -72,11 +80,11 @@ export function Tracker({ m }: { m: Match }) {
           <Pad m={m} c={c} setA={setA} mA={mA} record={record} />
           <div className="legend"><span><span className="sw" style={{ background: "var(--us)" }} />Point to {names.us}</span><span><span className="sw" style={{ background: "var(--them)" }} />Point to {names.them}</span><span><span className="sw" style={{ background: "var(--line)" }} />No point, rally continues</span></div>
         </div>
-        <div className="stack">
+        {!focus && <div className="stack">
           {scr ? <ScrimSummary m={m} c={c} /> : <SetSummary c={c} setA={setA} />}
           {!scr && <FlagsCard R={R} m={m} />}
           <RecentCard m={m} R={R} />
-        </div>
+        </div>}
       </div>
       <FollowSheet m={m} />
     </div>
@@ -113,6 +121,7 @@ function ControlBar({ m, c, names }: { m: Match; c: SetState; names: { us: strin
       <button className="ctrl" onClick={() => panel("fix")}>Fix score<small>{c.us}–{c.them}</small></button>
       <button className="ctrl" onClick={() => panel("tag")}>Film tag<small>bookmark a moment</small></button>
       <button className="ctrl" onClick={undo}>Undo<small>your last entry</small></button>
+      <FocusToggle />
     </div>);
   return (
     <div className="ctrlbar">
@@ -123,7 +132,42 @@ function ControlBar({ m, c, names }: { m: Match; c: SetState; names: { us: strin
       <button className="ctrl" onClick={() => panel("lineup")}>{c.lu ? "Fix positions" : "Set lineup"}<small>{c.lu ? "who's where now" : "rotation tracking"}</small></button>
       <button className="ctrl" onClick={() => panel("tag")}>Film tag<small>bookmark</small></button>
       <button className="ctrl" onClick={undo}>Undo<small>your last entry</small></button>
+      <FocusToggle />
     </div>);
+}
+
+function FocusToggle() {
+  const on = !!state.prefs.focus;
+  return <button className="ctrl" aria-pressed={on} onClick={() => setPrefs({ focus: !on })}>{on ? "Exit focus" : "Focus mode"}<small>{on ? "show side panels" : "big buttons only"}</small></button>;
+}
+
+/* ---------- type-in codes ---------- */
+function QuickEntry({ m, record }: { m: Match; record: (k: ActionCode, o?: { p?: string | null; op?: string; quiet?: boolean }) => boolean }) {
+  const [v, setV] = useState(""), [help, setHelp] = useState(false), [msg, setMsg] = useState("");
+  if (state.prefs.quick === false) return null;
+  const submit = () => {
+    const r = parseQuick(v); if (!v.trim()) return;
+    const done: string[] = [], bad = r.errors.slice();
+    for (let i = 0; i < r.undo; i++) { const e = undoLast(m.id); if (e) done.push("undo"); }
+    for (const it of r.items) {
+      let pid: string | null = null;
+      if (it.num) { const p = activePlayers().find((x) => x.num === it.num); if (!p) { bad.push(it.raw + " (no #" + it.num + ")"); continue; } pid = p.id; }
+      if (record(it.code, { p: pid, op: it.op, quiet: true })) done.push(it.raw); else bad.push(it.raw);
+    }
+    setMsg((done.length ? "Recorded: " + done.join(" ") : "") + (bad.length ? (done.length ? " · " : "") + "Didn't understand: " + bad.join(", ") : ""));
+    if (!bad.length) setV(""); else setV(bad.map((b) => b.split(" ")[0]).join(" "));
+    setUi({ follow: null });
+  };
+  return <div className="quick">
+    <div className="row" style={{ flexWrap: "nowrap" }}>
+      <input className="input" value={v} onChange={(e) => setV(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter") submit(); }} placeholder="Type codes: 7k  12ace  4p3  ok11  oe   (Enter to record)" aria-label="Type stat codes" autoComplete="off" autoCapitalize="off" spellCheck={false} />
+      <button className="btn sm" onClick={submit}>Record</button>
+      <button className="btn sm ghost" aria-expanded={help} onClick={() => setHelp(!help)}>Codes</button>
+    </div>
+    {msg && <p className="small muted" style={{ margin: "4px 2px 0" }}>{msg}</p>}
+    {help && <div className="tbl" style={{ marginTop: 6 }}><table><tbody>{QUICK_HELP.map(([c, d]) => <tr key={c}><td className="l"><code>{c}</code></td><td className="l small">{d}</td></tr>)}</tbody></table>
+      <p className="keys" style={{ marginTop: 6 }}>Number first for your players (7k), after the code for theirs (ok11). Several on one line work. Type-in entries skip the court-location prompt.</p></div>}
+  </div>;
 }
 
 export function describe(e: { t: string; p?: string }): string {
@@ -277,7 +321,7 @@ function Hint({ c, m }: { c: SetState; m: Match }) {
 }
 
 /* ---------- pad ---------- */
-function Pad({ m, c, setA, mA, record }: { m: Match; c: SetState; setA: ReturnType<typeof aggregate>; mA: ReturnType<typeof aggregate>; record: (k: ActionCode) => void }) {
+function Pad({ m, c, setA, mA, record }: { m: Match; c: SetState; setA: ReturnType<typeof aggregate>; mA: ReturnType<typeof aggregate>; record: (k: ActionCode) => boolean | void }) {
   const scr = m.scrim, sel = ui.sel, srv = serverOf(c);
   const selSide = scr && sel ? (scr.b.ids.includes(sel) ? "b" : "a") : null;
   const groups: [string, ActionCode[]][] = scr ? GROUPS.filter((g) => g[0] !== "Opponent").map(([g, ks]) => [g, ks.filter((k) => k !== "REF")] as [string, ActionCode[]]).concat([["Points", ["UP", "TP"]]]) : GROUPS;

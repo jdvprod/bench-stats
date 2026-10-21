@@ -296,3 +296,16 @@ tr.click{cursor:pointer}tr.click:hover td{background:var(--surface-2)}
 @media (prefers-reduced-motion:no-preference){.act,.pl{transition:background .12s,transform .05s}}
 
 .pbpcard{max-height:min(1100px,85vh);overflow-y:auto}
+/* ---------- formations ---------- */
+.formsvg{width:100%;max-width:540px;height:auto;display:block;margin:0 auto;border-radius:10px;touch-action:none;user-select:none;-webkit-user-select:none}
+.ftoken:focus{outline:none}.ftoken:focus-visible circle{stroke:var(--accent);stroke-width:.16}
+button.rotcard{font:inherit;color:inherit;cursor:pointer;width:100%}
+.rotcard.sel{outline:2px solid var(--accent);outline-offset:1px}
+/* ---------- quick codes & focus mode ---------- */
+.quick .input{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:15px}
+.quick code{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:13px;background:var(--surface-2);padding:1px 5px;border-radius:4px}
+@media (max-width:699px){.quick{display:none}}
+.focus .act{min-height:66px;font-size:18px}
+.focus .pl{min-height:84px}.focus .pl .n{font-size:34px}
+.ctrl[aria-pressed="true"]{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}
+.rots.minis{grid-template-columns:repeat(auto-fill,minmax(150px,1fr))}@media (max-width:560px){.rots.minis{grid-template-columns:repeat(2,minmax(0,1fr))}}

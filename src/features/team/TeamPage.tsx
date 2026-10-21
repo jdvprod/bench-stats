@@ -51,7 +51,7 @@ function Roster() {
   const add = () => { const p: Player = { id: uid("p"), teamId: t.id, num: "", first: "", last: "", pos: "OH", grad: null, height: "", active: true, goals: [], notes: "" }; save("players", p); setTimeout(() => document.getElementById("num-" + p.id)?.focus(), 30); };
   const upd = (id: string, k: keyof Player, v: any) => patch("players", id, { [k]: v } as any);
   const shown = ps.filter((p) => showInactive || p.active);
-  return <Card title={`Roster · ${ps.filter((p) => p.active).length} players`} actions={<><button className="btn sm primary" onClick={add}>Add player</button></>}>
+  return <Card title={`Roster · ${ps.filter((p) => p.active).length} players`} actions={<><label className="btn sm" style={{ cursor: "pointer" }}>Import CSV<input type="file" accept=".csv,text/csv,text/plain" hidden onChange={(e) => { const f = e.target.files?.[0]; if (f) f.text().then((txt) => toast(importRosterCsv(txt))); e.target.value = ""; }} /></label><button className="btn sm" disabled={!ps.length} onClick={() => download(`${t.name} roster.csv`, rosterCsv(), "text/csv")}>Export CSV</button><button className="btn sm primary" onClick={add}>Add player</button></>}>
     {!ps.length && <p className="empty">No players yet. Add your roster to start tracking.</p>}
     {shown.length > 0 && <div className="tbl"><table>
       <thead><tr><th className="l">#</th><th className="l">First</th><th className="l">Last</th><th className="l">Pos</th><th className="l">Grad</th><th className="l">Height</th><th /></tr></thead>
@@ -136,3 +136,43 @@ function Backup() {
 }
 
 export { player };
+
+/* ---------- roster CSV ---------- */
+const csvCell = (v: unknown) => { const x = String(v ?? ""); return /[",\n]/.test(x) ? '"' + x.replace(/"/g, '""') + '"' : x; };
+function rosterCsv() {
+  const rows = [["number", "first", "last", "position", "grad_year", "height", "active"], ...teamPlayers().map((p) => [p.num, p.first, p.last, p.pos, p.grad ?? "", p.height, p.active ? "yes" : "no"])];
+  return rows.map((r) => r.map(csvCell).join(",")).join("\n");
+}
+function parseCsv(text: string): string[][] {
+  const out: string[][] = []; let row: string[] = [], cell = "", q = false;
+  for (let i = 0; i < text.length; i++) {
+    const ch = text[i];
+    if (q) { if (ch === '"' && text[i + 1] === '"') { cell += '"'; i++; } else if (ch === '"') q = false; else cell += ch; }
+    else if (ch === '"') q = true; else if (ch === ",") { row.push(cell); cell = ""; }
+    else if (ch === "\n" || ch === "\r") { if (ch === "\r" && text[i + 1] === "\n") i++; row.push(cell); out.push(row); row = []; cell = ""; }
+    else cell += ch;
+  }
+  if (cell || row.length) { row.push(cell); out.push(row); }
+  return out.filter((r) => r.some((c) => c.trim()));
+}
+/** Columns are matched by header name, so exports from other apps work: number/#, first, last (or name), position/pos, grad/class/year, height. */
+function importRosterCsv(text: string): string {
+  const rows = parseCsv(text.replace(/^\uFEFF/, "")); if (rows.length < 2) return "That file has no players.";
+  const h = rows[0].map((x) => x.trim().toLowerCase());
+  const col = (...names: string[]) => h.findIndex((x) => names.some((n) => x === n || x.includes(n)));
+  const cNum = col("number", "#", "jersey", "no"), cFirst = col("first"), cLast = col("last"), cName = col("name", "player"), cPos = col("position", "pos"), cGrad = col("grad", "class", "year"), cH = col("height", "ht");
+  if (cNum < 0 && cName < 0 && cFirst < 0) return "Couldn't find number or name columns. Use headers like number, first, last, position.";
+  const t = team()!, existing = teamPlayers(); let added = 0, updated = 0;
+  for (const r of rows.slice(1)) {
+    const g = (i: number) => (i >= 0 ? (r[i] || "").trim() : "");
+    let first = g(cFirst), last = g(cLast);
+    if (!first && !last && cName >= 0) { const parts = g(cName).split(/\s+/); first = parts.shift() || ""; last = parts.join(" "); }
+    const num = g(cNum).replace(/^#/, ""); if (!num && !first && !last) continue;
+    const posRaw = g(cPos).toUpperCase(), pos = (POSITIONS as readonly string[]).includes(posRaw) ? posRaw : posRaw.startsWith("LIB") ? "L" : posRaw.startsWith("SET") ? "S" : posRaw.startsWith("MID") ? "MB" : posRaw.startsWith("OUT") ? "OH" : posRaw.startsWith("RIGHT") || posRaw.startsWith("OPP") ? "OPP" : posRaw ? "DS" : "OH";
+    const gradN = parseInt(g(cGrad)), grad = isFinite(gradN) && gradN > 1990 ? gradN : null;
+    const match = existing.find((p) => (num && p.num === num) || (!num && p.first === first && p.last === last));
+    if (match) { patch("players", match.id, { first: first || match.first, last: last || match.last, pos: g(cPos) ? pos : match.pos, grad: grad ?? match.grad, height: g(cH) || match.height, active: true }); updated++; }
+    else { save("players", { id: uid("p"), teamId: t.id, num, first, last, pos, grad, height: g(cH), active: true, goals: [], notes: "" } as Player); added++; }
+  }
+  return `Roster imported: ${added} added, ${updated} updated.`;
+}

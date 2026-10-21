@@ -92,3 +92,29 @@ test("sample match replays cleanly and points add up", () => {
   const f = flags(R, { us: "Us", them: "Them", subLimit: 15, playerIds: Object.keys(A.ps), short: (id) => id });
   assert.ok(Array.isArray(f));
 });
+
+import { defaultFormations, overlapFaults } from "../src/sports/volleyball/formations";
+test("default formations are legal at the serve", () => {
+  const f = defaultFormations();
+  for (let r = 0; r < 6; r++) { assert.equal(overlapFaults(f.receive[r], "receive").length, 0); assert.equal(overlapFaults(f.serve[r], "serve").length, 0); }
+});
+test("overlap check flags front/back and left/right faults, server exempt", () => {
+  const s = defaultFormations().receive[0];
+  s["5"] = [1.5, 10]; // left back in front of left front
+  assert.ok(overlapFaults(s, "receive").some((x) => x.a === "4" && x.b === "5"));
+  const v = defaultFormations().serve[0];
+  v["1"] = [0.5, 18.9]; // server anywhere behind the line is fine
+  assert.equal(overlapFaults(v, "serve").length, 0);
+  const w = defaultFormations().receive[0];
+  w["3"] = [8, 11.2]; // middle front right of right front
+  assert.ok(overlapFaults(w, "receive").some((x) => x.a === "3" && x.b === "2"));
+});
+
+import { parseQuick } from "../src/sports/volleyball/quickcodes";
+test("quick codes parse players, pass grades and their numbers", () => {
+  const r = parseQuick("7k 12ace 4p3 ok11 oe, 3D u #9ba zz 7p3x");
+  assert.deepEqual(r.items.map((i) => [i.code, i.num ?? "", i.op ?? ""]), [["K", "7", ""], ["SA", "12", ""], ["P3", "4", ""], ["OK", "", "11"], ["OE", "", ""], ["D", "3", ""], ["BA", "9", ""]]);
+  assert.equal(r.undo, 1);
+  assert.deepEqual(r.errors, ["zz", "7p3x"]);
+  assert.equal(parseQuick("k5").errors.length, 1, "a number after a non-opponent code is rejected");
+});

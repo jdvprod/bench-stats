@@ -7,6 +7,7 @@ import { Icon } from "../ui/icons";
 import { Toast } from "../ui/kit";
 import { TrackPage } from "../features/track/TrackPage";
 import { LineupPage } from "../features/lineup/LineupPage";
+import { FormationsPage } from "../features/formations/FormationsPage";
 import { PracticePage } from "../features/practice/PracticePage";
 import { StatsPage } from "../features/stats/StatsPage";
 import { CourtPage } from "../features/court/CourtPage";
@@ -17,7 +18,7 @@ import { LivePage } from "../features/live/LivePage";
 import { Welcome } from "../features/team/Welcome";
 
 const HOST_THEME = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
-const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"]];
+const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["formations", "Formations", "wide-only"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"]];
 
 export function App() {
   useVersion();
@@ -27,7 +28,7 @@ export function App() {
   if (!t) return <><div className="content"><Welcome /></div><Toast /></>;
 
   const page = route.page;
-  const showBoard = !!currentMatch() && ["track", "practice", "lineup", "stats", "court"].includes(page) && !(page === "practice" && currentMatch()?.kind === "match");
+  const showBoard = !!currentMatch() && ["track", "practice", "lineup", "formations", "stats", "court"].includes(page) && !(page === "practice" && currentMatch()?.kind === "match");
   const teams = all("teams").sort((a, b) => a.createdAt - b.createdAt);
   const switcher = (cls: string) => (
     <select className={cls} value={t.id} aria-label="Team" onChange={(e) => { if (e.target.value === "__new") location.hash = "#/team/new"; else setPrefs({ teamId: e.target.value }); }}>
@@ -38,6 +39,7 @@ export function App() {
   let body;
   switch (page) {
     case "lineup": body = <LineupPage />; break;
+    case "formations": body = <FormationsPage />; break;
     case "practice": body = <PracticePage />; break;
     case "stats": body = <StatsPage />; break;
     case "court": body = <CourtPage />; break;

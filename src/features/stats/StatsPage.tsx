@@ -13,6 +13,7 @@ import { go } from "../../app/router";
 import { activeSeason, defaultScope, resolveScope, Scope, seasonMatches } from "./scope";
 import { buildXlsx } from "../../lib/xlsx";
 import { logText } from "../track/Tracker";
+import { matchReportHtml } from "./matchReport";
 
 type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "opponent";
 
@@ -31,6 +32,7 @@ export function StatsPage() {
     <div className="pagehead"><h1>Stats</h1>
       <div className="row">
         <button className="btn sm" onClick={() => exportSheet(S, A)}>Download spreadsheet</button>
+        {single && !isScrim && <button className="btn sm" onClick={() => { download(`${t.name} vs ${single.m.opp} ${single.m.date} report.html`.replace(/[^\w\- .]+/g, ""), matchReportHtml(single.m, single.R), "text/html"); toast("Match report saved. Open it to print or share."); }}>Match report</button>}
         {single && <button className="btn sm" onClick={() => copyText(snapshot(single.m)).then((ok) => toast(ok ? "Summary copied" : "Couldn't copy here"))}>Copy summary</button>}
       </div>
     </div>
