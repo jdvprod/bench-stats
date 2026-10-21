@@ -178,6 +178,7 @@ function ServePass({ A }: { A: Agg }) {
         <tbody>{servers.map((p) => { const s = A.ps[p.id] || ({ SA: 0, SI: 0, SE: 0, SEN: 0, SEO: 0 } as Stat), r = A.srv[p.id]; return <tr key={p.id}><td className="l">{playerName(p.id)}</td><td>{serveAttempts(s)}</td><td>{s.SA}</td><td>{serveErrors(s)}</td><td>{fmtPct(serveInPct(s))}</td><td>{fmtHit(serveEfficiency(s))}</td><td>{r ? `${r.w}/${r.n} (${fmtPct(ratio(r.w, r.n))})` : "—"}</td><td>{r?.best || "—"}</td></tr>; })}</tbody>
       </table></div><p className="keys" style={{ marginTop: 8 }}>Rallies won and best run need a lineup so the app knows who is serving.</p></Card>
     </div>
+    <ReceiveRot A={A} />
   </div>;
 }
 
@@ -361,5 +362,21 @@ function Distribution({ A }: { A: Agg }) {
         return <tr key={r}><td className="l"><b>R{r}</b></td><td>{n}</td>{hitters.map((id) => { const x = row[id]; return <td key={id} className={x && id === top && n >= 5 ? "cmp-best" : ""}>{x && n ? <>{Math.round((100 * x.TA) / n)}% <span className="muted small">{fmtHit(hitting({ K: x.K, AE: x.E, TA: x.TA }))}</span></> : "—"}</td>; })}</tr>; })}</tbody>
     </table></div>
     <p className="keys" style={{ marginTop: 8 }}>Share of attacks each hitter gets in each rotation, with her hitting % there. Spot rotations where the offense leans on one hitter or where a hot hitter isn't getting the ball.</p>
+  </Card>;
+}
+
+/* Serve receive by rotation: who passes in each rotation, how well, and the side-out that follows. */
+function ReceiveRot({ A }: { A: Agg }) {
+  const tot: Record<string, number> = {};
+  for (let r = 1; r <= 6; r++) for (const [p, x] of Object.entries(A.rcvRot[r] || {})) tot[p] = (tot[p] || 0) + x.R;
+  const passers = Object.entries(tot).sort((a, b) => b[1] - a[1]).slice(0, 5).map((x) => x[0]);
+  if (!passers.length) return null;
+  return <Card title="Serve receive by rotation">
+    <div className="tbl"><table>
+      <thead><tr><th className="l">Rotation</th><th>Side-out</th><th>Pass avg</th>{passers.map((id) => <th key={id}>{playerName(id)}</th>)}</tr></thead>
+      <tbody>{[1, 2, 3, 4, 5, 6].map((r) => { const row = A.rcvRot[r] || {}, n = Object.values(row).reduce((a, x) => a + x.R, 0), rs = Object.values(row).reduce((a, x) => a + x.RS, 0), x = A.rot[r];
+        return <tr key={r}><td className="l"><b>R{r}</b></td><td>{fmtPct(ratio(x.rw, x.rn))}</td><td><b>{n ? fmtAvg(rs / n) : "—"}</b></td>{passers.map((id) => { const q = row[id]; return <td key={id} className={q && q.R >= 3 && q.RS / q.R < 1.7 ? "lo" : ""}>{q ? <>{fmtAvg(q.RS / q.R)} <span className="muted small">({q.R})</span></> : "—"}</td>; })}</tr>; })}</tbody>
+    </table></div>
+    <p className="keys" style={{ marginTop: 8 }}>Each passer's average in each rotation (number of serves in brackets). Underlined = struggling there: hide her in that rotation's serve-receive pattern or move the libero over.</p>
   </Card>;
 }

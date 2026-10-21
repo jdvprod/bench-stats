@@ -16,10 +16,11 @@ declare module "react" {
   export function useCallback<T>(f: T, deps: any[]): T;
   export function useSyncExternalStore<T>(s: (cb: () => void) => () => void, g: () => T): T;
   export const StrictMode: any; export const Fragment: any;
+  export class Component<P = any, S = any> { constructor(p: P); props: P; state: S; setState(s: Partial<S> | ((s: S) => Partial<S>)): void; render(): any }
   const React: any; export default React;
 }
 declare module "react/jsx-runtime" { export const jsx: any, jsxs: any, Fragment: any; }
 declare module "react-dom/client" { export function createRoot(el: any): { render(n: any): void }; }
 declare module "jszip" { const J: any; export default J; }
-declare namespace JSX { interface IntrinsicElements { [k: string]: any } interface Element {} interface ElementAttributesProperty {} interface IntrinsicAttributes { key?: any } }
+declare namespace JSX { interface IntrinsicElements { [k: string]: any } interface Element {} interface ElementAttributesProperty { props: {} } interface IntrinsicAttributes { key?: any } }
 declare module "*.css";

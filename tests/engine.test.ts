@@ -131,3 +131,10 @@ test("attacks are split by our rotation for setter distribution", () => {
   assert.deepEqual(A.atkRot[1].oh1, { K: 1, E: 1, TA: 2 }, "we kept serving, so every attack was in rotation 1");
   assert.equal(A.atkRot[1].mb1.TA, 1);
 });
+
+test("serve-receive passes are split by rotation", () => {
+  const R = replay([ev("NS", { serve: "them", lu: LU }), ev("P3", { p: "oh1" }), ev("K", { p: "oh1" }), ev("SA", { p: "oh1" }), ev("OK"), ev("P1", { p: "oh2" }), ev("AE", { p: "opp" })]);
+  const A = aggregate(R.sets);
+  assert.deepEqual(A.rcvRot[1].oh1, { R: 1, RS: 3 });
+  assert.deepEqual(A.rcvRot[2].oh2, { R: 1, RS: 1 }, "after siding out we receive in rotation 2");
+});

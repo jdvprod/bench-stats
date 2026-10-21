@@ -1,7 +1,7 @@
 import { createRoot } from "react-dom/client";
 import "./styles/app.css";
 import { App } from "./app/App";
-import { init } from "./data/store";
+import { init, toast } from "./data/store";
 import { restoreTeams, startSync } from "./cloud/sync";
 import { consumeAuthRedirect, currentUser } from "./cloud/client";
 
@@ -11,5 +11,10 @@ consumeAuthRedirect().finally(() => {
 });
 
 if ("serviceWorker" in navigator && location.protocol.startsWith("http") && location.hostname !== "localhost") {
-  window.addEventListener("load", () => { navigator.serviceWorker.register("sw.js").catch(() => {}); });
+  window.addEventListener("load", () => {
+    const hadController = !!navigator.serviceWorker.controller;
+    navigator.serviceWorker.register("sw.js").catch(() => {});
+    // a new version took over: say so once (pages already load network-first, so it's in use after this reload)
+    navigator.serviceWorker.addEventListener("controllerchange", () => { if (hadController) toast("Benchboard updated to the latest version"); });
+  });
 }

@@ -18,6 +18,7 @@ import { SettingsPage } from "../features/settings/SettingsPage";
 import { PlayerPage } from "../features/player/PlayerPage";
 import { LivePage } from "../features/live/LivePage";
 import { Welcome } from "../features/team/Welcome";
+import { ErrorBoundary } from "./ErrorBoundary";
 import { WatchPage } from "../cloud/WatchPage";
 import { JoinPage } from "../cloud/CloudCard";
 import { AccountChip, AccountPage, AuthPage, skipAccounts, syncDot, wantsAuthGate } from "../cloud/AuthPage";
@@ -81,7 +82,7 @@ export function App() {
       <div className="mobilebar"><b>Benchboard</b>{switcher("")}{user ? <a className={"avatar " + syncDot()} href="#/account" aria-label="Account">{user.email.slice(0, 1).toUpperCase()}</a> : null}</div>
       {showBoard && page !== "live" && <Scoreboard />}
       {!state.persistent && <div className="banner warn" style={{ marginTop: 12 }}><p>This browser isn't letting Benchboard save. Stats will be lost when you close it. Try a regular (not private) window.</p></div>}
-      {body}
+      <ErrorBoundary resetKey={page + (route.id || "")}>{body}</ErrorBoundary>
     </div>
     <Toast />
   </>;
