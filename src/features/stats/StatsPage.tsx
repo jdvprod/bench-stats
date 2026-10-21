@@ -17,6 +17,7 @@ import { matchReportHtml } from "./matchReport";
 import { shareFinalGraphic } from "./finalGraphic";
 import { FilmCard } from "./FilmCard";
 import { PlayEditor } from "./PlayEditor";
+import { AskCard } from "./AskCard";
 import { seasonAwards, seasonReportHtml } from "./seasonReport";
 import { rate, situationNotes, situations, WN } from "../../sports/volleyball/situations";
 
@@ -61,6 +62,7 @@ export function StatsPage() {
       <Seg value={vw} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"], ...(single && single.m.kind === "match" ? [["film", "Film"] as [View, string]] : []), ...(single && !isScrim ? [["fix", "Fix plays"] as [View, string]] : [])]} label="Section" />
       {vw === "overview" && S.event && <EventCard S={S} />}
       {vw === "overview" && <Overview S={S} A={A} />}
+      {vw === "overview" && S.kind !== "practice" && <AskCard key={S.key} S={S} />}
       {vw === "players" && <Players A={A} />}
       {vw === "offense" && <Offense A={A} />}
       {vw === "servepass" && <ServePass A={A} />}

@@ -133,3 +133,24 @@ export function practiceSuggestPrompt(focusText: string) {
 }
 
 export { zoneOf };
+
+/** Everything in the current Stats selection, compact enough to ask questions over. */
+export function askPrompt(items: { m: Match; R: import("../sports/volleyball/engine").Replay }[], label: string, question: string, history: { q: string; a: string }[] = []) {
+  const t = team()!, sorted = items.slice().sort((a, b) => a.m.date.localeCompare(b.m.date));
+  const A = aggregate(sorted.flatMap((x) => x.R.sets));
+  const L = [`TEAM: ${t.name} (${t.level}). SELECTION: ${label}, ${sorted.length} matches, ${A.sets} sets.`, "MATCHES:"];
+  for (const { m, R } of sorted) { const a = aggregate(R.sets), M = teamMetrics(a); L.push(`- ${m.date} vs ${m.opp}${m.event ? " (" + m.event + ")" : ""}: ${R.wonUs}-${R.wonThem} (${R.sets.map((s) => s.us + "-" + s.them).join(", ")}); hitting ${fmtHit(M.hitting)}, side-out ${fmtPct(M.sideOut)}, pass ${fmtAvg(M.passAvg)}, serve in ${fmtPct(M.serveIn)}`); }
+  L.push("TEAM TOTALS: " + teamLine(A));
+  L.push("OUR ROTATIONS (won-lost, side-out, point-scoring): " + [1, 2, 3, 4, 5, 6].map((r) => { const x = A.rot[r]; return `R${r} ${x.w}-${x.l} SO ${pct(x.rw, x.rn)} PS ${pct(x.sw, x.sn)}`; }).join("; "));
+  L.push("PLAYERS:");
+  for (const p of teamPlayers()) {
+    const s = A.ps[p.id]; if (!s) continue; const pm = playerMetrics(A, p.id);
+    const rotA = [1, 2, 3, 4, 5, 6].map((r) => { const x = A.atkRot[r]?.[p.id]; return x && x.TA ? `R${r} ${x.K}K/${x.E}E/${x.TA}TA` : ""; }).filter(Boolean).join(" ");
+    const rotP = [1, 2, 3, 4, 5, 6].map((r) => { const x = A.rcvRot[r]?.[p.id]; return x && x.R ? `R${r} ${fmtAvg(x.RS / x.R)} on ${x.R}` : ""; }).filter(Boolean).join(" ");
+    L.push(`- #${p.num} ${p.first} (${p.pos}), ${pm.sets} sets, +/- ${pm.plusMinus ?? "n/a"}: ${statLine(s)}${rotA ? `; attacks by rotation: ${rotA}` : ""}${rotP ? `; passing by rotation: ${rotP}` : ""}`);
+  }
+  const opp = Object.entries(A.opp).sort((a, b) => b[1].K - a[1].K).slice(0, 8);
+  if (opp.length) L.push("OPPONENT PLAYERS (kills/aces/errors): " + opp.map(([n, o]) => `#${n} ${o.K}/${o.A}/${o.E}`).join(", "));
+  const convo = history.slice(-4).map((h) => `Q: ${h.q}\nA: ${h.a}`).join("\n\n");
+  return `You are a volleyball analyst answering a coach's question about their own tracked stats. Answer directly in 2-6 short sentences or bullets, cite the exact numbers from the data, and say plainly when the data can't answer it (and what they'd need to track). Never invent stats. Name players by number and first name.\n\nDATA\n${L.join("\n")}${convo ? "\n\nEARLIER IN THIS CONVERSATION\n" + convo : ""}\n\nQUESTION: ${question}`;
+}
