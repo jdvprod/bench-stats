@@ -105,10 +105,11 @@ const filmTime = (ts: number, base: number) => { let s = Math.max(0, Math.round(
 
 /* ---------- players ---------- */
 function Players({ A }: { A: Agg }) {
-  const [mode, setMode] = useState<"totals" | "perset" | "advanced">("totals");
+  const [mode, setMode] = useState<"totals" | "perset" | "advanced" | "compare">("totals");
   const ids = teamPlayers().filter((p) => A.ps[p.id] || A.pm[p.id]).map((p) => p.id);
   const cls = (s: Stat) => ({ hc: s.TA >= 5 ? ((hitting(s) || 0) >= 0.3 ? "hi" : (hitting(s) || 0) < 0.1 ? "lo" : "") : "", pc: s.R >= 4 ? (s.RS / s.R >= 2.3 ? "hi" : s.RS / s.R < 1.7 ? "lo" : "") : "" });
-  return <Card title="Players" actions={<Seg value={mode} onChange={setMode} options={[["totals", "Totals"], ["perset", "Per set"], ["advanced", "Advanced"]]} />}>
+  return <Card title="Players" actions={<Seg value={mode} onChange={setMode} options={[["totals", "Totals"], ["perset", "Per set"], ["advanced", "Advanced"], ["compare", "Compare"]]} />}>
+    {mode === "compare" ? <Compare A={A} ids={ids} /> : <>
     <div className="tbl"><table>
       {mode === "totals" && <><thead>
         <tr><th /><th /><th colSpan={4} className="gh">Hitting</th><th colSpan={3} className="gh">Setting</th><th colSpan={5} className="gh">Serve</th><th colSpan={3} className="gh">Receive</th><th colSpan={2} className="gh">Defense</th><th colSpan={3} className="gh">Block</th><th colSpan={3} className="gh">Misc errors</th></tr>
@@ -120,7 +121,7 @@ function Players({ A }: { A: Agg }) {
       {mode === "advanced" && <><thead><tr><th className="l">#</th><th className="l">Player</th><th>Kill %</th><th>Hit %</th><th>Perfect pass %</th><th>Good pass %</th><th>Serve in %</th><th>Serve eff</th><th>Ace : error</th><th>+/−</th><th>Net points</th></tr></thead>
         <tbody>{ids.map((id) => { const s = A.ps[id] || ({} as Stat), pm = playerMetrics(A, id), p = player(id)!; return <tr key={id} className="click" onClick={() => go("player", id)}><td className="l">{p.num}</td><td className="l">{p.first} {p.last}</td><td>{fmtPct(pm.killPct)}</td><td>{fmtHit(pm.hitting)}</td><td>{fmtPct(pm.perfectPass)}</td><td>{fmtPct(s.R ? (s.R3 + s.R2) / s.R : null)}</td><td>{fmtPct(pm.serveIn)}</td><td>{fmtHit(pm.serveEff)}</td><td>{fmtRatio(pm.aceErr)}</td><td><b style={{ color: (pm.plusMinus || 0) > 0 ? "var(--good)" : (pm.plusMinus || 0) < 0 ? "var(--muted)" : undefined }}>{fmtSigned(pm.plusMinus)}</b></td><td>{fmtSigned(pm.netPoints)}</td></tr>; })}</tbody></>}
     </table></div>
-    <p className="keys" style={{ marginTop: 8 }}>{mode === "totals" ? "Hit % = (kills − errors) ÷ attempts. Pass on a 0–3 scale. Green and red mark standouts once there are enough attempts. Tap a player for her page." : mode === "perset" ? "Per set uses the sets each player recorded a stat or was on court in. Net points = kills, aces and blocks minus errors." : "+/− counts rallies won minus lost while she was on court (needs a lineup). Serve eff = (aces − errors) ÷ serves. Ace : error above 1.0 is strong."}</p>
+    <p className="keys" style={{ marginTop: 8 }}>{mode === "totals" ? "Hit % = (kills − errors) ÷ attempts. Pass on a 0–3 scale. Green and red mark standouts once there are enough attempts. Tap a player for her page." : mode === "perset" ? "Per set uses the sets each player recorded a stat or was on court in. Net points = kills, aces and blocks minus errors." : "+/− counts rallies won minus lost while she was on court (needs a lineup). Serve eff = (aces − errors) ÷ serves. Ace : error above 1.0 is strong."}</p></>}
   </Card>;
 }
 function totals(s: Stat, hc: string, pc: string) {
@@ -297,4 +298,39 @@ function Highs({ S }: { S: Scope }) {
       for (const { m, A } of per) for (const [id, st] of Object.entries(A.ps)) { const v = f(st); if (player(id) && v > 0 && (!best || v > best.v)) best = { id, v, m }; }
       return <li key={label} style={{ gridTemplateColumns: "92px 1fr auto" }}><span className="muted">{label}</span><span>{best ? <>{playerName(best.id)} <span className="muted small">vs {best.m.opp}, {fmtDate(best.m.date)}</span></> : "—"}</span><b className="num">{best ? fmtNum(best.v) : ""}</b></li>; })}</ul>
   </Card>;
+}
+
+/* Side-by-side for lineup decisions: up to three players, best value in each row highlighted. */
+function Compare({ A, ids }: { A: Agg; ids: string[] }) {
+  const [pick, setPick] = useState<string[]>(() => ids.slice().sort((a, b) => (A.ps[b]?.TA || 0) - (A.ps[a]?.TA || 0)).slice(0, 2));
+  const toggle = (id: string) => setPick(pick.includes(id) ? pick.filter((x) => x !== id) : pick.length >= 3 ? pick.slice(1).concat(id) : pick.concat(id));
+  const rows: [string, (id: string) => number | null, (v: number | null) => string, boolean][] = [
+    ["Sets played", (id) => playerMetrics(A, id).sets, (v) => fmtNum(v), true],
+    ["Kills per set", (id) => playerMetrics(A, id).kps, (v) => fmtNum(v, 2), true],
+    ["Hitting %", (id) => (A.ps[id]?.TA ? hitting(A.ps[id]) : null), fmtHit, true],
+    ["Kill %", (id) => playerMetrics(A, id).killPct, fmtPct, true],
+    ["Attack error %", (id) => (A.ps[id]?.TA ? A.ps[id].AE / A.ps[id].TA : null), fmtPct, false],
+    ["Aces per set", (id) => playerMetrics(A, id).acesPs, (v) => fmtNum(v, 2), true],
+    ["Serve in %", (id) => playerMetrics(A, id).serveIn, fmtPct, true],
+    ["Serve efficiency", (id) => playerMetrics(A, id).serveEff, fmtHit, true],
+    ["Pass average", (id) => playerMetrics(A, id).passAvg, (v) => fmtAvg(v), true],
+    ["Perfect pass %", (id) => playerMetrics(A, id).perfectPass, fmtPct, true],
+    ["Digs per set", (id) => playerMetrics(A, id).dps, (v) => fmtNum(v, 2), true],
+    ["Blocks per set", (id) => playerMetrics(A, id).bps, (v) => fmtNum(v, 2), true],
+    ["Assists per set", (id) => playerMetrics(A, id).aps, (v) => fmtNum(v, 2), true],
+    ["+/− on court", (id) => playerMetrics(A, id).plusMinus, fmtSigned, true],
+    ["Net points per set", (id) => playerMetrics(A, id).netPerSet, (v) => fmtNum(v, 2), true],
+  ];
+  return <div className="stack">
+    <div className="pick">{ids.map((id) => <button key={id} aria-pressed={pick.includes(id)} onClick={() => toggle(id)}>{playerName(id)}</button>)}</div>
+    {pick.length >= 2 ? <div className="tbl"><table>
+      <thead><tr><th className="l" />{pick.map((id) => <th key={id} className="cmp-h"><button className="btn sm ghost" onClick={() => go("player", id)}>{playerName(id)}</button><div className="small muted">{player(id)?.pos}</div></th>)}</tr></thead>
+      <tbody>{rows.map(([label, f, fmt, up]) => {
+        const vals = pick.map((id) => f(id)), have = vals.filter((v): v is number => v != null);
+        const best = have.length >= 2 ? (up ? Math.max(...have) : Math.min(...have)) : null;
+        const tie = best != null && have.filter((v) => fmt(v) === fmt(best)).length > 1;
+        return <tr key={label}><td className="l">{label}</td>{vals.map((v, i) => <td key={i} className={!tie && v != null && best != null && fmt(v) === fmt(best) ? "cmp-best" : ""}>{fmt(v)}</td>)}</tr>; })}</tbody>
+    </table></div> : <p className="empty">Pick two or three players to compare.</p>}
+    <p className="keys">Blue marks the best number in each row. Per-set numbers use the sets each player actually played.</p>
+  </div>;
 }

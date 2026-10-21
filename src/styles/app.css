@@ -450,3 +450,7 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .att-b i{font-style:normal;font-size:11px;color:var(--muted);font-weight:600}
 .att-b.in{background:var(--us-soft);border-color:color-mix(in srgb,var(--us) 40%,var(--line))}.att-b.in i{color:var(--us)}
 .att-b.late{border-style:dashed;border-color:var(--them)}.att-b.out{background:var(--surface-2);opacity:.65}.att-b.out i{color:var(--ink)}
+.cmp-best{color:var(--us);font-weight:800}.cmp-h{vertical-align:bottom}
+.avatar{position:relative}
+.avatar.dot-ok::after,.avatar.dot-wait::after,.avatar.dot-err::after{content:"";position:absolute;right:-2px;bottom:-2px;width:10px;height:10px;border-radius:50%;border:2px solid var(--bar)}
+.avatar.dot-ok::after{background:var(--us-bright)}.avatar.dot-wait::after{background:#8F959E}.avatar.dot-err::after{background:#F07167}

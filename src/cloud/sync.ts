@@ -179,6 +179,7 @@ export function startSync() {
     if (live || Date.now() - status.last > 30_000) tick();
   }, 8_000);
   document.addEventListener("visibilitychange", tick);
-  window.addEventListener("online", tick);
+  window.addEventListener("online", () => { emit(); tick(); });
+  window.addEventListener("offline", () => emit());
   setTimeout(tick, 500);
 }

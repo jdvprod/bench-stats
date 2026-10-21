@@ -20,7 +20,7 @@ import { LivePage } from "../features/live/LivePage";
 import { Welcome } from "../features/team/Welcome";
 import { WatchPage } from "../cloud/WatchPage";
 import { JoinPage } from "../cloud/CloudCard";
-import { AccountChip, AccountPage, AuthPage, skipAccounts, wantsAuthGate } from "../cloud/AuthPage";
+import { AccountChip, AccountPage, AuthPage, skipAccounts, syncDot, wantsAuthGate } from "../cloud/AuthPage";
 import { currentUser } from "../cloud/client";
 
 const HOST_THEME = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
@@ -78,7 +78,7 @@ export function App() {
       <a className="tab" href="#/settings" aria-current={page === "settings" ? "page" : undefined}><Icon name="settings" /><span>Settings</span></a>
     </nav>
     <div className="content">
-      <div className="mobilebar"><b>Benchboard</b>{switcher("")}{user ? <a className="avatar" href="#/account" aria-label="Account">{user.email.slice(0, 1).toUpperCase()}</a> : null}</div>
+      <div className="mobilebar"><b>Benchboard</b>{switcher("")}{user ? <a className={"avatar " + syncDot()} href="#/account" aria-label="Account">{user.email.slice(0, 1).toUpperCase()}</a> : null}</div>
       {showBoard && page !== "live" && <Scoreboard />}
       {!state.persistent && <div className="banner warn" style={{ marginTop: 12 }}><p>This browser isn't letting Benchboard save. Stats will be lost when you close it. Try a regular (not private) window.</p></div>}
       {body}

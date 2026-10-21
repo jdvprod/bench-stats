@@ -2,7 +2,7 @@
 import { FormEvent, ReactNode, useEffect, useRef, useState } from "react";
 import { setPrefs, state, team, toast } from "../data/store";
 import { CloudError, cloudAvailable, currentUser, resendConfirmation, sendPasswordReset, signIn, signOut, signUp, updatePassword } from "./client";
-import { isLinked, linkTeam, restoreTeams, status, syncNow } from "./sync";
+import { isLinked, linkTeam, pendingCount, restoreTeams, status, syncNow } from "./sync";
 import { go } from "../app/router";
 import { Card } from "../ui/kit";
 import { Icon } from "../ui/icons";
@@ -169,10 +169,17 @@ export function AccountChip() {
   const u = currentUser();
   if (!cloudAvailable()) return null;
   return <a className="tab acct-chip wide-only" href="#/account">
-    {u ? <span className="avatar">{u.email.slice(0, 1).toUpperCase()}</span> : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" /></svg>}
+    {u ? <span className={"avatar " + syncDot()}>{u.email.slice(0, 1).toUpperCase()}</span> : <svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="8.5" r="3.5" /><path d="M5 20c.8-3.6 3.6-5.5 7-5.5s6.2 1.9 7 5.5" /></svg>}
     <span>{u ? u.email : "Sign in"}</span>
   </a>;
 }
 
+/** Status dot on the avatar: synced, waiting (offline or changes pending) or error. */
+export function syncDot() {
+  if (!currentUser()) return "";
+  if (status.state === "error") return "dot-err";
+  if (typeof navigator !== "undefined" && !navigator.onLine) return "dot-wait";
+  return pendingCount() ? "dot-wait" : "dot-ok";
+}
 export const skipAccounts = () => setPrefs({ offline: true });
 export const wantsAuthGate = () => cloudAvailable() && !currentUser() && !state.prefs.offline;
