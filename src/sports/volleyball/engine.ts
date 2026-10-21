@@ -16,6 +16,7 @@ export interface StatEvent extends BaseEvent {
   op?: string; // opponent jersey number
   x?: number; y?: number; // where the ball landed, court meters (see zoneOf)
   s?: "a" | "b"; // scrimmage side of the player
+  ns?: boolean; // stats only: counts for the player but never changes the score (a second coach's device)
 }
 export interface NewSetEvent extends BaseEvent { t: "NS"; serve: Side; lu?: string[]; lib?: string | null; libSrv?: string | null }
 export interface LineupEvent extends BaseEvent { t: "LU"; lu: string[]; lib?: string | null; libSrv?: string | null }
@@ -231,7 +232,7 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
     }
     if (ev.x != null && ev.y != null) cur.locs.push({ t, p: ev.p || null, op: ev.op || null, x: ev.x, y: ev.y, set: cur.n, rot: cur.rot, serve: cur.serve, mid: info.id });
 
-    let wn: Side | null = a.point || null;
+    let wn: Side | null = ev.ns ? null : a.point || null;
     if (t === "BA" && lastBA) wn = null;
     lastBA = t === "BA" && wn !== null;
     if (scr && ev.s === "b" && wn && !a.team) wn = wn === "us" ? "them" : "us";

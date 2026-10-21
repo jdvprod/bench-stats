@@ -20,6 +20,17 @@ import { parseQuick, QUICK_HELP } from "../../sports/volleyball/quickcodes";
 import { PlanPanel } from "../matchup/MatchupPage";
 import { KEYMAP, useStatKeys } from "./keys";
 
+/** This device's job for a real match (scrimmages and drills always track everything). */
+export const jobOf = (m: Match): "all" | "score" | "stats" => (m.kind === "match" && !m.scrim ? state.prefs.job || "all" : "all");
+const SCORE_GROUPS: [string, ActionCode[]][] = [["Score", ["UP", "TP"]], ["How they scored or erred", ["OK", "OA", "OE"]]];
+const STAT_GROUP_NAMES = GROUPS.map((g) => g[0]).filter((g) => g !== "Opponent");
+const jobGroups = (m: Match): [string, ActionCode[]][] => {
+  const j = jobOf(m);
+  if (j === "score") return SCORE_GROUPS;
+  if (j === "stats") { const pick = state.prefs.jobGroups?.length ? state.prefs.jobGroups : STAT_GROUP_NAMES; return GROUPS.filter((g) => pick.includes(g[0])); }
+  return GROUPS;
+};
+
 const TAGS = ["Great play", "Review this", "Serve receive", "Rotation breakdown", "Defense", "Coachable moment"];
 
 export function Tracker({ m }: { m: Match }) {
@@ -69,6 +80,7 @@ export function Tracker({ m }: { m: Match }) {
     if (p) ev.p = p;
     if (o.op) ev.op = o.op;
     if (scr && p) ev.s = scr.b.ids.includes(p) ? "b" : "a";
+    if (jobOf(m) === "stats") ev.ns = true;
     const e = appendEvents(m.id, [ev]); if (!e) return false;
     if (o.op && !m.oppPlayers.includes(o.op)) patch("matches", m.id, { oppPlayers: m.oppPlayers.concat(o.op) });
     if (o.quiet) return true;
@@ -150,6 +162,7 @@ function ControlBar({ m, c, names }: { m: Match; c: SetState; names: { us: strin
       {c.lu && <button className="ctrl" onClick={() => panel("sub")}>Sub<small>{c.subs}{lim ? " of " + lim : ""} used</small></button>}
       <button className="ctrl" onClick={() => panel("lineup")}>{c.lu ? "Fix positions" : "Set lineup"}<small>{c.lu ? "who's where now" : "rotation tracking"}</small></button>
       <button className="ctrl" onClick={() => panel("plan")}>Game plan<small>keys & threats</small></button>
+      <button className={"ctrl" + (jobOf(m) !== "all" ? " on" : "")} onClick={() => panel("job")}>My job<small>{({ all: "everything", score: "score only", stats: "stats only" } as const)[jobOf(m)]}</small></button>
       <button className="ctrl" onClick={() => panel("tag")}>Film tag<small>bookmark</small></button>
       <button className="ctrl" onClick={undo}>Undo<small>your last entry</small></button>
       <FocusToggle />
@@ -212,6 +225,7 @@ function Panels({ m, R, c }: { m: Match; R: Replay; c: SetState }) {
   if (p === "tag") return <TagPanel m={m} R={R} />;
   if (p === "teams" && m.scrim) return <TeamsPanel m={m} />;
   if (p === "plan" && !m.scrim) return <PlanPanel m={m} onClose={() => setUi({ panel: null })} />;
+  if (p === "job" && m.kind === "match" && !m.scrim) return <JobPanel />;
   return null;
 }
 
@@ -349,7 +363,9 @@ function PlannedSub({ c, m }: { c: SetState; m: Match }) {
 }
 
 function Hint({ c, m }: { c: SetState; m: Match }) {
-  const srv = serverOf(c);
+  const srv = serverOf(c), job = jobOf(m);
+  if (job === "stats") return <p className="hint job-note"><b>Stats only.</b> What you enter here counts for players but never changes the score; another coach keeps score. {ui.sel ? <>Recording for <b>{playerName(ui.sel, "full")}</b>.</> : "Tap a player, then what they did."} <button className="linkish" onClick={() => setUi({ panel: "job" })}>Change</button></p>;
+  if (job === "score") return <p className="hint job-note"><b>Score only.</b> Tap who won each rally; other coaches add the player stats. <button className="linkish" onClick={() => setUi({ panel: "job" })}>Change</button></p>;
   if (ui.sel) return <p className="hint">Recording for <b>{playerName(ui.sel, "full")}</b>{m.scrim ? ` (${m.scrim.b.ids.includes(ui.sel) ? m.scrim.b.name : m.scrim.a.name})` : ""}. Tap again to deselect.</p>;
   if (m.scrim) return <p className="hint">Tap a player from either team, then what they did. Points go to the right team automatically.</p>;
   if (srv) return <p className="hint">Tap a player, then what they did. Serve buttons go to <b>{playerName(srv)}</b>{srv === c.lib ? " (libero)" : ""}, who's serving. <span className="kbd-tip muted">Laptop? Press <kbd>?</kbd> for keyboard entry.</span></p>;
@@ -360,7 +376,8 @@ function Hint({ c, m }: { c: SetState; m: Match }) {
 function Pad({ m, c, setA, mA, record }: { m: Match; c: SetState; setA: ReturnType<typeof aggregate>; mA: ReturnType<typeof aggregate>; record: (k: ActionCode) => boolean | void }) {
   const scr = m.scrim, sel = ui.sel, srv = serverOf(c);
   const selSide = scr && sel ? (scr.b.ids.includes(sel) ? "b" : "a") : null;
-  const groups: [string, ActionCode[]][] = scr ? GROUPS.filter((g) => g[0] !== "Opponent").map(([g, ks]) => [g, ks.filter((k) => k !== "REF")] as [string, ActionCode[]]).concat([["Points", ["UP", "TP"]]]) : GROUPS;
+  const job = jobOf(m);
+  const groups: [string, ActionCode[]][] = scr ? GROUPS.filter((g) => g[0] !== "Opponent").map(([g, ks]) => [g, ks.filter((k) => k !== "REF")] as [string, ActionCode[]]).concat([["Points", ["UP", "TP"]]]) : jobGroups(m);
   const srvSrc = sel ? mA.ps[sel] : setA.T;
   return <div className="pad">{groups.map(([g, ks]) => <div className="grp" key={g}><div className="label">{g}</div><div className="acts">
     {ks.map((k) => {
@@ -369,6 +386,7 @@ function Pad({ m, c, setA, mA, record }: { m: Match; c: SetState; setA: ReturnTy
       if (scr && k === "UP") label = "+1 " + scr.a.name;
       if (scr && k === "TP") label = "+1 " + scr.b.name;
       if (selSide === "b" && !a.team && cls) cls = cls === "us" ? "them" : "us";
+      if (job === "stats") cls = "";
       const on = !!sel || a.team || (!scr && (a.optionalPlayer || (a.serve && srv)));
       return <button key={k} className={"act " + cls} aria-disabled={!on} onClick={() => record(k)}>{label}</button>;
     })}
@@ -480,12 +498,17 @@ function ActionSheet({ m, c, record }: { m: Match; c: SetState; record: (k: Acti
   const pos = (p.pos || "").toUpperCase();
   // Put the most likely actions first for the player's position.
   const first = pos.startsWith("S") && pos !== "SUB" ? "Set" : /^L|DS/.test(pos) ? "Pass" : null;
-  const groups = first ? [SHEET_GROUPS.find((g) => g[0] === first)!, ...SHEET_GROUPS.filter((g) => g[0] !== first)] : SHEET_GROUPS;
+  const job = jobOf(m); if (job === "score") return null;
+  const PAD_NAME: Record<string, string> = { Attack: "Hitting", Pass: "Serve receive", Serve: "Serve", Defense: "Defense", Set: "Setting", Block: "Block", Errors: "Misc" };
+  const allowed = new Set(jobGroups(m).map((g) => g[0]));
+  const mine = SHEET_GROUPS.filter((g) => job !== "stats" || allowed.has(PAD_NAME[g[0]]));
+  if (!mine.length) return null;
+  const groups = first && mine.some((g) => g[0] === first) ? [mine.find((g) => g[0] === first)!, ...mine.filter((g) => g[0] !== first)] : mine;
   const tap = (k: ActionCode) => { if (record(k) !== false) setUi({ sel: null }); };
   return <div className="actsheet" role="dialog" aria-label={"Actions for " + playerName(sel)}>
     <div className="as-head"><b>#{p.num} {p.first}</b><span className="small muted">{p.pos}{serverOf(c) === sel ? " · serving" : ""}</span><button className="btn sm ghost" onClick={() => setUi({ sel: null })}>Close</button></div>
     <div className="as-grid">{groups.map(([g, ks]) => <div className="as-row" key={g}><span className="as-l">{g}</span><div className="as-b">{ks.map((k) => {
-      const a: any = ACTIONS[k]; let cls = a.point || ""; if (flip && cls) cls = cls === "us" ? "them" : "us";
+      const a: any = ACTIONS[k]; let cls = job === "stats" ? "" : a.point || ""; if (flip && cls) cls = cls === "us" ? "them" : "us";
       const label = ({ CE: "Comms", PE: "Position" } as Record<string, string>)[k] || a.label.replace(/^Error · /, "Err ");
       return <button key={k} className={"act " + cls} onClick={() => tap(k)}>{label}</button>;
     })}</div></div>)}</div>
@@ -502,5 +525,23 @@ function KeyHelp({ onClose }: { onClose: () => void }) {
       <div><kbd>p</kbd><kbd>3</kbd>…<kbd>0</kbd><span>Pass grade</span></div>
       <div><kbd>⌫</kbd><span>Undo</span></div><div><kbd>Esc</kbd><span>Clear player</span></div><div><kbd>?</kbd><span>Show or hide this</span></div>
     </div>
+  </div>;
+}
+
+/* ---------- my job (several coaches on one match) ---------- */
+function JobPanel() {
+  const job = state.prefs.job || "all", picked = state.prefs.jobGroups?.length ? state.prefs.jobGroups : STAT_GROUP_NAMES;
+  const toggle = (g: string) => { const next = picked.includes(g) ? picked.filter((x) => x !== g) : picked.concat(g); setPrefs({ jobGroups: next.length ? next : [g] }); };
+  return <div className="editor">
+    <b>My job on this device</b>
+    <span className="small muted">When several coaches track the same match, split the work. Only one device should keep score.</span>
+    <div className="pick">
+      {([["all", "Everything", "stats and score"], ["score", "Score only", "who won each rally"], ["stats", "Stats only", "never changes the score"]] as const).map(([k, l, d]) =>
+        <button key={k} aria-pressed={job === k} onClick={() => setPrefs({ job: k })}>{l}<small style={{ display: "block", fontWeight: 400 }}>{d}</small></button>)}
+    </div>
+    {job === "stats" && <><span className="label">What I'm tracking</span>
+      <div className="pick">{STAT_GROUP_NAMES.map((g) => <button key={g} aria-pressed={picked.includes(g)} onClick={() => toggle(g)}>{g}</button>)}</div>
+      <span className="small muted">Example: the head coach keeps score and hitting; an assistant tracks serve receive, serving and digs.</span></>}
+    <div className="row"><button className="btn sm" onClick={() => setUi({ panel: null })}>Done</button></div>
   </div>;
 }

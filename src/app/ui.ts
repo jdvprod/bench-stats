@@ -1,7 +1,7 @@
 /** Screen state shared between components (not saved). */
 import { emit } from "../data/store";
 
-export type Panel = null | "fix" | "lineup" | "sub" | "tag" | "timeout" | "teams" | "plan";
+export type Panel = null | "fix" | "lineup" | "sub" | "tag" | "timeout" | "teams" | "plan" | "job";
 export const ui = {
   sel: null as string | null,          // selected player on the pad
   panel: null as Panel,                // open editor on the Track screen

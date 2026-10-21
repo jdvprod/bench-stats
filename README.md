@@ -41,7 +41,7 @@ The `dist/` folder is a static website. Drag it onto **Netlify Drop** (app.netli
 3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key into `src/cloud/config.ts` (both are safe to publish; Row Level Security protects the data).
 4. Optional: in **Authentication → Providers → Email**, turn off "Confirm email" for the smoothest sign-up while testing.
 
-Then coaches sign in on the Team tab, tap **Sync this team**, and invite assistants with a code. Every match is an event log per device, so several coaches can track the same match and their entries merge. **Share live link** on the Live screen gives parents a public gamecast (`#/watch/CODE`) that shows only that match, player numbers, first names and last initials; parents can follow one player. **Share season page** on the Team tab gives players and parents a read-only season hub (`#/season/CODE`) with results, schedule, leaders, box scores and every player's line.
+Then coaches sign in on the Team tab, tap **Sync this team**, and invite assistants with a code. Every match is an event log per device, so several coaches can track the same match and their entries merge. Each device picks a job under **My job** on the Track screen: everything, score only, or stats only (chosen stat groups that count for players but never change the score). **Share live link** on the Live screen gives parents a public gamecast (`#/watch/CODE`) that shows only that match, player numbers, first names and last initials; parents can follow one player. **Share season page** on the Team tab gives players and parents a read-only season hub (`#/season/CODE`) with results, schedule, leaders, box scores and every player's line.
 
 ## AI features
 

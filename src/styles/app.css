@@ -552,3 +552,4 @@ kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--
 .club-k{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}.club-k div{display:flex;flex-direction:column}.club-k b{font-family:var(--display);font-size:20px}
 .club-card .pt-us{color:var(--us)}.club-card .pt-them{color:var(--them)}
 .recruit-frame{position:fixed;inset:0;width:100%;height:100%;border:0;background:#fff}
+.ctrl.on{border-color:var(--accent);box-shadow:inset 0 0 0 1px var(--accent)}.job-note{border-left:3px solid var(--accent)}

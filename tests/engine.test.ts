@@ -154,3 +154,11 @@ test("situations: runs, timeouts, score bands and serving runs", () => {
   const srv = Object.values(X.serveRuns)[0];
   assert.equal(srv.longest, 3); assert.equal(srv.runs3, 1);
 });
+
+test("stats-only entries count for the player but never change the score", () => {
+  const R = replay([ev("NS", { serve: "them", lu: LU }), ev("P3", { p: "oh1", ns: true }), ev("K", { p: "oh1", ns: true }), ev("UP"), ev("P0", { p: "oh2", ns: true }), ev("TP")]);
+  const c = R.cur!;
+  assert.equal(c.us, 1); assert.equal(c.them, 1);
+  assert.equal(c.ps.oh1.K, 1); assert.equal(c.ps.oh1.R3, 1); assert.equal(c.ps.oh2.P0, 1);
+  assert.equal(c.rallies[0].pass, "P3", "the assistant's pass grade still feeds side-out by pass");
+});
