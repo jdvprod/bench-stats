@@ -10,7 +10,7 @@ import { AiCard } from "../../ui/ai";
 import { reportPrompt, seasonPrompt, snapshot, statLine } from "../../ai/prompts";
 import { setUi, ui } from "../../app/ui";
 import { go } from "../../app/router";
-import { activeSeason, defaultScope, resolveScope, Scope, seasonMatches } from "./scope";
+import { activeSeason, defaultScope, resolveScope, Scope, seasonEvents, seasonMatches } from "./scope";
 import { buildXlsx } from "../../lib/xlsx";
 import { logText } from "../track/Tracker";
 import { matchReportHtml } from "./matchReport";
@@ -28,7 +28,7 @@ export function StatsPage() {
   const S = resolveScope(ui.statsScope, ui.statsSeason);
   const A = aggregate(S.sets);
   const games = seasonMatches(ui.statsSeason, "games"), practices = seasonMatches(ui.statsSeason, "practice");
-  const single = S.single;
+  const single = S.single, events = seasonEvents(ui.statsSeason);
   const isScrim = !!single?.m.scrim;
 
   return <div className="page">
@@ -46,7 +46,8 @@ export function StatsPage() {
         <select className="input" style={{ width: "auto" }} value={ui.statsSeason} onChange={(e) => setUi({ statsSeason: e.target.value, statsScope: "season" })} aria-label="Season">
           <option value="all">All seasons</option>{seasonsOf().map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}
         </select>
-        <Seg value={S.single ? "match" : S.key} onChange={(v) => setUi({ statsScope: v === "match" ? (games[games.length - 1] ? "m:" + games[games.length - 1].id : "season") : v })} options={[["season", `Season (${games.length})`], ["practice", `Practice (${practices.length})`], ["match", "One match"]]} label="Scope" />
+        <Seg value={S.single ? "match" : S.event ? "event" : S.key} onChange={(v) => setUi({ statsScope: v === "match" ? (games[games.length - 1] ? "m:" + games[games.length - 1].id : "season") : v === "event" ? "e:" + encodeURIComponent(events[0]) : v })} options={[["season", `Season (${games.length})`], ...(events.length ? [["event", "Event"] as [string, string]] : []), ["practice", `Practice (${practices.length})`], ["match", "One match"]]} label="Scope" />
+        {S.event && <select className="input" style={{ width: "auto", maxWidth: 260 }} value={S.event} onChange={(e) => setUi({ statsScope: "e:" + encodeURIComponent(e.target.value) })} aria-label="Event">{events.map((e) => <option key={e} value={e}>{e}</option>)}</select>}
         {S.single && <select className="input" style={{ width: "auto", maxWidth: 260 }} value={single!.m.id} onChange={(e) => setUi({ statsScope: "m:" + e.target.value })} aria-label="Match">
           {[...games, ...practices].reverse().map((m) => <option key={m.id} value={m.id}>{fmtDate(m.date)} · {m.kind === "match" ? "vs " + m.opp : m.opp}</option>)}
         </select>}
@@ -55,6 +56,7 @@ export function StatsPage() {
     </div>
     {!S.sets.length ? <Card><p className="empty">No stats recorded yet for this selection.</p></Card> : isScrim ? <ScrimStats S={S} A={A} /> : <>
       <Seg value={view} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"]]} label="Section" />
+      {view === "overview" && S.event && <EventCard S={S} />}
       {view === "overview" && <Overview S={S} A={A} />}
       {view === "players" && <Players A={A} />}
       {view === "offense" && <Offense A={A} />}
@@ -490,5 +492,22 @@ function Units({ A }: { A: Agg }) {
       <tbody>{rows.slice(0, 8).map((u) => { const net = u.w - u.l; return <tr key={u.ids.join()}><td className="l small" style={{ whiteSpace: "normal", minWidth: 220 }}>{u.ids.map((id, i) => <span key={id} style={{ fontWeight: rows[0].ids.includes(id) ? undefined : 700, color: rows[0].ids.includes(id) ? undefined : "var(--us)" }}>{i ? ", " : ""}{nm(id)}</span>)}</td><td>{u.w + u.l}</td><td>{u.w}–{u.l}</td><td><b style={{ color: net > 0 ? "var(--us)" : net < 0 ? "var(--them)" : undefined }}>{fmtSigned(net)}</b></td><td>{fmtPct(ratio(u.sw, u.sn))}</td><td>{fmtPct(ratio(u.pw, u.pn))}</td></tr>; })}</tbody>
     </table></div>
     <p className="keys" style={{ marginTop: 8 }}>Groups of six that played at least 10 rallies together, ranked by points won minus lost. Rotation order doesn't matter here; subs create new groups.</p>
+  </Card>;
+}
+
+/* ---------- event / tournament ---------- */
+function EventCard({ S }: { S: Scope }) {
+  const done = S.items.filter((x) => x.R.matchOver), W = done.filter((x) => x.R.wonUs > x.R.wonThem).length;
+  const sw = S.items.reduce((n, x) => n + x.R.wonUs, 0), sl = S.items.reduce((n, x) => n + x.R.wonThem, 0);
+  let pf = 0, pa = 0; for (const x of S.items) for (const st of x.R.sets) { pf += st.us; pa += st.them; }
+  const days = new Set(S.items.map((x) => x.m.date)).size;
+  return <Card title={S.event + " · results"}>
+    <div className="kpis">
+      <Kpi label="Matches" value={`${W}–${done.length - W}`} sub={days > 1 ? `over ${days} days` : S.items[0]?.m.date} />
+      <Kpi label="Sets" value={`${sw}–${sl}`} sub={sw + sl ? `${Math.round((100 * sw) / (sw + sl))}% won` : ""} />
+      <Kpi label="Points" value={`${pf}–${pa}`} sub={`${pf - pa >= 0 ? "+" : ""}${pf - pa} differential`} />
+      <Kpi label="Point ratio" value={pa ? (pf / pa).toFixed(3) : "—"} sub="pool tiebreaker" />
+    </div>
+    <p className="keys" style={{ marginTop: 8 }}>Pool play usually breaks ties by match record, then set percentage, then point ratio. Matches are grouped by the event name you enter when starting a match.</p>
   </Card>;
 }

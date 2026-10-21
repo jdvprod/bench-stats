@@ -47,7 +47,7 @@ export function createSampleTeam() {
     const date = new Date(now - (opps.length - i) * 7 * day);
     const m: Match = {
       id: uid("m"), teamId: t.id, seasonId: t.activeSeasonId, kind: "match", opp, date: date.toISOString().slice(0, 10), bestOf: 5, status: "done",
-      site: i % 2 ? "away" : "home", event: "League", notes: "", oppPlayers: ["11", "7", "3", "15", "9"], scrim: null, filmStart: null, nextLu: null,
+      site: i >= 2 ? "neutral" : i % 2 ? "away" : "home", event: i >= 2 ? "Harvest Invitational" : "League", notes: "", oppPlayers: ["11", "7", "3", "15", "9"], scrim: null, filmStart: null, nextLu: null,
       report: "", reportAt: null, planId: null, createdAt: date.getTime(), sample: true,
     };
     save("matches", m, true);
