@@ -8,6 +8,8 @@ import { Card, Seg } from "../../ui/kit";
 import { useDragDrop } from "../../ui/drag";
 import { askJson, aiAvailable, AiError, AI_ERRORS } from "../../ai/client";
 import { lineupPrompt } from "../../ai/prompts";
+import { lineupCardsHtml } from "./lineupCards";
+import { download } from "../../ui/kit";
 
 /** Court order for display: front row P4 P3 P2, back row P5 P6 P1. */
 const FRONT = [3, 2, 1], BACK = [4, 5, 0];
@@ -79,6 +81,11 @@ export function LineupPage() {
     <div className="pagehead"><h1>Lineup & rotations</h1>
       <div className="row">
         <button className="btn primary" disabled={!valid} onClick={saveDefault}>Save as starting lineup</button>
+        <button className="btn" disabled={!valid} onClick={() => {
+          const today = new Date().toISOString().slice(0, 10), next = (team()!.schedule || []).filter((x) => x.date >= today).sort((a, b) => a.date.localeCompare(b.date))[0];
+          const opp = m && m.kind === "match" && m.status === "live" ? m.opp : next?.opp, date = m && m.kind === "match" && m.status === "live" ? m.date : next?.date;
+          download(`${team()!.name} lineup cards.html`.replace(/[^\w\- .]+/g, ""), lineupCardsHtml(lu, lib, { opp, date, sets: 5 }), "text/html"); toast("Lineup cards saved. Open the file to print.");
+        }}>Lineup cards</button>
         {m && m.kind === "match" && <><button className="btn" disabled={!valid} onClick={useNow}>Put on court now</button><button className="btn" disabled={!valid} onClick={useNext}>Use next set{m.nextLu ? " ✓" : ""}</button></>}
       </div>
     </div>
