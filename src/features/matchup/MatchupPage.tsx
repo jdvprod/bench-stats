@@ -1,4 +1,5 @@
 /** Matchups: the schedule, and everything you know about the next opponent from every time you've played them. */
+import { TheirRotations } from "../stats/StatsPage";
 import { useState } from "react";
 import { ensureOpponent, get, matchesOf, newMatch, oppKey, opponentsOf, patch, playerName, replayOf, setTeamPatch, team, teamPlayers, toast, todayISO, uid } from "../../data/store";
 import { Match, Opponent, PlanItem, ScheduleItem } from "../../data/model";
@@ -111,6 +112,7 @@ function Matchup({ h, next }: { h: H2H; next?: ScheduleItem }) {
       <Tendency A={A} name={o.name} />
       <div className="grid2" style={{ alignItems: "start" }}>
         <Rotations A={A} />
+        <TheirRotations A={A} />
         <OurPlayers A={A} />
       </div>
       <GamePlan o={o} h={h} />

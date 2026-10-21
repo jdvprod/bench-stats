@@ -516,7 +516,7 @@ function EventCard({ S }: { S: Scope }) {
 }
 
 /* ---------- their rotations ---------- */
-function TheirRotations({ A }: { A: Agg }) {
+export function TheirRotations({ A }: { A: Agg }) {
   const R: Record<number, { sw: number; sn: number; aces: number; rw: number; rn: number }> = {};
   for (const r of A.rallies) {
     const x = R[r.rotB] || (R[r.rotB] = { sw: 0, sn: 0, aces: 0, rw: 0, rn: 0 });
