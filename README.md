@@ -1,5 +1,7 @@
 # Benchboard
 
+[![CI](https://github.com/jdvprod/benchboard/actions/workflows/ci.yml/badge.svg)](https://github.com/jdvprod/benchboard/actions/workflows/ci.yml)
+
 _Formerly Bench Stats._
 
 Volleyball stats, lineups, rotations and practice planning for coaches. Works offline, installs like an app on phones, tablets and laptops, and keeps every team's data on the device.

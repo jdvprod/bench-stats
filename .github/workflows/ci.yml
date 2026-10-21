@@ -1,0 +1,22 @@
+name: CI
+on:
+  push: { branches: [main] }
+  pull_request:
+jobs:
+  app:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with: { node-version: 22 }
+      - run: npm install --no-audit --no-fund
+      - run: npm run build
+      - run: npm test
+  schema:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Check supabase/schema.sql on a throwaway Postgres
+        run: |
+          sudo chmod -R a+rx "$GITHUB_WORKSPACE"
+          sudo -u postgres bash -c "cd /tmp && PG_BIN=\$(ls -d /usr/lib/postgresql/*/bin | tail -1) bash $GITHUB_WORKSPACE/supabase/test-schema.sh"
