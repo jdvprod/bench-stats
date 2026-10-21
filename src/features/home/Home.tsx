@@ -12,6 +12,7 @@ import { StartMatch } from "../track/TrackPage";
 import { focusAreas } from "../practice/PracticePage";
 import { matchReportHtml } from "../stats/matchReport";
 import { download } from "../../ui/kit";
+import { shareFinalGraphic } from "../stats/finalGraphic";
 
 const fmtTime = (hhmm: string) => { const [h, m] = hhmm.split(":").map(Number); return `${((h + 11) % 12) + 1}:${String(m).padStart(2, "0")} ${h < 12 ? "AM" : "PM"}`; };
 
@@ -61,7 +62,7 @@ export function Home() {
           <div className="home-opp"><span className={last.R.wonUs > last.R.wonThem ? "w" : "l"}>{last.R.wonUs > last.R.wonThem ? "W" : "L"}</span> {last.R.wonUs}–{last.R.wonThem} vs {last.m.opp}</div>
           <p className="muted">{fmtDate(last.m.date)} · {last.R.sets.map((s) => `${s.us}-${s.them}`).join(", ")}</p>
           <p className="small">Hitting {fmtHit(lastM.hitting)} · side-out {fmtPct(lastM.sideOut)} · pass {fmtAvg(lastM.passAvg)}{star && star[1] > 0 ? ` · Top: ${playerName(star[0])}` : ""}</p>
-          <div className="row"><button className="btn sm" onClick={() => { setUi({ statsScope: "m:" + last.m.id }); go("stats"); }}>Full stats</button><button className="btn sm" onClick={() => download(`${t.name} vs ${last.m.opp} ${last.m.date} report.html`.replace(/[^\w\- .]+/g, ""), matchReportHtml(last.m, last.R), "text/html")}>Match report</button></div>
+          <div className="row"><button className="btn sm" onClick={() => { setUi({ statsScope: "m:" + last.m.id }); go("stats"); }}>Full stats</button><button className="btn sm" onClick={() => download(`${t.name} vs ${last.m.opp} ${last.m.date} report.html`.replace(/[^\w\- .]+/g, ""), matchReportHtml(last.m, last.R), "text/html")}>Match report</button><button className="btn sm" onClick={() => shareFinalGraphic(last.m, last.R)}>Share graphic</button></div>
         </> : <p className="muted" style={{ marginTop: 6 }}>Your most recent result shows up here.</p>}
       </section>
     </div>

@@ -1,5 +1,6 @@
 /** A 1080×1350 "final score" graphic for social posts: result, set scores, top performers. Drawn on a canvas, saved as PNG. */
-import { player, team } from "../../data/store";
+import { player, team, toast } from "../../data/store";
+import { download } from "../../ui/kit";
 import { Match } from "../../data/model";
 import { aggregate, Replay, Stat } from "../../sports/volleyball/engine";
 import { blocks } from "../../sports/volleyball/metrics";
@@ -51,4 +52,13 @@ export async function finalGraphic(m: Match, R: Replay): Promise<Blob | null> {
   });
   text("BENCHBOARD", W - 80, H - 50, 22, GREY, { align: "right", spacing: 6 });
   return new Promise((res) => cv.toBlob((b) => res(b), "image/png"));
+}
+
+/** Draw the graphic, then open the phone's share sheet (or save the PNG on desktop). */
+export async function shareFinalGraphic(m: Match, R: Replay) {
+  const b = await finalGraphic(m, R); if (!b) { toast("Couldn't draw the graphic here."); return; }
+  const name = `${team()!.name} vs ${m.opp} ${m.date}.png`.replace(/[^\w\- .]+/g, "");
+  const file = new File([b], name, { type: "image/png" }), nav: any = navigator;
+  if (nav.canShare?.({ files: [file] })) { try { await nav.share({ files: [file], title: name }); return; } catch { /* cancelled: fall through to save */ } }
+  download(name, b, "image/png"); toast("Graphic saved. Post it or send it to the team.");
 }

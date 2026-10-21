@@ -14,7 +14,7 @@ import { activeSeason, defaultScope, resolveScope, Scope, seasonMatches } from "
 import { buildXlsx } from "../../lib/xlsx";
 import { logText } from "../track/Tracker";
 import { matchReportHtml } from "./matchReport";
-import { finalGraphic } from "./finalGraphic";
+import { shareFinalGraphic } from "./finalGraphic";
 import { seasonAwards, seasonReportHtml } from "./seasonReport";
 import { rate, situationNotes, situations, WN } from "../../sports/volleyball/situations";
 
@@ -37,13 +37,7 @@ export function StatsPage() {
         <button className="btn sm" onClick={() => exportSheet(S, A)}>Download spreadsheet</button>
         {!single && S.kind === "games" && S.items.length > 0 && <button className="btn sm" onClick={() => { const se = seasonsOf().find((x) => x.id === ui.statsSeason); download(`${t.name} ${se?.name || "season"} report.html`.replace(/[^\w\- .]+/g, ""), seasonReportHtml(S.items, se), "text/html"); toast("Season report saved. Open it to print or share."); }}>Season report</button>}
         {single && !isScrim && <button className="btn sm" onClick={() => { download(`${t.name} vs ${single.m.opp} ${single.m.date} report.html`.replace(/[^\w\- .]+/g, ""), matchReportHtml(single.m, single.R), "text/html"); toast("Match report saved. Open it to print or share."); }}>Match report</button>}
-        {single && !isScrim && single.m.kind === "match" && <button className="btn sm" onClick={async () => {
-          const b = await finalGraphic(single.m, single.R); if (!b) { toast("Couldn't draw the graphic here."); return; }
-          const name = `${t.name} vs ${single.m.opp} ${single.m.date}.png`.replace(/[^\w\- .]+/g, "");
-          const file = new File([b], name, { type: "image/png" }), nav: any = navigator;
-          if (nav.canShare?.({ files: [file] })) { try { await nav.share({ files: [file], title: name }); return; } catch { /* cancelled */ } }
-          download(name, b, "image/png"); toast("Graphic saved. Post it or send it to the team.");
-        }}>Share graphic</button>}
+        {single && !isScrim && single.m.kind === "match" && <button className="btn sm" onClick={() => shareFinalGraphic(single.m, single.R)}>Share graphic</button>}
         {single && <button className="btn sm" onClick={() => copyText(snapshot(single.m)).then((ok) => toast(ok ? "Summary copied" : "Couldn't copy here"))}>Copy summary</button>}
       </div>
     </div>
