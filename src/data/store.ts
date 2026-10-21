@@ -153,6 +153,17 @@ export function patchEvent(matchId: string, eventIdToPatch: string, p: Record<st
 }
 export function deleteEvent(matchId: string, ref: string) { appendEvents(matchId, [{ t: "DEL", ref } as any]); }
 
+/** Change any event, including another coach's: delete it and add a copy at the same moment. */
+export function replaceEvent(matchId: string, old: MatchEvent, p: Record<string, any>) {
+  const copy: any = { ...old, ...p, id: eventId(), ts: old.ts };
+  for (const k of Object.keys(copy)) if (copy[k] === undefined) delete copy[k];
+  appendEvents(matchId, [{ t: "DEL", ref: old.id } as any, copy]);
+}
+/** Add a missed play just before another one. */
+export function insertBefore(matchId: string, before: MatchEvent, e: Partial<MatchEvent>) {
+  appendEvents(matchId, [{ ...e, ts: before.ts - 1 } as any]);
+}
+
 /** Undo the last thing this device recorded. */
 export function undoLast(matchId: string): MatchEvent | null {
   const evs = eventsOf(matchId);

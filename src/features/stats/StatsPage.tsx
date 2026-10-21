@@ -16,10 +16,11 @@ import { logText } from "../track/Tracker";
 import { matchReportHtml } from "./matchReport";
 import { shareFinalGraphic } from "./finalGraphic";
 import { FilmCard } from "./FilmCard";
+import { PlayEditor } from "./PlayEditor";
 import { seasonAwards, seasonReportHtml } from "./seasonReport";
 import { rate, situationNotes, situations, WN } from "../../sports/volleyball/situations";
 
-type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "situations" | "opponent" | "film";
+type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "situations" | "opponent" | "film" | "fix";
 
 export function StatsPage() {
   const t = team()!;
@@ -30,7 +31,7 @@ export function StatsPage() {
   const A = aggregate(S.sets);
   const games = seasonMatches(ui.statsSeason, "games"), practices = seasonMatches(ui.statsSeason, "practice");
   const single = S.single, events = seasonEvents(ui.statsSeason);
-  const vw: View = view === "film" && !(single && single.m.kind === "match") ? "overview" : view;
+  const vw: View = (view === "film" && !(single && single.m.kind === "match")) || (view === "fix" && !single) ? "overview" : view;
   const isScrim = !!single?.m.scrim;
 
   return <div className="page">
@@ -57,7 +58,7 @@ export function StatsPage() {
       </div>
     </div>
     {!S.sets.length ? <Card><p className="empty">No stats recorded yet for this selection.</p></Card> : isScrim ? <ScrimStats S={S} A={A} /> : <>
-      <Seg value={vw} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"], ...(single && single.m.kind === "match" ? [["film", "Film"] as [View, string]] : [])]} label="Section" />
+      <Seg value={vw} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"], ...(single && single.m.kind === "match" ? [["film", "Film"] as [View, string]] : []), ...(single && !isScrim ? [["fix", "Fix plays"] as [View, string]] : [])]} label="Section" />
       {vw === "overview" && S.event && <EventCard S={S} />}
       {vw === "overview" && <Overview S={S} A={A} />}
       {vw === "players" && <Players A={A} />}
@@ -67,6 +68,7 @@ export function StatsPage() {
       {vw === "situations" && <SituationsView S={S} />}
       {vw === "opponent" && <><Opponent A={A} /><TheirRotations A={A} /></>}
       {vw === "film" && single && <FilmCard key={single.m.id} m={single.m} R={single.R} />}
+      {vw === "fix" && single && <PlayEditor key={single.m.id} m={single.m} R={single.R} />}
     </>}
   </div>;
 }
