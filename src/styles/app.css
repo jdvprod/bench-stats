@@ -530,3 +530,6 @@ th.sortable{cursor:pointer;user-select:none;white-space:nowrap}th.sortable:hover
 .kh-grid{display:grid;grid-template-columns:1fr 1fr;gap:4px 14px;margin-top:8px;font-size:13.5px}.kh-grid div{display:flex;align-items:center;gap:6px}
 kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--body,system-ui);border:1px solid var(--line);border-bottom-width:2px;border-radius:5px;padding:4px 5px;background:var(--surface-2)}
 .kbd-tip{display:none}@media (hover:hover) and (min-width:1024px){.kbd-tip{display:inline}}
+.log.film li{grid-template-columns:64px 1fr auto}.log.film a.num{color:var(--accent);font-weight:700;text-decoration:none}.log.film a.num:hover{text-decoration:underline}
+.log.film .pt-us{color:var(--us);font-weight:700}.log.film .pt-them{color:var(--them);font-weight:700}
+.log.film{max-height:520px;overflow:auto}

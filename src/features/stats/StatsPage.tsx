@@ -15,10 +15,11 @@ import { buildXlsx } from "../../lib/xlsx";
 import { logText } from "../track/Tracker";
 import { matchReportHtml } from "./matchReport";
 import { shareFinalGraphic } from "./finalGraphic";
+import { FilmCard } from "./FilmCard";
 import { seasonAwards, seasonReportHtml } from "./seasonReport";
 import { rate, situationNotes, situations, WN } from "../../sports/volleyball/situations";
 
-type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "situations" | "opponent";
+type View = "overview" | "players" | "offense" | "servepass" | "rotations" | "situations" | "opponent" | "film";
 
 export function StatsPage() {
   const t = team()!;
@@ -29,6 +30,7 @@ export function StatsPage() {
   const A = aggregate(S.sets);
   const games = seasonMatches(ui.statsSeason, "games"), practices = seasonMatches(ui.statsSeason, "practice");
   const single = S.single, events = seasonEvents(ui.statsSeason);
+  const vw: View = view === "film" && !(single && single.m.kind === "match") ? "overview" : view;
   const isScrim = !!single?.m.scrim;
 
   return <div className="page">
@@ -55,15 +57,16 @@ export function StatsPage() {
       </div>
     </div>
     {!S.sets.length ? <Card><p className="empty">No stats recorded yet for this selection.</p></Card> : isScrim ? <ScrimStats S={S} A={A} /> : <>
-      <Seg value={view} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"]]} label="Section" />
-      {view === "overview" && S.event && <EventCard S={S} />}
-      {view === "overview" && <Overview S={S} A={A} />}
-      {view === "players" && <Players A={A} />}
-      {view === "offense" && <Offense A={A} />}
-      {view === "servepass" && <ServePass A={A} />}
-      {view === "rotations" && <><Rotations A={A} S={S} /><Units A={A} /></>}
-      {view === "situations" && <SituationsView S={S} />}
-      {view === "opponent" && <Opponent A={A} />}
+      <Seg value={vw} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"], ...(single && single.m.kind === "match" ? [["film", "Film"] as [View, string]] : [])]} label="Section" />
+      {vw === "overview" && S.event && <EventCard S={S} />}
+      {vw === "overview" && <Overview S={S} A={A} />}
+      {vw === "players" && <Players A={A} />}
+      {vw === "offense" && <Offense A={A} />}
+      {vw === "servepass" && <ServePass A={A} />}
+      {vw === "rotations" && <><Rotations A={A} S={S} /><Units A={A} /></>}
+      {vw === "situations" && <SituationsView S={S} />}
+      {vw === "opponent" && <Opponent A={A} />}
+      {vw === "film" && single && <FilmCard key={single.m.id} m={single.m} R={single.R} />}
     </>}
   </div>;
 }

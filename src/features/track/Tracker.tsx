@@ -274,7 +274,7 @@ function TagPanel({ m, R }: { m: Match; R: Replay }) {
   const add = (n: string) => { appendEvents(m.id, [{ t: "TAG", note: n.slice(0, 140), ...(ui.sel ? { p: ui.sel } : {}) } as any]); toast("Tagged: " + n); };
   return <div className="editor">
     <b>Film tag{ui.sel ? " · " + playerName(ui.sel) : ""}</b>
-    <span className="small muted">Tap a label to bookmark this moment{ui.sel ? " for the selected player" : ""}. Times are listed on the Stats tab so you can find them on video.</span>
+    <span className="small muted">Tap a label to bookmark this moment{ui.sel ? " for the selected player" : ""}. Find them on video from Stats → One match → Film.</span>
     <div className="pick">{TAGS.map((x) => <button key={x} onClick={() => add(x)}>{x}</button>)}</div>
     <div className="row"><input className="input grow" style={{ flexBasis: 180 }} placeholder="Your note" value={note} onChange={(e) => setNote(e.target.value)} onKeyDown={(e) => { if (e.key === "Enter" && note.trim()) { add(note.trim()); setNote(""); } }} /><button className="btn primary sm" disabled={!note.trim()} onClick={() => { add(note.trim()); setNote(""); }}>Save tag</button></div>
     <div className="row"><span className="small muted grow">{m.filmStart ? `Video clock started ${new Date(m.filmStart).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}.` : "Tag times count from the first entry. Tap when you press record so times match your video."}</span><button className="btn sm" onClick={() => { patch("matches", m.id, { filmStart: Date.now() }); toast("Video clock started"); }}>Video started now</button><button className="btn sm" onClick={() => setUi({ panel: null })}>Close</button></div>

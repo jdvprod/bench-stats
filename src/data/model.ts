@@ -73,6 +73,8 @@ export interface Match {
   oppPlayers: string[];
   scrim: ScrimSetup | null;
   filmStart: number | null;
+  /** Match video link and how many seconds into it the tracking clock starts. */
+  video?: string; videoOffset?: number;
   nextLu: Lineup | null;
   report: string; reportAt: number | null;
   planId: string | null;
