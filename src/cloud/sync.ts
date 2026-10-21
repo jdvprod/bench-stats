@@ -122,6 +122,22 @@ export async function joinWithCode(code: string): Promise<string> {
   return teamId;
 }
 
+/** After signing in on a new device: bring down every team this account belongs to. */
+export async function restoreTeams(): Promise<number> {
+  const me = currentUser(); if (!me) return 0;
+  const rows: { team_id: string }[] = await rest(`members?select=team_id&user_id=eq.${me.id}`);
+  let added = 0;
+  for (const r of rows) if (!S.teams.includes(r.team_id)) { S.teams.push(r.team_id); S.since[r.team_id] = "1970-01-01T00:00:00Z"; added++; }
+  persist();
+  if (added) await syncNow();
+  if ((!state.prefs.teamId || !get("teams", state.prefs.teamId)) && rows.length) {
+    const first = rows.map((r) => r.team_id).find((id) => get("teams", id));
+    if (first) { state.prefs.teamId = first; try { localStorage.setItem("bs-prefs", JSON.stringify(state.prefs)); } catch { /* ignore */ } }
+  }
+  emit();
+  return added;
+}
+
 export function unlinkTeam(teamId: string) {
   S.teams = S.teams.filter((t) => t !== teamId); delete S.since[teamId];
   for (const k of Object.keys(S.dirty)) if (S.dirty[k].team === teamId) delete S.dirty[k];

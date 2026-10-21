@@ -19,6 +19,8 @@ import { LivePage } from "../features/live/LivePage";
 import { Welcome } from "../features/team/Welcome";
 import { WatchPage } from "../cloud/WatchPage";
 import { JoinPage } from "../cloud/CloudCard";
+import { AccountChip, AccountPage, AuthPage, skipAccounts, wantsAuthGate } from "../cloud/AuthPage";
+import { currentUser } from "../cloud/client";
 
 const HOST_THEME = typeof document !== "undefined" ? document.documentElement.getAttribute("data-theme") : null;
 const NAV: [string, string, string?][] = [["track", "Track"], ["lineup", "Lineup"], ["practice", "Practice"], ["stats", "Stats"], ["court", "Court"], ["team", "Team"], ["live", "Live", "wide-only"], ["labs", "Labs", "wide-only"]];
@@ -29,7 +31,16 @@ export function App() {
   useEffect(() => { applyTheme(t?.color || "#2A78AE", state.prefs.theme, state.prefs.size, HOST_THEME); }, [t?.color, state.prefs.theme, state.prefs.size]);
   if (route.page === "watch" && route.id) return <><WatchPage code={route.id} /><Toast /></>;
   if (!state.ready) return <div className="content"><p className="empty" style={{ padding: 24 }}>Loading…</p></div>;
-  if (!t) return <><div className="content">{route.page === "join" && route.id ? <JoinPage code={route.id} /> : <Welcome />}</div><Toast /></>;
+  const user = currentUser();
+  if (!user && (route.page === "account" || (route.page === "join" && route.id && wantsAuthGate()))) {
+    if (route.page === "join" && route.id) try { sessionStorage.setItem("bs-join", route.id); } catch { /* ignore */ }
+    return <><AuthPage key={route.id || "a"} initial={route.id === "signup" || route.page === "join" ? "signup" : "signin"} onSkip={() => { skipAccounts(); location.hash = "#/track"; }} /><Toast /></>;
+  }
+  if (route.page === "account" && route.id === "new-password") return <><AuthPage initial="newpw" /><Toast /></>;
+  if (!t) {
+    if (route.page === "join" && route.id && user) return <><div className="content"><JoinPage code={route.id} /></div><Toast /></>;
+    return <>{wantsAuthGate() ? <AuthPage onSkip={skipAccounts} /> : <Welcome />}<Toast /></>;
+  }
 
   const page = route.page;
   const showBoard = !!currentMatch() && ["track", "practice", "lineup", "formations", "stats", "court"].includes(page) && !(page === "practice" && currentMatch()?.kind === "match");
@@ -46,6 +57,7 @@ export function App() {
     case "formations": body = <FormationsPage />; break;
     case "labs": body = <LabsPage />; break;
     case "join": body = <JoinPage code={route.id || ""} />; break;
+    case "account": body = <AccountPage />; break;
     case "practice": body = <PracticePage />; break;
     case "stats": body = <StatsPage />; break;
     case "court": body = <CourtPage />; break;
@@ -60,10 +72,11 @@ export function App() {
       <div className="brand"><i><Icon name="brand" /></i><b>Benchboard</b></div>
       <div className="teamswitch">{switcher("")}</div>
       {NAV.map(([k, l, cls]) => <a key={k} className={"tab " + (cls || "")} href={"#/" + k} aria-current={page === k || (k === "stats" && page === "player") || (k === "labs" && page === "formations") ? "page" : undefined}><Icon name={k} /><span>{l}</span></a>)}
-      <a className="tab end" href="#/settings" aria-current={page === "settings" ? "page" : undefined}><Icon name="settings" /><span>Settings</span></a>
+      <AccountChip />
+      <a className="tab" href="#/settings" aria-current={page === "settings" ? "page" : undefined}><Icon name="settings" /><span>Settings</span></a>
     </nav>
     <div className="content">
-      <div className="mobilebar"><b>Benchboard</b>{switcher("")}</div>
+      <div className="mobilebar"><b>Benchboard</b>{switcher("")}{user ? <a className="avatar" href="#/account" aria-label="Account">{user.email.slice(0, 1).toUpperCase()}</a> : null}</div>
       {showBoard && page !== "live" && <Scoreboard />}
       {!state.persistent && <div className="banner warn" style={{ marginTop: 12 }}><p>This browser isn't letting Benchboard save. Stats will be lost when you close it. Try a regular (not private) window.</p></div>}
       {body}

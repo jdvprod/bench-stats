@@ -40,7 +40,7 @@ export function CloudCard() {
   if (!user) return <Card title="Cloud sync">
     <div className="stack">
       <p className="small">Sign in to sync your teams across devices, share them with other coaches, and send parents a live link. Your teams keep working offline either way.</p>
-      <AuthForm />
+      <div className="row"><button className="btn primary" onClick={() => go("account")}>Sign in</button><button className="btn" onClick={() => go("account", "signup")}>Create account</button></div>
     </div>
   </Card>;
 
@@ -85,7 +85,7 @@ export function JoinPage({ code }: { code: string }) {
   return <div className="page" style={{ maxWidth: 620 }}>
     <Card title={`Join a team · ${code}`}>
       {!cloudAvailable() ? <p>Cloud sync isn't set up in this version of the app.</p>
-        : !user ? <div className="stack"><p className="small">Sign in or create an account first. Then you'll join the team.</p><AuthForm /></div>
+        : !user ? <div className="stack"><p className="small">Sign in or create an account first. Then you'll join the team.</p><div className="row"><button className="btn primary" onClick={() => { try { sessionStorage.setItem("bs-join", code); } catch { /* ignore */ } go("account"); }}>Sign in</button></div></div>
           : <div className="stack"><p className="small">Signed in as {user.email}.</p><div className="row"><button className="btn primary" disabled={state === "busy"} onClick={join}>{state === "busy" ? "Joining…" : "Join team"}</button></div></div>}
       {err && <p className="hint warn" style={{ marginTop: 8 }}>{err}</p>}
     </Card>

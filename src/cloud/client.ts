@@ -53,7 +53,7 @@ function fromAuth(b: any): Session {
   return { access_token: b.access_token, refresh_token: b.refresh_token, expires_at: b.expires_at || Math.floor(Date.now() / 1000) + (b.expires_in || 3600), user: { id: b.user.id, email: b.user.email } };
 }
 export async function signUp(email: string, password: string): Promise<"signed-in" | "confirm-email"> {
-  const b = await call("/auth/v1/signup", { method: "POST", auth: false, body: JSON.stringify({ email, password }) });
+  const b = await call("/auth/v1/signup?redirect_to=" + encodeURIComponent(home()), { method: "POST", auth: false, body: JSON.stringify({ email, password }) });
   if (b && b.access_token) { setSession(fromAuth(b)); return "signed-in"; }
   return "confirm-email";
 }
@@ -71,7 +71,34 @@ async function refresh() {
   return refreshing;
 }
 export async function sendPasswordReset(email: string) {
-  await call("/auth/v1/recover", { method: "POST", auth: false, body: JSON.stringify({ email, redirect_to: location.origin + location.pathname }) });
+  await call("/auth/v1/recover?redirect_to=" + encodeURIComponent(home()), { method: "POST", auth: false, body: JSON.stringify({ email }) });
+}
+const home = () => location.origin + location.pathname;
+export async function resendConfirmation(email: string) {
+  await call("/auth/v1/resend?redirect_to=" + encodeURIComponent(home()), { method: "POST", auth: false, body: JSON.stringify({ type: "signup", email }) });
+}
+export async function updatePassword(password: string) {
+  await call("/auth/v1/user", { method: "PUT", body: JSON.stringify({ password }) });
+}
+/**
+ * Email links (confirm account, reset password) come back as #access_token=...&type=...
+ * Turn that into a session before the app's router reads the hash. Returns the link type.
+ */
+export async function consumeAuthRedirect(): Promise<string | null> {
+  const h = location.hash.replace(/^#/, "");
+  if (!/(^|&)(access_token|error_description)=/.test(h)) return null;
+  const p = new URLSearchParams(h);
+  history.replaceState(null, "", location.pathname + location.search);
+  if (p.get("error_description")) { location.hash = "#/account"; return "error:" + p.get("error_description"); }
+  const access = p.get("access_token")!, type = p.get("type") || "signup";
+  try {
+    const c = config(); if (!c) return null;
+    const res = await fetch(c.url + "/auth/v1/user", { headers: { apikey: c.key, authorization: "Bearer " + access } });
+    const u = await res.json();
+    setSession({ access_token: access, refresh_token: p.get("refresh_token") || "", expires_at: +(p.get("expires_at") || 0) || Math.floor(Date.now() / 1000) + +(p.get("expires_in") || 3600), user: { id: u.id, email: u.email } });
+  } catch { return null; }
+  location.hash = type === "recovery" ? "#/account/new-password" : "#/account";
+  return type;
 }
 export function signOut() { const s = session; setSession(null); if (s) call("/auth/v1/logout", { method: "POST", headers: { authorization: "Bearer " + s.access_token } as any, auth: false }).catch(() => {}); }
 
