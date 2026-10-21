@@ -508,3 +508,15 @@ body:has(.auth){padding-left:0;padding-bottom:0}
 .follow-k b{display:block;font-family:var(--display);font-size:24px;line-height:1.1}.follow-k span{font-size:12px;color:var(--muted)}
 .follow-row td{background:var(--accent-soft, rgba(43,121,176,.1))}.follow-row td:first-child{font-weight:700}
 .pbp li.mine{background:var(--accent-soft, rgba(43,121,176,.1));border-radius:6px}
+/* phone action sheet */
+.actsheet{display:none}
+@media (max-width:760px){
+  .actsheet{display:block;position:fixed;left:0;right:0;bottom:calc(var(--navh) + env(safe-area-inset-bottom,0px));z-index:45;background:var(--surface);border-top:1px solid var(--line);box-shadow:0 -10px 28px rgba(0,0,0,.22);padding:8px 10px 10px;border-radius:14px 14px 0 0;max-height:70vh;overflow:auto}
+  .as-head{display:flex;align-items:center;gap:8px;padding:2px 4px 6px}.as-head b{font-family:var(--display);font-size:18px}.as-head .btn{margin-left:auto}
+  .as-grid{display:grid;gap:5px}
+  .as-row{display:grid;grid-template-columns:58px 1fr;align-items:center;gap:6px}
+  .as-l{font-size:12px;color:var(--muted);font-weight:600}
+  .as-b{display:grid;grid-auto-flow:column;grid-auto-columns:1fr;gap:5px}
+  .as-b .act{min-height:42px;padding:6px 4px;font-size:14px}
+  .stack:has(.actsheet) .pad{padding-bottom:0}
+}
