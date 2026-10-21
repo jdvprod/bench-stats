@@ -1,11 +1,12 @@
 /** Labs: newer features you can try without them changing the main screens. */
+import type { ReactNode } from "react";
 import { setPrefs, state, team } from "../../data/store";
 import { Card, Switch } from "../../ui/kit";
 import { go } from "../../app/router";
 
 export function LabsPage() {
   const p = state.prefs, t = team()!;
-  const item = (title: string, desc: string, control: JSX.Element, note?: string) => <Card>
+  const item = (title: string, desc: string, control: ReactNode, note?: string) => <Card>
     <div className="row between" style={{ alignItems: "flex-start" }}>
       <div className="grow" style={{ flexBasis: 260, minWidth: 0 }}><h2 style={{ margin: 0 }}>{title}</h2><p className="muted" style={{ marginTop: 4 }}>{desc}</p>{note && <p className="small muted" style={{ marginTop: 6 }}>{note}</p>}</div>
       <div>{control}</div>
