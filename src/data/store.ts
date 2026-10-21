@@ -14,7 +14,7 @@ export const state = {
   persistent: true,
   tables: Object.fromEntries(["teams", "seasons", "players", "matches", "logs", "opponents", "drills", "plans", "boards", "kv"].map((s) => [s, new Map()])) as Tables,
   prefs: loadPrefs(),
-  toast: null as null | { msg: string; at: number },
+  toast: null as null | { msg: string; at: number; action?: { label: string; fn: () => void } },
 };
 
 /* ---------- subscriptions ---------- */
@@ -74,8 +74,8 @@ export function patch<K extends StoreName>(s: K, id: string, p: Partial<StoreTyp
   save(s, { ...(v as any), ...p });
 }
 
-export function toast(msg: string) { state.toast = { msg, at: Date.now() }; emit(); }
-db.setStorageErrorHandler(toast);
+export function toast(msg: string, action?: { label: string; fn: () => void }) { state.toast = { msg, at: Date.now(), action }; emit(); }
+db.setStorageErrorHandler((m: string) => toast(m));
 
 /* ---------- loading ---------- */
 export async function init() {

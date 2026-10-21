@@ -42,16 +42,16 @@ export function ConfirmButton({ children, confirmText = "Tap again to confirm", 
 
 export function Toast() {
   useVersion();
-  const [shown, setShown] = useState<{ msg: string; at: number } | null>(null);
+  const [shown, setShown] = useState<typeof state.toast>(null);
   const last = useRef(0);
   const t = state.toast;
   useEffect(() => {
     if (t && t.at !== last.current) {
       last.current = t.at; setShown(t);
-      const h = setTimeout(() => setShown(null), 1800); return () => clearTimeout(h);
+      const h = setTimeout(() => setShown(null), t.action ? 3500 : 1800); return () => clearTimeout(h);
     }
   }, [t]);
-  return shown ? <div className="toast" role="status">{shown.msg}</div> : null;
+  return shown ? <div className="toast" role="status">{shown.msg}{shown.action && <button className="toast-act" onClick={() => { shown.action!.fn(); setShown(null); }}>{shown.action.label}</button>}</div> : null;
 }
 
 /** Renders simple AI text: "Title:" lines become headings, "- " lines become bullets. */

@@ -63,7 +63,7 @@ export function Tracker({ m }: { m: Match }) {
     if (scr && half && ev.s === "b") half = half === "them" ? "us" : "them";
     const askOpp = !scr && t.settings.askOpp && !!OPP_NUMBER[code];
     if (half || askOpp) setUi({ follow: { id: e.id, half, askOpp, label: (p ? playerName(p) + " · " : "") + a.long } });
-    else { setUi({ follow: null }); toast((p ? playerName(p) + " · " : "") + a.long); }
+    else { setUi({ follow: null }); toast((p ? playerName(p) + " · " : "") + a.long, { label: "Undo", fn: () => { const u = undoLast(m.id); if (u) toast("Undid " + describe(u as any)); } }); }
     return true;
   };
   const focus = !!(state.prefs.labsFocus && state.prefs.focus);
@@ -431,7 +431,7 @@ function FollowSheet({ m }: { m: Match }) {
     if (!f.half || e.x != null) done();
   };
   return <div className="sheet"><div className="in">
-    <div className="row between"><b>{f.label}</b><button className="btn sm" onClick={done}>{e.x != null || e.op ? "Done" : "Skip"}</button></div>
+    <div className="row between"><b>{f.label}</b><div className="row" style={{ gap: 6 }}><button className="btn sm ghost" onClick={() => { const u = undoLast(m.id); done(); toast(u ? "Undid " + describe(u as any) : "Nothing of yours to undo."); }}>Undo</button><button className="btn sm" onClick={done}>{e.x != null || e.op ? "Done" : "Skip"}</button></div></div>
     {f.askOpp && <OppPicker m={m} value={e.op} onPick={setOpp} />}
     {f.half && <>
       <div className="label">Where did it land? Tap the court{f.half === "them" ? " (their side)" : " (our side)"}</div>
