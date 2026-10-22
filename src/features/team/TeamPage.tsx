@@ -1,5 +1,5 @@
 import { useState } from "react";
-import { deleteMatch, deleteTeam, get, matchesOf, patch, player, remove, replayOf, save, seasonsOf, setTeamPatch, team, teamPlayers, toast, uid, opponentsOf, defaultSeasonName, oppKey } from "../../data/store";
+import { all, deleteMatch, deleteTeam, get, matchesOf, patch, player, remove, replayOf, save, seasonsOf, setTeamPatch, team, teamPlayers, toast, uid, opponentsOf, defaultSeasonName, oppKey } from "../../data/store";
 import { Player } from "../../data/model";
 import { POSITIONS } from "../../sports/volleyball/actions";
 import { Card, ConfirmButton, download, fmtDate } from "../../ui/kit";
@@ -37,7 +37,11 @@ function TeamInfo() {
         <div className="row" style={{ marginTop: 6 }}>
           <select className="input" style={{ width: "auto" }} value={t.activeSeasonId || ""} onChange={(e) => setTeamPatch({ activeSeasonId: e.target.value })}>{seasons.map((s) => <option key={s.id} value={s.id}>{s.name}</option>)}</select>
           <input className="input" style={{ width: 150 }} placeholder={defaultSeasonName()} value={newSeason} onChange={(e) => setNewSeason(e.target.value)} />
-          <button className="btn sm" onClick={() => { const s = { id: uid("s"), teamId: t.id, name: newSeason.trim() || defaultSeasonName(), createdAt: Date.now() }; save("seasons", s, true); setTeamPatch({ activeSeasonId: s.id }); setNewSeason(""); toast("New season started"); }}>Start new season</button>
+          <button className="btn sm" onClick={() => { const s = { id: uid("s"), teamId: t.id, name: newSeason.trim() || defaultSeasonName(), createdAt: Date.now() }; save("seasons", s, true); setTeamPatch({ activeSeasonId: s.id }); setNewSeason("");
+            const now = new Date(), lastClass = now.getMonth() >= 6 ? now.getFullYear() : now.getFullYear() - 1;
+            const grads = all("players").filter((p) => p.teamId === t.id && p.active && p.grad && p.grad <= lastClass);
+            if (grads.length) toast(`New season started. ${grads.length} ${grads.length === 1 ? "player has" : "players have"} graduated.`, { label: "Move off roster", fn: () => { grads.forEach((p) => patch("players", p.id, { active: false })); toast(`${grads.length} graduated ${grads.length === 1 ? "player" : "players"} moved off the roster (their stats stay)`); } });
+            else toast("New season started"); }}>Start new season</button>
         </div>
         <p className="small muted" style={{ marginTop: 4 }}>New matches go into the active season. Stats can show one season or all of them.</p>
       </div>
