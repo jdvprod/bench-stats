@@ -62,6 +62,7 @@ export function StatsPage() {
       <Seg value={vw} onChange={setView} options={[["overview", "Overview"], ["players", "Players"], ["offense", "Offense"], ["servepass", "Serve & pass"], ["rotations", "Rotations"], ["situations", "Situations"], ["opponent", "Opponent"], ...(single && single.m.kind === "match" ? [["film", "Film"] as [View, string]] : []), ...(single && !isScrim ? [["fix", "Fix plays"] as [View, string]] : [])]} label="Section" />
       {vw === "overview" && S.event && <EventCard S={S} />}
       {vw === "overview" && <Overview S={S} A={A} />}
+      {vw === "overview" && S.key === "season" && !S.event && ui.statsSeason !== "all" && <SeasonVsSeason seasonId={ui.statsSeason} />}
       {vw === "overview" && S.kind !== "practice" && <AskCard key={S.key} S={S} />}
       {vw === "players" && <Players A={A} />}
       {vw === "offense" && <Offense A={A} />}
@@ -536,5 +537,34 @@ export function TheirRotations({ A }: { A: Agg }) {
       <tbody>{rots.map((n) => { const x = R[n], ps = ratio(x.sw, x.sn); return <tr key={n} style={n === worst ? { fontWeight: 700 } : undefined}><td className="l">R{n}{n === 1 ? " (first server)" : ""}</td><td>{x.sn}</td><td style={{ color: ps != null && ps >= 0.5 ? "var(--them)" : undefined }}>{fmtPct(ps)} <span className="muted small">{x.sw}/{x.sn}</span></td><td>{x.aces}</td><td>{x.rn}</td><td>{fmtPct(ratio(x.rw, x.rn))} <span className="muted small">{x.rw}/{x.rn}</span></td></tr>; })}</tbody>
     </table></div>
     <p className="keys" style={{ marginTop: 8 }}>Their rotation counts from their first server each set and moves each time they side out.{worst ? ` Their R${worst} server hurt you most: ${fmtPct(ratio(R[worst].sw, R[worst].sn))} of rallies won on that serve. Note who it is and plan your serve-receive for that turn.` : ""}</p>
+  </Card>;
+}
+
+/* ---------- this season vs earlier seasons ---------- */
+function SeasonVsSeason({ seasonId }: { seasonId: string }) {
+  const seasons = seasonsOf(); // newest first
+  const idx = seasons.findIndex((x) => x.id === seasonId);
+  const cols = seasons.slice(Math.max(0, idx), Math.max(0, idx) + 3).map((se) => {
+    const items = resolveScope("season", se.id).items, A = aggregate(items.flatMap((x) => x.R.sets)), M = teamMetrics(A);
+    const done = items.filter((x) => x.R.matchOver), W = done.filter((x) => x.R.wonUs > x.R.wonThem).length;
+    return { se, n: items.length, W, L: done.length - W, M, A };
+  }).filter((c) => c.n > 0);
+  if (cols.length < 2) return null;
+  const rows: [string, (c: (typeof cols)[number]) => number | null, (v: number | null) => string, boolean][] = [
+    ["Record", (c) => (c.W + c.L ? c.W / (c.W + c.L) : null), () => "", true],
+    ["Hitting", (c) => c.M.hitting, fmtHit, true], ["Side-out", (c) => c.M.sideOut, fmtPct, true], ["Point-scoring", (c) => ratio(c.A.psc.w, c.A.psc.n), fmtPct, true],
+    ["Pass average", (c) => c.M.passAvg, fmtAvg, true], ["Serve in", (c) => c.M.serveIn, fmtPct, true],
+    ["Kills per set", (c) => c.M.perSet?.K ?? null, (v) => fmtNum(v, 2), true], ["Aces per set", (c) => c.M.perSet?.SA ?? null, (v) => fmtNum(v, 2), true],
+    ["Digs per set", (c) => c.M.perSet?.D ?? null, (v) => fmtNum(v, 2), true], ["Points given away per set", (c) => c.M.perSet?.errors ?? null, (v) => fmtNum(v, 2), false],
+  ];
+  return <Card title="Compared with earlier seasons">
+    <div className="tbl"><table>
+      <thead><tr><th className="l" />{cols.map((c) => <th key={c.se.id}>{c.se.name}</th>)}</tr></thead>
+      <tbody>{rows.map(([label, get, fmt, up]) => <tr key={label}><td className="l">{label}</td>{cols.map((c, i) => {
+        const v = get(c), prev = cols[i + 1] ? get(cols[i + 1]) : null;
+        const better = i === 0 && v != null && prev != null && Math.abs(v - prev) > 1e-9 ? (v > prev) === up : null;
+        return <td key={c.se.id} style={i === 0 ? { fontWeight: 700, color: better == null ? undefined : better ? "var(--us)" : "var(--them)" } : undefined}>{label === "Record" ? `${c.W}–${c.L}` : fmt(v)}</td>; })}</tr>)}</tbody>
+    </table></div>
+    <p className="keys" style={{ marginTop: 8 }}>This season in bold; blue is better than last season, grey is worse.</p>
   </Card>;
 }
