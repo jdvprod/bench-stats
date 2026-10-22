@@ -7,7 +7,8 @@ import { Card, fmtDate } from "../../ui/kit";
 import { MomentumChart } from "../../ui/charts";
 import { logText } from "../track/Tracker";
 import { sideNames } from "../../app/Scoreboard";
-import { ShareLive } from "../../cloud/CloudCard";
+import { liveUrlFor, ShareLive } from "../../cloud/CloudCard";
+import { qrSvg } from "../../lib/qr";
 
 export function LivePage() {
   const t = team()!, cur = currentMatch();
@@ -37,6 +38,7 @@ export function LivePage() {
       </div>
       <div className="tv-sets-row">{R.sets.map((s) => <span key={s.n}>Set {s.n}: <b>{s.us}–{s.them}</b></span>)}</div>
       <div className="tv-plays">{lastPlays.map((l) => <div key={l.id}>{logText(l, m, t.name)}</div>)}</div>
+      {liveUrlFor(m.id) && <div className="tv-qr"><div dangerouslySetInnerHTML={{ __html: qrSvg(liveUrlFor(m.id)) }} /><span>Scan to follow live</span></div>}
       <div className="tv-hint">Tap anywhere to exit</div>
     </div>;
   }

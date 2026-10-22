@@ -102,8 +102,10 @@ export function JoinPage({ code }: { code: string }) {
 }
 
 /** "Share live link" for parents, on the Live screen. */
+export const liveUrlFor = (matchId: string) => { try { return localStorage.getItem("bs-live-url-" + matchId) || ""; } catch { return ""; } };
 export function ShareLive({ matchId }: { matchId: string }) {
-  const t = team()!, [busy, setBusy] = useState(false), [url, setUrl] = useState("");
+  const t = team()!, [busy, setBusy] = useState(false), [url, setUrlState] = useState(() => liveUrlFor(matchId));
+  const setUrl = (u: string) => { setUrlState(u); try { localStorage.setItem("bs-live-url-" + matchId, u); } catch { /* private mode */ } };
   if (!cloudAvailable() || t.sample) return null;
   if (!currentUser() || !isLinked(t.id)) return <button className="btn sm" onClick={() => go("team")} title="Sign in and sync this team to share a live link">Share with parents</button>;
   return <span className="row" style={{ flexWrap: "nowrap" }}>
