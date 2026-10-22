@@ -5,6 +5,7 @@ import { Card, ConfirmButton, copyText } from "../ui/kit";
 import { cloudAvailable, CloudError, currentUser, sendPasswordReset, signIn, signOut, signUp } from "./client";
 import { createInvite, isLinked, joinWithCode, linkTeam, members, pendingCount, removeMember, shareLive, shareSeason, status, syncNow, unlinkTeam } from "./sync";
 import { go } from "../app/router";
+import { QrButton } from "../ui/QrButton";
 
 const errText = (e: unknown) => (e instanceof CloudError ? e.message : "Something went wrong. Try again.");
 
@@ -70,6 +71,7 @@ export function CloudCard() {
             <div className="label">Season page for players and parents</div>
             <p className="small muted" style={{ margin: 0 }}>A read-only page with results, schedule, leaders and every player's stats. Last names show as initials. No account needed to view.</p>
             <div className="row"><button className="btn sm" disabled={busy || !t.activeSeasonId} onClick={() => act(async () => { const r = await shareSeason(t.id, t.activeSeasonId!); setSeasonUrl(r.url); const ok = await copyText(r.url); toast(ok ? "Season link copied. Share it with the team." : "Season link: " + r.url); })}>Share season page</button>
+              {seasonUrl && <QrButton url={seasonUrl} title="Scan for the team's season page" label="QR code" />}
               {seasonUrl && <a className="small" href={seasonUrl} target="_blank" rel="noopener" style={{ maxWidth: 260, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{seasonUrl}</a>}</div>
           </>}
           <div className="row"><ConfirmButton className="btn sm ghost" confirmText="Stop syncing on this device?" onConfirm={() => { unlinkTeam(t.id); toast("Stopped syncing this team on this device"); }}>Stop syncing on this device</ConfirmButton></div>
@@ -106,6 +108,7 @@ export function ShareLive({ matchId }: { matchId: string }) {
   if (!currentUser() || !isLinked(t.id)) return <button className="btn sm" onClick={() => go("team")} title="Sign in and sync this team to share a live link">Share with parents</button>;
   return <span className="row" style={{ flexWrap: "nowrap" }}>
     <button className="btn sm primary" disabled={busy} onClick={async () => { setBusy(true); try { const r = await shareLive(t.id, matchId); setUrl(r.url); const ok = await copyText(r.url); toast(ok ? "Live link copied. Text it to parents." : "Live link: " + r.url); } catch (e) { toast(errText(e)); } setBusy(false); }}>{busy ? "Making link…" : "Share live link"}</button>
+    {url && <QrButton url={url} title="Scan to follow the match live" label="QR code" />}
     {url && <span className="small muted" style={{ maxWidth: 220, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{url}</span>}
   </span>;
 }

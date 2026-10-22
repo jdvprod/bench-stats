@@ -557,3 +557,8 @@ kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--
 .btn[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink);border-color:var(--accent)}
 .ask-turn{border-top:1px solid var(--line);padding-top:10px;margin-top:10px}.ask-q{font-weight:700;margin:0 0 4px}
 .ask form{margin-top:10px}
+/* QR overlay */
+.qr-overlay{position:fixed;inset:0;z-index:120;background:rgba(0,0,0,.82);display:grid;place-items:center;padding:16px}
+.qr-box{background:#fff;color:#000;border-radius:16px;padding:20px;max-width:min(520px,100%);width:100%;text-align:center;display:grid;gap:10px;justify-items:center}
+.qr-box h2{margin:0;font-family:var(--display);font-size:24px}.qr-img{width:min(380px,80vw)}.qr-img svg{width:100%;height:auto;display:block}
+.qr-box .btn{background:#fff;color:#000;border-color:#ccc}

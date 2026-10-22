@@ -48,7 +48,7 @@ export function Toast() {
   useEffect(() => {
     if (t && t.at !== last.current) {
       last.current = t.at; setShown(t);
-      const h = setTimeout(() => setShown(null), t.action ? 3500 : 1800); return () => clearTimeout(h);
+      const h = setTimeout(() => setShown(null), t.action ? 6000 : 1800); return () => clearTimeout(h);
     }
   }, [t]);
   return shown ? <div className="toast" role="status">{shown.msg}{shown.action && <button className="toast-act" onClick={() => { shown.action!.fn(); setShown(null); }}>{shown.action.label}</button>}</div> : null;

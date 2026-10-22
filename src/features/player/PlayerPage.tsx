@@ -12,6 +12,7 @@ import { go } from "../../app/router";
 import { cloudAvailable, currentUser } from "../../cloud/client";
 import { isLinked, shareRecruit } from "../../cloud/sync";
 import { copyText } from "../../ui/kit";
+import { QrButton } from "../../ui/QrButton";
 import { CourtSvg } from "../../ui/court";
 import { tendencies } from "../../sports/volleyball/tendencies";
 
@@ -161,7 +162,7 @@ function Recruiting({ id, rows, A }: { id: string; rows: Row[]; A: Agg }) {
       <label className="field"><span className="label">About</span><textarea key={id + "about"} rows={3} defaultValue={pr.about || ""} placeholder="Strengths, leadership, what they're looking for in a program" onBlur={(e) => set("about", e.target.value.trim())} /></label>
       <p className="keys">Stays private on your account until you share it. The download and the profile link show the player's full name, these details and verified stats; the link is a snapshot you can update anytime.</p>
     </div> : <p className="small muted">Measurables, contact info and a highlight link, combined with verified season stats into a one-page sheet for college coaches.</p>}
-    {url && <p className="small" style={{ marginBottom: 0 }}>Profile link: <a href={url} target="_blank" rel="noopener">{url}</a></p>}
+    {url && <div className="row" style={{ marginTop: 6 }}><span className="small">Profile link: <a href={url} target="_blank" rel="noopener">{url}</a></span><QrButton url={url} title={`${p.first} ${p.last}: recruiting profile`} label="QR code" /></div>}
   </Card>;
 }
 
