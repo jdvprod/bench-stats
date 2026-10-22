@@ -162,3 +162,24 @@ test("stats-only entries count for the player but never change the score", () =>
   assert.equal(c.ps.oh1.K, 1); assert.equal(c.ps.oh1.R3, 1); assert.equal(c.ps.oh2.P0, 1);
   assert.equal(c.rallies[0].pass, "P3", "the assistant's pass grade still feeds side-out by pass");
 });
+
+import { parseSchedule } from "../src/features/matchup/parseSchedule";
+test("schedule paste: common formats", () => {
+  const today = new Date(2026, 7, 1);
+  const g = parseSchedule([
+    "Thu 9/4 vs Buchanan 6:00 PM",
+    "9/9/2026 @ Clovis West 5:30pm (League)",
+    "Sep 13 - Fresno Invitational - Fresno State",
+    "2026-09-20\tat Central\t18:00",
+    "October 2, 2026  Bullard  7 PM",
+    "9/27 BYE",
+    "Practice notes",
+  ].join("\n"), today);
+  assert.equal(g.length, 5);
+  assert.deepEqual([g[0].date, g[0].time, g[0].opp, g[0].site], ["2026-09-04", "18:00", "Buchanan", "home"]);
+  assert.deepEqual([g[1].date, g[1].time, g[1].opp, g[1].site, g[1].event], ["2026-09-09", "17:30", "Clovis West", "away", "League"]);
+  assert.equal(g[2].opp, "Fresno Invitational"); assert.equal(g[2].event, "Fresno State"); assert.equal(g[2].site, "neutral");
+  assert.deepEqual([g[3].date, g[3].opp, g[3].site, g[3].time], ["2026-09-20", "Central", "away", "18:00"]);
+  assert.deepEqual([g[4].date, g[4].opp, g[4].time], ["2026-10-02", "Bullard", "19:00"]);
+  assert.equal(parseSchedule("1/10 vs Hoover", new Date(2026, 9, 22))[0].date, "2027-01-10", "a January date in October is next year");
+});
