@@ -1,25 +1,37 @@
 /** Small hand-drawn SVG charts that follow the theme colors. */
+import { useCallback, useRef, useState } from "react";
+
+/** Width of an element in CSS pixels, so charts draw at real size and text stays readable on phones. */
+function useWidth(fallback: number): [(el: Element | null) => void, number] {
+  const [w, setW] = useState(fallback), ro = useRef<ResizeObserver | null>(null);
+  const ref = useCallback((el: Element | null) => {
+    ro.current?.disconnect(); if (!el || typeof ResizeObserver === "undefined") return;
+    ro.current = new ResizeObserver((es) => { const cw = Math.round(es[0].contentRect.width); if (cw > 0) setW(cw); }); ro.current.observe(el);
+  }, []);
+  return [ref, w];
+}
 
 export function LineChart({ points, format, height = 230 }: { points: { label: string; sub?: string; v: number | null }[]; format: (v: number) => string; height?: number }) {
+  const [ref, cw] = useWidth(640);
   const vals = points.map((p) => p.v).filter((v): v is number => v != null);
   if (!vals.length) return <p className="empty">No data for this stat yet.</p>;
-  const W = 640, H = height, L = 52, R = 18, T = 18, B = 46;
+  const W = Math.max(280, cw), H = W < 480 ? Math.min(height, 200) : height, L = 46, R = 16, T = 22, B = 46;
   let lo = Math.min(0, ...vals), hi = Math.max(...vals); if (hi === lo) hi = lo + 1;
-  const n = points.length, x = (i: number) => (n === 1 ? L + (W - L - R) / 2 : L + (i * (W - L - R)) / (n - 1)), y = (v: number) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
+  const n = points.length, x = (i: number) => (n === 1 ? L + (W - L - R) / 2 : L + 18 + (i * (W - L - R - 36)) / (n - 1)), y = (v: number) => T + (H - T - B) * (1 - (v - lo) / (hi - lo));
   let path = ""; points.forEach((p, i) => { if (p.v != null) path += (path ? "L" : "M") + x(i).toFixed(1) + " " + y(p.v).toFixed(1); });
-  const every = Math.max(1, Math.ceil(n / 8));
+  const every = Math.max(1, Math.ceil(n / Math.max(3, Math.floor(W / 80))));
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Trend chart">
+    <div ref={ref} style={{ width: "100%" }}><svg className="chart" viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ maxWidth: "100%", height: "auto" }} role="img" aria-label="Trend chart">
       {[0, 1, 2, 3, 4].map((i) => { const v = lo + ((hi - lo) * i) / 4, yy = y(v); return <g key={i}><line x1={L} x2={W - R} y1={yy} y2={yy} stroke="var(--line)" /><text x={L - 8} y={yy + 4} textAnchor="end" fontSize={11} fill="var(--muted)">{format(v)}</text></g>; })}
       {path && <path d={path} fill="none" stroke="var(--accent)" strokeWidth={2.5} strokeLinejoin="round" />}
       {points.map((p, i) => (
         <g key={i}>
           {p.v != null && <><circle cx={x(i)} cy={y(p.v)} r={i === n - 1 ? 5 : 3.5} fill="var(--accent)" stroke="var(--surface)" strokeWidth={1.5} />
-            {(n <= 10 || i === n - 1) && <text x={x(i)} y={y(p.v) - 9} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--ink)">{format(p.v)}</text>}</>}
+            {(n <= Math.floor(W / 60) || i === n - 1) && <text x={x(i)} y={y(p.v) - 9} textAnchor="middle" fontSize={11} fontWeight={700} fill="var(--ink)">{format(p.v)}</text>}</>}
           {(i % every === 0 || i === n - 1) && <><text x={x(i)} y={H - B + 18} textAnchor="middle" fontSize={10.5} fill="var(--muted)">{p.label}</text><text x={x(i)} y={H - B + 32} textAnchor="middle" fontSize={10} fill="var(--muted)">{p.sub}</text></>}
         </g>
       ))}
-    </svg>
+    </svg></div>
   );
 }
 
