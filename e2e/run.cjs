@@ -11,7 +11,7 @@ const DIST = path.join(__dirname, "..", "dist"), APP_PORT = 5199, MOCK_PORT = 54
 const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml" };
 const only = process.argv[2] || "";
 
-let failures = 0, passes = 0;
+let failures = 0, passes = 0; const OPEN = new Set();
 const ok = (name, cond, detail = "") => { if (cond) { passes++; } else { failures++; console.log(`  ✗ ${name}${detail ? ": " + detail : ""}`); } };
 
 function serveDist() {
@@ -29,7 +29,7 @@ function serveDist() {
 async function newPage(browser, { phone = false, dark = false, cloud = true } = {}) {
   const ctx = await browser.newContext({ viewport: phone ? { width: 390, height: 844 } : { width: 1360, height: 900 }, colorScheme: dark ? "dark" : "light", acceptDownloads: true, hasTouch: phone });
   if (cloud) await ctx.addInitScript((url) => { try { localStorage.setItem("bs-cloud-config", JSON.stringify({ url, key: "anon" })); } catch { /* sandboxed frame */ } }, `http://localhost:${MOCK_PORT}`);
-  const page = await ctx.newPage(); page.errors = [];
+  const page = await ctx.newPage(); page.errors = []; OPEN.add(page); page.on("close", () => OPEN.delete(page));
   page.on("pageerror", (e) => page.errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|ERR_|fonts\.g/.test(m.text())) page.errors.push(m.text()); });
   page.setDefaultTimeout(8000);
@@ -200,6 +200,30 @@ const scenarios = {
     fs.unlinkSync(file); await p.context().close(); await q.context().close();
   },
 
+  async practice(browser) {
+    const p = await newPage(browser);
+    await go(p, "sample"); await p.waitForTimeout(800);
+    await p.locator("button.ctrl", { hasText: "End match" }).click(); await p.locator("button.ctrl", { hasText: "Tap again" }).click(); await p.waitForTimeout(200);
+    // scrimmage: a kill by the second team scores for them
+    await go(p, "practice"); await p.getByRole("button", { name: "Scrimmage", exact: true }).click(); await p.getByRole("button", { name: "Start scrimmage" }).click(); await p.waitForTimeout(300);
+    const white = p.locator(".grid2 .card").nth(1);
+    await white.locator(".pl").first().click(); await p.getByRole("button", { name: "Kill", exact: true }).click(); await p.waitForTimeout(150);
+    // the court asks where it landed: tap it
+    const court = p.locator(".sheet svg.courtsvg");
+    if (await court.count()) { const bx = await court.boundingBox(); await p.mouse.click(bx.x + bx.width * 0.5, bx.y + bx.height * 0.3); await p.waitForTimeout(150); }
+    ok("scrimmage kill scores for the second team", /^BLUE 0 GAME 1 0–0 SCRIMMAGE WHITE 1/.test(await score(p)), await score(p));
+    await skipIfAsked(p); await p.keyboard.press("Escape");
+    // type-in codes from Labs
+    await go(p, "labs"); await p.getByLabel("Type-in stat codes").check({ force: true }); await go(p, "practice");
+    const num = (await white.locator(".pl .n").first().innerText()).trim();
+    await p.getByLabel("Type stat codes").fill(`${num}k ${num}ace oe`); await p.keyboard.press("Enter"); await p.waitForTimeout(200);
+    ok("type-in codes record three plays", (await p.locator(".card", { hasText: "Recent" }).last().locator("li").count()) >= 4);
+    await go(p, "stats"); await p.getByRole("button", { name: /^Practice \(/ }).click(); await p.waitForTimeout(200);
+    ok("practice stats show the scrimmage", (await p.locator(".card").filter({ hasText: /Blue|White/ }).count()) > 0);
+    ok("practice: no page errors", !p.errors.length, p.errors.slice(0, 3).join(" | "));
+    await p.context().close();
+  },
+
   async planning(browser) {
     const p = await newPage(browser);
     await go(p, "sample"); await p.waitForTimeout(800);
@@ -269,7 +293,11 @@ const scenarios = {
   for (const [name, fn] of Object.entries(scenarios)) {
     if (only && name !== only) continue;
     const t0 = Date.now(), f0 = failures; console.log(`• ${name}`);
-    try { await fn(browser); } catch (e) { failures++; console.log(`  ✗ ${name} crashed: ${String(e.message || e).split("\n")[0]}`); }
+    try { await fn(browser); } catch (e) {
+      failures++; console.log(`  ✗ ${name} crashed: ${String(e.message || e).split("\n")[0]}`);
+      let i = 0; for (const pg of OPEN) { const f = path.join(require("os").tmpdir(), `e2e-${name}-${i++}.png`); await pg.screenshot({ path: f }).catch(() => {}); console.log("    screenshot: " + f); }
+    }
+    for (const pg of OPEN) await pg.context().close().catch(() => {});
     console.log(`  ${failures === f0 ? "✓" : "✗"} ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
   }
   await browser.close(); app.close(); mock.close();
