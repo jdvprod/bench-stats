@@ -58,8 +58,8 @@ A coach can still paste their own Anthropic key in Settings; then calls go strai
 ## Tests
 
 - `npm test`: engine unit tests plus backtesting, where thousands of random matches (every action, subs, timeouts, deletes, several devices, stats-only entries, score fixes) are checked against invariants: scores match rallies, rotations follow side-outs, team totals equal player totals, merging devices or deleting entries gives the same result, no metric is ever NaN.
-- `npm run e2e`: drives the built app in Chromium on desktop and phone, light and dark, with a mock Supabase: a full match by keyboard and buttons, formats (sets to 21, caps, pool play, ending a set early), planning, two coaches syncing, parent links, the season page, recruiting links, AI and the setup check.
-- `supabase/test-schema.sh`: runs `schema.sql` twice on a throwaway Postgres and checks the public functions and row level security.
+- `npm run e2e`: drives the built app in Chromium on desktop and phone, light and dark, with a mock Supabase (about 180 checks): a full match by keyboard and buttons, match formats (sets to 21, caps, pool play, ending a set early), scrimmages and type-in codes, offline tracking in a gym with no signal and syncing after, backups restored on a new device, long names on a small phone, planning, two coaches splitting a match, a phone with a wrong clock, view-only accounts, parent links, the season page, recruiting links, AI and the setup check.
+- `supabase/test-schema.sh`: runs `schema.sql` twice on a throwaway Postgres, checks the public functions, and checks row level security as real coaches (owner, stranger, view-only, last edit wins).
 
 All three run on every push (GitHub Actions).
 

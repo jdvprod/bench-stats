@@ -167,3 +167,24 @@ test("parsers never throw on junk and only return valid entries", () => {
 });
 
 test("schedule paste skips impossible dates", () => { assert.equal(parseSchedule("2/31 vs Hoover").length, 0); assert.equal(parseSchedule("2/29/2028 vs Hoover").length, 1); });
+
+test("lineup fixes mid-set (rotation, serve, positions, libero) keep the lineup valid", () => {
+  for (let seed = 1; seed <= 600; seed++) {
+    const r = rng(seed * 13), base = randomMatch(seed).events.filter((e) => e.t !== "DEL");
+    const out: any[] = []; let ts = 0;
+    for (const e of base) {
+      out.push({ ...e, ts: (ts += 10) });
+      const x = r();
+      if (x < 0.02) out.push({ id: `rot${seed}-${ts}`, ts: (ts += 1), t: "ROT", v: 1 + Math.floor(r() * 6) });
+      else if (x < 0.03) out.push({ id: `srv${seed}-${ts}`, ts: (ts += 1), t: "SRV", v: r() < 0.5 ? "us" : "them" });
+      else if (x < 0.035) { const lu = ROSTER.filter((p) => p !== "lib").sort(() => r() - 0.5).slice(0, 6); out.push({ id: `lu${seed}-${ts}`, ts: (ts += 1), t: "LU", lu, lib: "lib", libSrv: r() < 0.3 ? lu[0] : null }); }
+    }
+    const R = replay(out as MatchEvent[], { bestOf: 5 });
+    for (const s of R.sets) {
+      assert.equal(s.us + s.them, s.rallies.length, `seed ${seed}: score = rallies`);
+      if (s.lu) { assert.equal(new Set(s.lu).size, 6, `seed ${seed}: six different players`); assert.ok(!s.lu.includes("lib"), `seed ${seed}: libero isn't one of the six`); }
+      assert.ok(s.rot >= 1 && s.rot <= 6);
+    }
+    aggregate(R.sets); situations(R.sets);
+  }
+});
