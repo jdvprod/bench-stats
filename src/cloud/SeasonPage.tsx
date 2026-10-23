@@ -74,7 +74,7 @@ export function SeasonPage({ code }: { code: string }) {
       {games.length ? <ul className="sh-list">{games.map(({ m, R }) => { const isOpen = open === m.id; return <li key={m.id} className="click" onClick={() => setOpen(isOpen ? null : m.id)}>
         <span className="sh-date">{fmtD(m.date)}</span>
         <b>{m.site === "away" ? "at " : "vs "}{m.opp}</b>
-        <span className={"sh-res " + (resultOf(R) === "W" ? "w" : resultOf(R) === "L" ? "l" : "")}>{resultOf(R) ? resultOf(R) + " " : m.status === "live" ? "Live " : ""}{R.wonUs}–{R.wonThem}</span>
+        <span className={"sh-res " + (resultOf(R) === "W" ? "w" : resultOf(R) === "L" ? "l" : "")}>{resultOf(R) ? `${resultOf(R)} ${R.wonUs}–${R.wonThem}` : m.status === "live" && R.cur ? `Live · set ${R.cur.n}, ${R.cur.us}–${R.cur.them}` : `${R.wonUs}–${R.wonThem}`}</span>
         <span className="small muted sh-sets">{R.sets.filter((s) => s.us + s.them).map((s) => `${s.us}-${s.them}`).join(", ")}</span>
         {isOpen && <div className="tbl sh-box" onClick={(e) => e.stopPropagation()}><table><thead><tr><th className="l">Player</th><th>K</th><th>Ace</th><th>Dig</th><th>Blk</th><th>Ast</th></tr></thead>
           <tbody>{box(R).map(([id, s]) => <tr key={id}><td className="l"><button className="linkish" onClick={() => setSel(id)}>{nm(id)}</button></td><td>{s.K}</td><td>{s.SA}</td><td>{s.D}</td><td>{fmtNum(blocks(s))}</td><td>{s.AST}</td></tr>)}</tbody></table></div>}
