@@ -184,6 +184,22 @@ const scenarios = {
     await p.context().close();
   },
 
+  async backup(browser) {
+    const p = await newPage(browser);
+    await go(p, "sample"); await p.waitForTimeout(800);
+    await go(p, "team");
+    const bk = await download(p, () => p.getByRole("button", { name: "Save all teams" }).click());
+    ok("backup file saved", bk.name.endsWith(".json") && bk.size > 20000, bk.size + " bytes");
+    const file = path.join(require("os").tmpdir(), "bb-e2e-backup.json"); fs.writeFileSync(file, bk.text());
+    const q = await newPage(browser, { phone: true });
+    await go(q, "track"); await q.getByRole("button", { name: "Use without an account" }).click();
+    await q.locator(".auth-alt-btn input[type=file]").setInputFiles(file); await q.waitForTimeout(1200);
+    await go(q, "stats"); await q.getByRole("button", { name: /^Season \(/ }).click();
+    ok("restored on a new device with every match", /Season \(5\)/.test(await q.getByRole("button", { name: /^Season \(/ }).innerText()));
+    ok("backup: no page errors", !p.errors.length && !q.errors.length, p.errors.concat(q.errors).slice(0, 3).join(" | "));
+    fs.unlinkSync(file); await p.context().close(); await q.context().close();
+  },
+
   async planning(browser) {
     const p = await newPage(browser);
     await go(p, "sample"); await p.waitForTimeout(800);
