@@ -21,6 +21,7 @@ export function parseSchedule(text: string, today = new Date()): ParsedGame[] {
     if (!mo || !d || mo > 12 || d > 31) continue;
     line = line.replace(m![0], " ");
     if (!y) y = inferYear(mo, d, today);
+    if (new Date(y, mo - 1, d).getDate() !== d) continue; // e.g. 2/31
     // time
     let time = "";
     const tm = line.match(/\b(\d{1,2})(?::(\d{2}))?\s*(a\.?m\.?|p\.?m\.?|a|p)\b/i) || line.match(/\b([01]?\d|2[0-3]):([0-5]\d)\b/);

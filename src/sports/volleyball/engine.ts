@@ -196,7 +196,9 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
         if (!cur.rallies.length) { cur.startLu = e.lu.slice(); cur.rot = 1; cur.startLibSrv = cur.libSrv; }
         log.push({ id: e.id, set: cur.n, kind: "lu" }); continue;
       case "SUB":
-        if (cur.lu) { const i = cur.lu.indexOf(e.out); if (i >= 0) cur.lu[i] = e.in; }
+        // A sub only applies if the player coming out is on court and the one going in isn't (two coaches can both
+        // record the same sub, or an earlier sub can be deleted); otherwise the lineup would hold a player twice.
+        if (cur.lu) { const i = cur.lu.indexOf(e.out); if (i < 0 || cur.lu.includes(e.in) || e.in === cur.lib) { log.push({ id: e.id, set: cur.n, kind: "sub", in: e.in, out: e.out }); continue; } cur.lu[i] = e.in; }
         cur.subs++; cur.subLog.push({ out: e.out, in: e.in, score: cur.us + "–" + cur.them });
         log.push({ id: e.id, set: cur.n, kind: "sub", in: e.in, out: e.out }); continue;
       case "TAG":
@@ -237,7 +239,7 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
 
     let wn: Side | null = ev.ns ? null : a.point || null;
     if (t === "BA" && lastBA) wn = null;
-    lastBA = t === "BA" && wn !== null;
+    if (!ev.ns) lastBA = t === "BA" && wn !== null; // a stats-only entry in between doesn't split a two-person block
     if (scr && ev.s === "b" && wn && !a.team) wn = wn === "us" ? "them" : "us";
 
     if (wn) {
