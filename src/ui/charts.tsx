@@ -37,19 +37,20 @@ export function LineChart({ points, format, height = 230 }: { points: { label: s
 
 /** Running point differential through a set: above the line = we lead. */
 export function MomentumChart({ diffs, height = 140 }: { diffs: number[]; height?: number }) {
+  const [ref, cw] = useWidth(640);
   if (!diffs.length) return <p className="empty">Momentum shows up after the first rally.</p>;
-  const W = 640, H = height, P = 10, mx = Math.max(3, ...diffs.map(Math.abs));
+  const W = Math.max(260, cw), H = W < 480 ? Math.min(height, 110) : height, P = 10, mx = Math.max(3, ...diffs.map(Math.abs));
   const x = (i: number) => P + (i * (W - 2 * P)) / Math.max(1, diffs.length - 1), y = (v: number) => H / 2 - (v / mx) * (H / 2 - P);
   const pts = diffs.map((d, i) => `${x(i).toFixed(1)},${y(d).toFixed(1)}`).join(" ");
   return (
-    <svg className="chart" viewBox={`0 0 ${W} ${H}`} role="img" aria-label="Momentum">
+    <div ref={ref} style={{ width: "100%" }}><svg className="chart" viewBox={`0 0 ${W} ${H}`} width={W} height={H} style={{ maxWidth: "100%", height: "auto" }} role="img" aria-label="Momentum">
       <rect x={0} y={0} width={W} height={H / 2} fill="var(--us-soft)" opacity={0.6} />
       <rect x={0} y={H / 2} width={W} height={H / 2} fill="var(--them-soft)" opacity={0.6} />
       <line x1={0} x2={W} y1={H / 2} y2={H / 2} stroke="var(--muted)" strokeWidth={1} />
       <polyline points={`${x(0)},${H / 2} ${pts} ${x(diffs.length - 1)},${H / 2}`} fill="none" stroke="var(--ink)" strokeWidth={2} strokeLinejoin="round" />
       <text x={W - 6} y={14} textAnchor="end" fontSize={11} fill="var(--us)" fontWeight={700}>Ahead</text>
       <text x={W - 6} y={H - 6} textAnchor="end" fontSize={11} fill="var(--them)" fontWeight={700}>Behind</text>
-    </svg>
+    </svg></div>
   );
 }
 
