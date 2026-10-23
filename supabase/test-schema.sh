@@ -36,7 +36,8 @@ check "select jsonb_array_length(season_view('s1s1s1')->'matches');" "1" "season
 check "select watch('l1l1l1')->'match'->>'opp';" "Them" "live link returns the match"
 check "select recruit_view('r1r1r1')->>'html';" "<p>profile</p>" "recruit link returns the page"
 check "select count(*) from records;" "0" "anon can't read records directly"
-check "select schema_version();" "5" "schema version is reported"
+check "select schema_version();" "6" "schema version is reported"
+check "select abs(server_time() - (extract(epoch from now()) * 1000)::bigint) < 5000;" "t" "server time is in milliseconds"
 # row level security as signed-in coaches: A owns a team, B is a stranger until invited as a viewer
 A=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa; B=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
 q -c "insert into auth.users values ('$A', 'a@example.com'), ('$B', 'b@example.com');"

@@ -4,7 +4,7 @@
  * incrementally by server time. Conflicts: the most recent edit wins. Match event logs are per device,
  * so two coaches tracking the same match never overwrite each other; their logs merge.
  */
-import { all, emit, get, hooks, remove, save, state } from "../data/store";
+import { all, emit, get, hooks, remove, save, setClockOffset, state } from "../data/store";
 import { StoreName } from "../data/model";
 import { CloudError, cloudAvailable, currentUser, rest, rpc, upsert } from "./client";
 
@@ -69,6 +69,14 @@ async function push() {
   return blocked;
 }
 
+/** Measure this device's clock against the server's (every 10 minutes at most). */
+let clockChecked = 0;
+async function checkClock() {
+  if (Date.now() - clockChecked < 600000) return; clockChecked = Date.now();
+  const t0 = Date.now(), server = +(await rpc("server_time", {}, true)), t1 = Date.now();
+  if (server > 0 && t1 - t0 < 4000) setClockOffset(server - (t0 + t1) / 2);
+}
+
 async function loadRoles() {
   const me = currentUser(); if (!me) return;
   if (S.rolesFor !== me.id) { S.roles = {}; S.rolesFor = me.id; }
@@ -112,6 +120,7 @@ export function syncNow(): Promise<void> {
   running ||= (async () => {
     setStatus({ state: "syncing", error: "" });
     try {
+      await checkClock().catch(() => {});
       await loadRoles().catch(() => {});
       const blocked = await push();
       let changed = false;

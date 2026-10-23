@@ -33,7 +33,8 @@ module.exports = (port) => new Promise((ok) => { const srv = http.createServer((
       return send(res, 200, { team: tr && { name: tr.data.name, color: tr.data.color, level: tr.data.level }, match: (R.find((r) => r.store === "matches" && r.id === s.match_id) || {}).data || null,
         logs: R.filter((r) => r.store === "logs" && r.data.matchId === s.match_id).map((r) => r.data.events), players: R.filter((r) => r.store === "players").map((r) => ({ id: r.data.id, num: r.data.num, first: r.data.first, last: (r.data.last || "").slice(0, 1), pos: r.data.pos })), at: new Date().toISOString() });
     }
-    if (p === "/rest/v1/rpc/schema_version") return send(res, 200, 5);
+    if (p === "/rest/v1/rpc/schema_version") return send(res, 200, 6);
+    if (p === "/rest/v1/rpc/server_time") return send(res, 200, Date.now() + (+process.env.MOCK_CLOCK_SKEW || 0));
     if (p === "/rest/v1/rpc/recruit_view") { const r = recruits.get(String(b.share).toUpperCase()); return send(res, 200, r ? { html: r.html, updated_at: r.updated_at } : null); }
     if (p === "/rest/v1/rpc/season_view") {
       const s = seasonShares.get(String(b.share).toUpperCase()); if (!s) return send(res, 200, null);

@@ -26,6 +26,10 @@ const subscribe = (l: () => void) => { listeners.add(l); return () => listeners.
 export function useVersion() { return useSyncExternalStore(subscribe, () => version); }
 
 /* ---------- ids and devices ---------- */
+/** Device clock corrected to the server's, so plays from several coaches' phones merge in the right order. */
+let clockOffset = 0;
+export const now = () => Date.now() + clockOffset;
+export function setClockOffset(ms: number) { clockOffset = Math.abs(ms) > 750 ? Math.round(ms) : 0; }
 export const uid = (p = "") => p + Date.now().toString(36) + Math.random().toString(36).slice(2, 8);
 export const DEVICE = (() => {
   let d: string | null = null;
@@ -55,7 +59,7 @@ export function get<K extends StoreName>(s: K, id: string | null | undefined): S
 export const hooks = { who: null as null | (() => string | null), change: null as null | ((s: StoreName, v: any, deleted: boolean) => void), paused: false, teamRemoved: null as null | ((teamId: string) => void) };
 
 export function save<K extends StoreName>(s: K, v: StoreTypes[K], silent = false, fromCloud = false) {
-  if (!fromCloud) (v as any)._u = Math.max(Date.now(), ((state.tables[s].get((v as any).id) as any)?._u || 0) + 1);
+  if (!fromCloud) (v as any)._u = Math.max(now(), ((state.tables[s].get((v as any).id) as any)?._u || 0) + 1);
   (state.tables[s] as Map<string, StoreTypes[K]>).set((v as any).id, v);
   db.put(s, v);
   if (s === "logs") replayCache.delete((v as unknown as EventLog).matchId);
@@ -66,7 +70,7 @@ export function remove(s: StoreName, id: string, silent = false, fromCloud = fal
   const v: any = state.tables[s].get(id);
   state.tables[s].delete(id); db.del(s, id);
   if (s === "logs" && v) replayCache.delete(v.matchId);
-  if (!fromCloud && !hooks.paused && v) hooks.change?.(s, { ...v, _u: Date.now() }, true);
+  if (!fromCloud && !hooks.paused && v) hooks.change?.(s, { ...v, _u: now() }, true);
   if (!silent) emit();
 }
 export function patch<K extends StoreName>(s: K, id: string, p: Partial<StoreTypes[K]>) {
@@ -130,7 +134,7 @@ export function replayOf(m: Match | undefined | null): Replay | null {
 export function appendEvents(matchId: string, evs: Partial<MatchEvent>[]): MatchEvent | null {
   const id = matchId + "|" + DEVICE;
   const log = { ...(get("logs", id) || { id, matchId, device: DEVICE, events: [] }), ...stamp(matchId) };
-  let ts = Date.now();
+  let ts = now();
   const lastTs = log.events.length ? log.events[log.events.length - 1].ts : 0;
   if (ts <= lastTs) ts = lastTs + 1;
   const added = evs.map((e) => ({ ...e, id: e.id || eventId(), ts: e.ts || ts++ }) as MatchEvent);
@@ -140,7 +144,7 @@ export function appendEvents(matchId: string, evs: Partial<MatchEvent>[]): Match
 /** This device's name and job, written on its event log for the match. */
 function stamp(matchId: string): Partial<EventLog> {
   const m = get("matches", matchId), job = m && m.kind === "match" && !m.scrim ? state.prefs.job || "all" : "all";
-  return { by: hooks.who?.() || undefined, job, groups: job === "stats" ? state.prefs.jobGroups : undefined, seen: Date.now() };
+  return { by: hooks.who?.() || undefined, job, groups: job === "stats" ? state.prefs.jobGroups : undefined, seen: now() };
 }
 /** Re-stamp this device's log after the job changes, so other coaches see it right away. */
 export function stampLog(matchId: string) {

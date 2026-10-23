@@ -26,9 +26,10 @@ function serveDist() {
   });
 }
 
-async function newPage(browser, { phone = false, dark = false, cloud = true } = {}) {
+async function newPage(browser, { phone = false, dark = false, cloud = true, skew = 0 } = {}) {
   const ctx = await browser.newContext({ viewport: phone ? { width: 390, height: 844 } : { width: 1360, height: 900 }, colorScheme: dark ? "dark" : "light", acceptDownloads: true, hasTouch: phone });
   if (cloud) await ctx.addInitScript((url) => { try { localStorage.setItem("bs-cloud-config", JSON.stringify({ url, key: "anon" })); } catch { /* sandboxed frame */ } }, `http://localhost:${MOCK_PORT}`);
+  if (skew) await ctx.addInitScript((ms) => { const real = Date.now; Date.now = () => real() + ms; }, skew);
   const page = await ctx.newPage(); page.errors = []; OPEN.add(page); page.on("close", () => OPEN.delete(page));
   page.on("pageerror", (e) => page.errors.push(e.message));
   page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|ERR_|fonts\.g/.test(m.text())) page.errors.push(m.text()); });
@@ -222,6 +223,32 @@ const scenarios = {
     ok("practice stats show the scrimmage", (await p.locator(".card").filter({ hasText: /Blue|White/ }).count()) > 0);
     ok("practice: no page errors", !p.errors.length, p.errors.slice(0, 3).join(" | "));
     await p.context().close();
+  },
+
+  async clockskew(browser) {
+    // The assistant's phone clock is 90 seconds fast. Plays must still merge in the order they happened.
+    const A = await newPage(browser);
+    await go(A, "track"); await A.getByRole("button", { name: "Create an account" }).click();
+    await A.getByLabel("Email").fill("clock@e2e.test"); await A.locator("#auth-pw").fill("secret123"); await A.getByRole("button", { name: "Create account" }).click(); await A.waitForTimeout(500);
+    await A.getByLabel("Team name").fill("Clock High"); await A.getByRole("button", { name: "Create team" }).click(); await A.waitForTimeout(900);
+    await A.locator("input[type=file][accept*=csv]").setInputFiles(path.join(__dirname, "roster.csv")); await A.waitForTimeout(1200);
+    await A.getByRole("button", { name: "Invite a coach" }).click(); await A.waitForTimeout(300);
+    const code = (await A.locator(".hint b").first().innerText()).trim();
+    await go(A, "track"); await A.getByPlaceholder("e.g. Buchanan").fill("Skew Prep"); await A.getByRole("button", { name: "Start · they serve first" }).click(); await A.waitForTimeout(200);
+    await A.locator("button.ctrl", { hasText: "My job" }).click(); await A.getByRole("button", { name: /^Score only/ }).click(); await A.getByRole("button", { name: "Done", exact: true }).click();
+    await A.waitForTimeout(2200);
+    const B = await newPage(browser, { phone: true, skew: 90000 });
+    await go(B, "join/" + code); await B.getByLabel("Email").fill("fast@e2e.test"); await B.locator("#auth-pw").fill("secret123"); await B.getByRole("button", { name: "Create account" }).click(); await B.waitForTimeout(500);
+    await B.getByRole("button", { name: "Join team" }).click(); await B.waitForTimeout(1500);
+    await go(B, "track"); await B.locator("button.ctrl", { hasText: "My job" }).click(); await B.getByRole("button", { name: /^Stats only/ }).click(); await B.getByRole("button", { name: "Done", exact: true }).click();
+    await B.locator(".pl", { hasText: "Nia" }).first().click(); await B.locator(".actsheet button", { hasText: /^3$/ }).click(); await skipIfAsked(B); await B.waitForTimeout(2200);
+    await go(A, "team"); await A.getByRole("button", { name: "Sync now" }).click(); await A.waitForTimeout(900);
+    await go(A, "track"); await A.getByRole("button", { name: "Our point", exact: true }).click(); await A.waitForTimeout(300);
+    await go(A, "stats"); await A.getByRole("button", { name: "Fix plays", exact: true }).click(); await A.waitForTimeout(200);
+    const order = (await A.locator(".log.pe li button.log-edit").allInnerTexts()).map((x) => x.replace(/\s+/g, " "));
+    ok("a fast phone's pass still lands before the point it led to", order.length >= 2 && /Pass 3/.test(order[0]) && /Point/.test(order[1]), order.join(" | "));
+    for (const [n, pg] of [["scorer", A], ["fast phone", B]]) ok(`clock skew: no page errors (${n})`, !pg.errors.length, pg.errors.slice(0, 3).join(" | "));
+    for (const pg of [A, B]) await pg.context().close();
   },
 
   async planning(browser) {

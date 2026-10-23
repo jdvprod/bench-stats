@@ -239,5 +239,9 @@ $$;
 grant execute on function public.recruit_view(text) to anon, authenticated;
 
 -- ---------- schema version: the app's Settings → Setup check compares this with what it expects ----------
-create or replace function public.schema_version() returns int language sql immutable as $$ select 5 $$;
+create or replace function public.schema_version() returns int language sql immutable as $$ select 6 $$;
 grant execute on function public.schema_version() to anon, authenticated;
+
+-- ---------- server clock: devices correct their clocks so plays from several phones merge in order ----------
+create or replace function public.server_time() returns bigint language sql stable as $$ select (extract(epoch from clock_timestamp()) * 1000)::bigint $$;
+grant execute on function public.server_time() to anon, authenticated;
