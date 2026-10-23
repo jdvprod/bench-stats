@@ -404,7 +404,7 @@ function Pad({ m, c, setA, mA, record }: { m: Match; c: SetState; setA: ReturnTy
       if (selSide === "b" && !a.team && cls) cls = cls === "us" ? "them" : "us";
       if (job === "stats") cls = "";
       const on = !!sel || a.team || (!scr && (a.optionalPlayer || (a.serve && srv)));
-      return <button key={k} className={"act " + cls} aria-disabled={!on} onClick={() => record(k)}>{label}</button>;
+      return <button key={k} className={"act " + cls} aria-disabled={!on} onClick={() => record(k)} aria-label={label}>{a.short ? <><span className="lbl-long">{label}</span><span className="lbl-short">{a.short}</span></> : label}</button>;
     })}
     {g === "Serve" && <span className="auto" title="Counted from ace, in and errors">Attempts {srvSrc ? serveAttempts(srvSrc) : 0}<br /><small>{sel ? "this player, match" : "team, this set"}</small></span>}
   </div></div>)}</div>;

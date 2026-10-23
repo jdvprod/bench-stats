@@ -15,12 +15,14 @@ export interface ActionDef {
   optionalPlayer?: boolean;
   /** Serve action: goes to the current server automatically. */
   serve?: boolean;
+  /** Shorter label for narrow phone buttons. */
+  short?: string;
 }
 
 export const ACTIONS = {
   K: { label: "Kill", long: "Kill", point: "us" },
   KT: { label: "Tool", long: "Kill off the block (tool)", point: "us" },
-  TA: { label: "Attempt", long: "Attack attempt" },
+  TA: { label: "Attempt", long: "Attack attempt", short: "Att." },
   AE: { label: "Error", long: "Attack error", point: "them" },
   AB: { label: "Blocked", long: "Attack blocked", point: "them" },
   SATT: { label: "Attempt", long: "Set attempt" },
@@ -32,21 +34,21 @@ export const ACTIONS = {
   P0: { label: "0", long: "Pass 0 (reception error)", point: "them" },
   D: { label: "Dig", long: "Dig" },
   DE: { label: "Dig error", long: "Dig error", point: "them" },
-  FBR: { label: "Free ball to us", long: "Free ball received", team: true },
+  FBR: { label: "Free ball to us", long: "Free ball received", team: true, short: "Free ball" },
   OVP: { label: "Overpass", long: "Overpass", optionalPlayer: true },
-  FBS: { label: "Free ball given", long: "Free ball given", optionalPlayer: true },
+  FBS: { label: "Free ball given", long: "Free ball given", optionalPlayer: true, short: "Gave free" },
   SA: { label: "Ace", long: "Ace", point: "us", serve: true },
   SI: { label: "In", long: "Serve in", serve: true },
-  SEN: { label: "Error · net", long: "Serve error (net)", point: "them", serve: true },
-  SEO: { label: "Error · out", long: "Serve error (out)", point: "them", serve: true },
+  SEN: { label: "Error · net", long: "Serve error (net)", point: "them", serve: true, short: "Net" },
+  SEO: { label: "Error · out", long: "Serve error (out)", point: "them", serve: true, short: "Out" },
   SE: { label: "Error", long: "Serve error", point: "them", serve: true },
-  BS: { label: "Solo block", long: "Solo block", point: "us" },
-  BA: { label: "Block assist", long: "Block assist", point: "us" },
+  BS: { label: "Solo block", long: "Solo block", point: "us", short: "Solo" },
+  BA: { label: "Block assist", long: "Block assist", point: "us", short: "Assist" },
   BE: { label: "Net / error", long: "Block / net error", point: "them" },
-  CE: { label: "Communication", long: "Communication error", point: "them", optionalPlayer: true },
+  CE: { label: "Communication", long: "Communication error", point: "them", optionalPlayer: true, short: "Comms" },
   EE: { label: "Effort", long: "Effort error", point: "them", optionalPlayer: true },
-  PE: { label: "Positioning", long: "Positioning error", point: "them", optionalPlayer: true },
-  REF: { label: "Bad ref call", long: "Bad ref call", point: "them", team: true },
+  PE: { label: "Positioning", long: "Positioning error", point: "them", optionalPlayer: true, short: "Position" },
+  REF: { label: "Bad ref call", long: "Bad ref call", point: "them", team: true, short: "Bad call" },
   OE: { label: "Their error", long: "Opponent error", point: "us", team: true },
   OK: { label: "Their kill", long: "Opponent kill", point: "them", team: true },
   OA: { label: "Their ace", long: "Opponent ace", point: "them", team: true },

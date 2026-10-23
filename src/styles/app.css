@@ -567,3 +567,5 @@ kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--
 .setup-list{list-style:none;margin:0;padding:0;display:grid;gap:10px}.setup-list li{display:grid;grid-template-columns:26px 1fr;gap:10px;align-items:start}
 .sc-dot{width:24px;height:24px;border-radius:12px;display:grid;place-items:center;font-weight:800;font-size:13px;background:var(--surface-2);color:var(--muted)}
 .sc-ok .sc-dot{background:var(--accent);color:var(--accent-ink)}.sc-todo .sc-dot{background:var(--ink);color:var(--surface)}
+.lbl-short{display:none}
+@media (max-width:440px){.act{flex:1 1 0;min-width:0;padding:8px 3px;font-size:13.5px}.lbl-long{display:none}.lbl-short{display:inline}}
