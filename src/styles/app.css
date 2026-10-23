@@ -569,3 +569,9 @@ kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--
 .sc-ok .sc-dot{background:var(--accent);color:var(--accent-ink)}.sc-todo .sc-dot{background:var(--ink);color:var(--surface)}
 .lbl-short{display:none}
 @media (max-width:440px){.act{flex:1 1 0;min-width:0;padding:8px 3px;font-size:13.5px}.lbl-long{display:none}.lbl-short{display:inline}}
+/* long names never push the page sideways */
+.grid2>*,.split>*,.stack>*,.mu-layout>*{min-width:0}
+.pagehead select{max-width:100%}
+.tbl td.l{white-space:normal;overflow-wrap:anywhere;min-width:72px}
+.gc-score .nm,.board .nm{overflow-wrap:anywhere}
+.page>*{min-width:0}.pagehead>*{min-width:0}

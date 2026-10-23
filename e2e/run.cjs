@@ -171,6 +171,19 @@ const scenarios = {
     for (const pg of [A, N]) await pg.context().close();
   },
 
+  async longnames(browser) {
+    const p = await newPage(browser, { phone: true }); await p.setViewportSize({ width: 360, height: 740 });
+    await go(p, "track"); await p.getByRole("button", { name: "Use without an account" }).click();
+    await p.getByLabel("Team name").fill("Clovis North Educational Center Broncos"); await p.getByRole("button", { name: "Create team" }).click(); await p.waitForTimeout(300);
+    await go(p, "team"); await p.getByRole("button", { name: "Paste list" }).click();
+    await p.locator("textarea").first().fill("12 Maximiliana Alexandrovna-Rodriguez OH\n3 Bo Li MB"); await p.getByRole("button", { name: "Add players" }).click();
+    await go(p, "track"); await p.getByPlaceholder("e.g. Buchanan").fill("Saint Bartholomew Preparatory Academy of the Valley"); await p.getByRole("button", { name: "Start · we serve first" }).click(); await p.waitForTimeout(200);
+    await p.locator(".pl", { hasText: "Maximiliana" }).first().click(); await p.locator(".actsheet button", { hasText: /^Kill$/ }).click(); await skipIfAsked(p);
+    for (const r of ["track", "lineup", "matchup", "practice", "stats", "court", "team", "live", "settings"]) { await go(p, r); ok(`long names: ${r} fits a small phone`, (await overflow(p)) <= 1, `${await overflow(p)}px`); }
+    ok("long names: no page errors", !p.errors.length, p.errors.slice(0, 3).join(" | "));
+    await p.context().close();
+  },
+
   async planning(browser) {
     const p = await newPage(browser);
     await go(p, "sample"); await p.waitForTimeout(800);

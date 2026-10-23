@@ -33,7 +33,7 @@ export function MatchupPage({ id }: { id?: string }) {
   const pick = (oid: string) => go("matchup", oid);
   return <div className="page">
     <div className="pagehead"><h1>Matchups</h1>
-      {opps.length > 0 && <select className="input" style={{ width: "auto", minWidth: 200 }} value={o?.id || ""} onChange={(e) => pick(e.target.value)} aria-label="Opponent">
+      {opps.length > 0 && <select className="input" style={{ width: "auto", minWidth: 0, maxWidth: "100%" }} value={o?.id || ""} onChange={(e) => pick(e.target.value)} aria-label="Opponent">
         {opps.map((x) => <option key={x.id} value={x.id}>{x.name}</option>)}
       </select>}
     </div>
