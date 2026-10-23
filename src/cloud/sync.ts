@@ -11,7 +11,7 @@ import { CloudError, cloudAvailable, currentUser, rest, rpc, upsert } from "./cl
 const KEY = "bs-sync";
 const SYNCED: StoreName[] = ["teams", "seasons", "players", "matches", "logs", "opponents", "drills", "plans", "boards"];
 interface Dirty { store: StoreName; id: string; team: string; deleted: boolean; u: number }
-interface SyncState { teams: string[]; since: Record<string, string>; dirty: Record<string, Dirty> }
+interface SyncState { teams: string[]; since: Record<string, string>; dirty: Record<string, Dirty>; roles?: Record<string, string>; rolesFor?: string }
 
 const load = (): SyncState => { try { return { teams: [], since: {}, dirty: {}, ...JSON.parse(localStorage.getItem(KEY) || "{}") }; } catch { return { teams: [], since: {}, dirty: {} }; } };
 const S: SyncState = load();
@@ -22,6 +22,8 @@ const setStatus = (p: Partial<typeof status>) => { Object.assign(status, p); emi
 
 export const isLinked = (teamId: string | null | undefined) => !!teamId && S.teams.includes(teamId);
 export const pendingCount = () => Object.keys(S.dirty).length;
+/** Your role on a synced team ("owner", "coach" or "viewer"), once known. */
+export const roleOn = (teamId: string | null | undefined) => (teamId && S.roles?.[teamId]) || null;
 
 /** Which team a record belongs to. */
 export function teamOf(store: StoreName, v: any): string | null {
@@ -42,17 +44,37 @@ function schedulePush(ms = 1500) { if (pushTimer) clearTimeout(pushTimer); pushT
 
 /* ---------- push / pull ---------- */
 async function push() {
-  const items = Object.values(S.dirty);
-  for (let i = 0; i < items.length; i += 200) {
-    const chunk = items.slice(i, i + 200);
-    const rows = chunk.map((d) => {
-      const cur: any = d.deleted ? null : get(d.store, d.id);
-      return { store: d.store, id: d.id, team_id: d.team, data: cur, u: cur?._u || d.u, deleted: d.deleted || !cur };
-    });
-    await upsert("records", rows, "store,id");
-    for (const d of chunk) { const k = d.store + "|" + d.id; if (S.dirty[k] && S.dirty[k].u <= d.u) delete S.dirty[k]; }
-    persist();
+  const byTeam = new Map<string, Dirty[]>();
+  for (const d of Object.values(S.dirty)) { const l = byTeam.get(d.team) || []; l.push(d); byTeam.set(d.team, l); }
+  let blocked = 0;
+  for (const [team, items] of byTeam) {
+    for (let i = 0; i < items.length; i += 200) {
+      const chunk = items.slice(i, i + 200);
+      const rows = chunk.map((d) => {
+        const cur: any = d.deleted ? null : get(d.store, d.id);
+        return { store: d.store, id: d.id, team_id: d.team, data: cur, u: cur?._u || d.u, deleted: d.deleted || !cur };
+      });
+      try { await upsert("records", rows, "store,id"); }
+      catch (e) {
+        // View-only (or removed from the team): the server will never accept these, so stop retrying them
+        // instead of blocking every other change behind them.
+        if (e instanceof CloudError && e.status === 403) { for (const d of chunk) delete S.dirty[d.store + "|" + d.id]; blocked += chunk.length; persist(); break; }
+        throw e;
+      }
+      for (const d of chunk) { const k = d.store + "|" + d.id; if (S.dirty[k] && S.dirty[k].u <= d.u) delete S.dirty[k]; }
+      persist();
+    }
+    void team;
   }
+  return blocked;
+}
+
+async function loadRoles() {
+  const me = currentUser(); if (!me) return;
+  if (S.rolesFor !== me.id) { S.roles = {}; S.rolesFor = me.id; }
+  const missing = S.teams.filter((t) => !S.roles?.[t]); if (!missing.length) return;
+  const rows: any[] = await rest(`members?select=team_id,role&user_id=eq.${me.id}`);
+  S.roles = { ...(S.roles || {}) }; for (const r of rows) S.roles[r.team_id] = r.role; persist();
 }
 
 export function applyRemote(r: { store: StoreName; id: string; data: any; u: number; deleted: boolean }) {
@@ -90,11 +112,12 @@ export function syncNow(): Promise<void> {
   running ||= (async () => {
     setStatus({ state: "syncing", error: "" });
     try {
-      await push();
+      await loadRoles().catch(() => {});
+      const blocked = await push();
       let changed = false;
       for (const t of S.teams) changed = (await pull(t)) || changed;
       if (changed) { if (!state.prefs.teamId || !get("teams", state.prefs.teamId)) state.prefs.teamId = S.teams.find((t) => get("teams", t)) || state.prefs.teamId; }
-      setStatus({ state: "idle", last: Date.now() });
+      setStatus(blocked ? { state: "error", error: "You have view-only access to this team, so changes made on this device stay here." } : { state: "idle", last: Date.now() });
     } catch (e) {
       setStatus({ state: "error", error: e instanceof CloudError ? e.message : "Sync failed. It will try again." });
     } finally { running = null; }

@@ -3,7 +3,7 @@ import { useEffect, useState } from "react";
 import { team, toast } from "../data/store";
 import { Card, ConfirmButton, copyText } from "../ui/kit";
 import { cloudAvailable, CloudError, currentUser, sendPasswordReset, signIn, signOut, signUp } from "./client";
-import { createInvite, isLinked, joinWithCode, linkTeam, members, pendingCount, removeMember, shareLive, shareSeason, status, syncNow, unlinkTeam } from "./sync";
+import { createInvite, isLinked, joinWithCode, linkTeam, members, pendingCount, removeMember, roleOn, shareLive, shareSeason, status, syncNow, unlinkTeam } from "./sync";
 import { go } from "../app/router";
 import { QrButton } from "../ui/QrButton";
 
@@ -57,6 +57,7 @@ export function CloudCard() {
         </> : <>
           <p className="small"><span className="tag good" style={{ marginLeft: 0 }}>Synced</span> {status.state === "syncing" ? "Syncing…" : status.state === "error" ? <span style={{ color: "var(--bad)" }}>{status.error}</span> : status.last ? `Up to date · ${new Date(status.last).toLocaleTimeString([], { hour: "numeric", minute: "2-digit" })}` : "Waiting to sync"}{pendingCount() ? ` · ${pendingCount()} changes waiting` : ""}</p>
           <div className="row"><button className="btn sm" disabled={status.state === "syncing"} onClick={() => syncNow()}>Sync now</button></div>
+          {roleOn(t.id) === "viewer" && <p className="hint">You have view-only access to this team: you see everything the coaches record, and changes made on this device stay here.</p>}
           <div className="label">Coaches and viewers</div>
           {mem ? <ul className="log">{mem.map((m) => <li key={m.user_id} style={{ gridTemplateColumns: "1fr auto auto" }}><span>{m.email || "Coach"}{m.user_id === user.id ? " (you)" : ""}</span><span className="tag" style={{ marginLeft: 0 }}>{m.role}</span>
             {m.user_id !== user.id && m.role !== "owner" ? <ConfirmButton className="btn sm ghost" confirmText="Remove?" onConfirm={() => act(async () => { await removeMember(t.id, m.user_id); setMem(await members(t.id)); })}>✕</ConfirmButton> : <span />}</li>)}</ul> : <p className="small muted">Loading…</p>}

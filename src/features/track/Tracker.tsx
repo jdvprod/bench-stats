@@ -1,5 +1,6 @@
 /** Live stat tracking for a match, drill session or scrimmage. */
 import { useCallback, useState } from "react";
+import { roleOn } from "../../cloud/sync";
 import { setTeamPatch, setPrefs, state, stampLog, logsOf, DEVICE, activePlayers, appendEvents, deleteEvent, eventsOf, isMine, patch, patchEvent, player, playerName, replayOf, save, team, toast, undoLast } from "../../data/store";
 import { Match } from "../../data/model";
 import { ACTIONS, ActionCode, GROUPS, LOCATION_HALF, OPP_NUMBER } from "../../sports/volleyball/actions";
@@ -111,6 +112,7 @@ export function Tracker({ m }: { m: Match }) {
       <Banners m={m} R={R} />
       <ControlBar m={m} c={c} names={names} />
       <CrewWarning m={m} />
+      {roleOn(t.id) === "viewer" && <div className="banner warn"><p><b>View-only.</b> You can follow along, but what you record on this device isn't shared with the team. Ask a coach for a coach invite to track.</p></div>}
       <QuickEntry m={m} record={record} />
       <div className={focus ? "stack" : "split"}>
         <div className="stack">

@@ -282,8 +282,21 @@ const scenarios = {
     ok("ask your stats answers", (await A.locator(".ask-turn").count()) === 1);
     await go(A, "settings"); await A.getByRole("button", { name: "Run check" }).click(); await A.waitForTimeout(1000);
     ok("setup check: everything but install is ✓", (await A.locator(".setup-list li.sc-ok").count()) === 5, await A.locator(".setup-list").innerText());
-    for (const [n, pg] of [["head coach", A], ["assistant", B], ["parent", P]]) ok(`cloud: no page errors (${n})`, !pg.errors.length, pg.errors.slice(0, 3).join(" | "));
-    for (const pg of [A, B, P]) await pg.context().close();
+    // a view-only parent account can follow along but can't change the team's data
+    await go(A, "team"); await A.getByRole("button", { name: "Invite view-only" }).click(); await A.waitForTimeout(300);
+    const vcode = (await A.locator(".hint b").first().innerText()).trim();
+    const V = await newPage(browser, { phone: true });
+    await go(V, "join/" + vcode); await V.getByLabel("Email").fill("parent@e2e.test"); await V.locator("#auth-pw").fill("secret123"); await V.getByRole("button", { name: "Create account" }).click(); await V.waitForTimeout(500);
+    await V.getByRole("button", { name: "Join team" }).click(); await V.waitForTimeout(1500);
+    await go(V, "team"); await V.getByRole("button", { name: "Sync now" }).click(); await V.waitForTimeout(800);
+    await go(V, "track"); ok("viewer sees the view-only note", (await V.locator(".banner", { hasText: "View-only." }).count()) === 1);
+    await V.locator(".pl", { hasText: "Maya" }).first().click(); await V.locator(".actsheet button", { hasText: /^Kill$/ }).click(); await skipIfAsked(V); await V.waitForTimeout(2500);
+    await go(V, "team"); await V.getByRole("button", { name: "Sync now" }).click(); await V.waitForTimeout(800);
+    ok("viewer's sync says it's view-only instead of failing forever", (await V.getByText("view-only access").count()) > 0);
+    await go(A, "team"); await A.getByRole("button", { name: "Sync now" }).click(); await A.waitForTimeout(800); await go(A, "track");
+    ok("viewer's entry never reaches the team", /CLOUD CLUB 1/.test(await score(A)), await score(A));
+    for (const [n, pg] of [["head coach", A], ["assistant", B], ["parent", P], ["viewer", V]]) ok(`cloud: no page errors (${n})`, !pg.errors.length, pg.errors.slice(0, 3).join(" | "));
+    for (const pg of [A, B, P, V]) await pg.context().close();
   },
 };
 
