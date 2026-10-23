@@ -141,8 +141,8 @@ function Players({ A }: { A: Agg }) {
     {mode === "compare" ? <Compare A={A} ids={ids} /> : <>
     <div className="tbl"><table>
       {mode === "totals" && <><thead>
-        <tr><th /><th /><th colSpan={4} className="gh">Hitting</th><th colSpan={3} className="gh">Setting</th><th colSpan={5} className="gh">Serve</th><th colSpan={3} className="gh">Receive</th><th colSpan={2} className="gh">Defense</th><th colSpan={3} className="gh">Block</th><th colSpan={3} className="gh">Misc errors</th></tr>
-        <tr><th className="l">#</th><th className="l">Player</th>{["K", "TA", "E", "Hit %", "Att", "Ast", "E", "Att", "Ace", "In", "Net", "Out", "Avg", "Rec", "0s", "Dig", "Dig E", "Solo", "Ast", "E", "Comm", "Eff", "Pos"].map((l, i) => S.th(l, "t" + i))}</tr></thead>
+        <tr><th /><th /><th colSpan={6} className="gh">Hitting</th><th colSpan={3} className="gh">Setting</th><th colSpan={5} className="gh">Serve</th><th colSpan={3} className="gh">Receive</th><th colSpan={2} className="gh">Defense</th><th colSpan={3} className="gh">Block</th><th colSpan={3} className="gh">Misc errors</th></tr>
+        <tr><th className="l">#</th><th className="l">Player</th>{["K", "TA", "E", "Hit %", "Tool", "Blk'd", "Att", "Ast", "E", "Att", "Ace", "In", "Net", "Out", "Avg", "Rec", "0s", "Dig", "Dig E", "Solo", "Ast", "E", "Comm", "Eff", "Pos"].map((l, i) => S.th(l, "t" + i))}</tr></thead>
         <tbody>{ids.map((id) => { const s = A.ps[id] || ({} as Stat), c = cls(s), p = player(id)!; return <tr key={id} className="click" onClick={() => go("player", id)}><td className="l">{p.num}</td><td className="l">{p.first} {p.last} <span className="label">{p.pos}</span></td>{totals(s, c.hc, c.pc)}</tr>; })}</tbody>
         <tfoot><tr><td /><td className="l">Team</td>{totals(A.T, "", "")}</tr></tfoot></>}
       {mode === "perset" && <><thead><tr><th className="l">#</th><th className="l">Player</th>{S.th("Sets", "sets")}{S.th("Kills/S", "kps")}{S.th("Aces/S", "aps2")}{S.th("Blocks/S", "bps")}{S.th("Digs/S", "dps")}{S.th("Assists/S", "asps")}{S.th("Rec/S", "rps")}{S.th("Errors/S", "eps")}{S.th("Net pts/S", "nps")}</tr></thead>
@@ -153,7 +153,7 @@ function Players({ A }: { A: Agg }) {
     <p className="keys" style={{ marginTop: 8 }}>{mode === "totals" ? "Hit % = (kills − errors) ÷ attempts. Pass on a 0–3 scale. Green and red mark standouts once there are enough attempts. Tap a column to sort, or a player for their page." : mode === "perset" ? "Per set uses the sets each player recorded a stat or was on court in. Net points = kills, aces and blocks minus errors." : "+/− counts rallies won minus lost while that player was on court (needs a lineup). Serve eff = (aces − errors) ÷ serves. Ace : error above 1.0 is strong."}</p></>}
   </Card>;
 }
-const TOTAL_GET: ((s: Stat) => number | null)[] = [(s) => s.K, (s) => s.TA, (s) => s.AE, (s) => hitting(s), (s) => s.SATT, (s) => s.AST, (s) => s.BHE, (s) => serveAttempts(s), (s) => s.SA, (s) => s.SI, (s) => s.SEN, (s) => s.SEO + s.SE, (s) => passAvg(s), (s) => s.R, (s) => s.P0, (s) => s.D, (s) => s.DE, (s) => s.BS, (s) => s.BA, (s) => s.BE, (s) => s.CE, (s) => s.EE, (s) => s.PE];
+const TOTAL_GET: ((s: Stat) => number | null)[] = [(s) => s.K, (s) => s.TA, (s) => s.AE, (s) => hitting(s), (s) => s.KT, (s) => s.AB, (s) => s.SATT, (s) => s.AST, (s) => s.BHE, (s) => serveAttempts(s), (s) => s.SA, (s) => s.SI, (s) => s.SEN, (s) => s.SEO + s.SE, (s) => passAvg(s), (s) => s.R, (s) => s.P0, (s) => s.D, (s) => s.DE, (s) => s.BS, (s) => s.BA, (s) => s.BE, (s) => s.CE, (s) => s.EE, (s) => s.PE];
 /** Click-to-sort for stat tables: first click sorts high to low, second low to high, third clears. */
 function useSort() {
   const [k, setK] = useState<string | null>(null), [d, setD] = useState(-1);
@@ -163,7 +163,7 @@ function useSort() {
 }
 
 function totals(s: Stat, hc: string, pc: string) {
-  const v = [s.K, s.TA, s.AE, <b className={hc}>{fmtHit(hitting(s))}</b>, s.SATT, s.AST, s.BHE, serveAttempts(s), s.SA, s.SI, s.SEN, s.SEO + s.SE, <b className={pc}>{fmtAvg(passAvg(s))}</b>, s.R, s.P0, s.D, s.DE, s.BS, s.BA, s.BE, s.CE, s.EE, s.PE];
+  const v = [s.K, s.TA, s.AE, <b className={hc}>{fmtHit(hitting(s))}</b>, s.KT, s.AB, s.SATT, s.AST, s.BHE, serveAttempts(s), s.SA, s.SI, s.SEN, s.SEO + s.SE, <b className={pc}>{fmtAvg(passAvg(s))}</b>, s.R, s.P0, s.D, s.DE, s.BS, s.BA, s.BE, s.CE, s.EE, s.PE];
   return v.map((x, i) => <td key={i}>{x ?? 0}</td>);
 }
 

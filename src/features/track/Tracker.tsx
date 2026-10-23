@@ -99,6 +99,8 @@ export function Tracker({ m }: { m: Match }) {
     const askOpp = !scr && t.settings.askOpp && !!OPP_NUMBER[code];
     if (half || askOpp) setUi({ follow: { id: e.id, half, askOpp, label: (p ? playerName(p) + " · " : "") + a.long } });
     else { setUi({ follow: null }); toast((p ? playerName(p) + " · " : "") + a.long, { label: "Undo", fn: () => { const u = undoLast(m.id); if (u) toast("Undid " + describe(u as any)); } }); }
+    // Clear the selected player after their play so the next tap can't land on the wrong person.
+    if (p && ui.sel === p) setUi({ sel: null });
     return true;
   };
   recRef.current = (k) => { const ok = record(k); if (ok && ui.sel && !(ACTIONS[k] as any).team) setUi({ sel: null }); return ok; };
@@ -502,7 +504,7 @@ function OppPicker({ m, value, onPick }: { m: Match; value?: string; onPick: (n:
 export { isMine };
 
 /* ---------- phone: action sheet for the selected player ---------- */
-const SHEET_GROUPS: [string, ActionCode[]][] = [["Attack", ["K", "TA", "AE"]], ["Pass", ["P3", "P2", "P1", "P0"]], ["Serve", ["SA", "SI", "SEN", "SEO"]], ["Defense", ["D", "DE"]], ["Set", ["AST", "SATT", "BHE"]], ["Block", ["BS", "BA", "BE"]], ["Errors", ["CE", "EE", "PE"]]];
+const SHEET_GROUPS: [string, ActionCode[]][] = [["Attack", ["K", "KT", "TA", "AE", "AB"]], ["Pass", ["P3", "P2", "P1", "P0"]], ["Serve", ["SA", "SI", "SEN", "SEO"]], ["Defense", ["D", "DE"]], ["Set", ["AST", "SATT", "BHE"]], ["Block", ["BS", "BA", "BE"]], ["Errors", ["CE", "EE", "PE"]]];
 function ActionSheet({ m, c, record }: { m: Match; c: SetState; record: (k: ActionCode) => boolean | void }) {
   const sel = ui.sel; if (!sel || !player(sel)) return null;
   const p = player(sel)!, scr = m.scrim, flip = !!(scr && scr.b.ids.includes(sel));
@@ -520,7 +522,7 @@ function ActionSheet({ m, c, record }: { m: Match; c: SetState; record: (k: Acti
     <div className="as-head"><b>#{p.num} {p.first}</b><span className="small muted">{p.pos}{serverOf(c) === sel ? " · serving" : ""}</span><button className="btn sm ghost" onClick={() => setUi({ sel: null })}>Close</button></div>
     <div className="as-grid">{groups.map(([g, ks]) => <div className="as-row" key={g}><span className="as-l">{g}</span><div className="as-b">{ks.map((k) => {
       const a: any = ACTIONS[k]; let cls = job === "stats" ? "" : a.point || ""; if (flip && cls) cls = cls === "us" ? "them" : "us";
-      const label = ({ CE: "Comms", PE: "Position" } as Record<string, string>)[k] || a.label.replace(/^Error · /, "Err ");
+      const label = ({ CE: "Comms", PE: "Position", TA: "Att." } as Record<string, string>)[k] || a.label.replace(/^Error · /, "Err ");
       return <button key={k} className={"act " + cls} onClick={() => tap(k)}>{label}</button>;
     })}</div></div>)}</div>
   </div>;

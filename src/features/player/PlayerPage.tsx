@@ -198,7 +198,7 @@ function PlayerCourt({ id, A }: { id: string; A: Agg }) {
   return <div className="grid2" style={{ alignItems: "start" }}>
     {T.total > 0 && <Card title="Where attacks land">
       <CourtSvg half="them" counts={{ half: "them", byZone, total: T.total, heat: true }} label="Attack chart"
-        dots={T.points.filter((l) => l.x != null).map((l) => ({ x: l.x, y: l.y, color: l.t === "K" ? "var(--us)" : "var(--muted)", r: 0.24, opacity: 0.85 }))} labels={{ top: "Opponent" }} />
+        dots={T.points.filter((l) => l.x != null).map((l) => ({ x: l.x, y: l.y, color: l.t === "K" || l.t === "KT" ? "var(--us)" : "var(--muted)", r: 0.24, opacity: 0.85 }))} labels={{ top: "Opponent" }} />
       <div className="keys"><span><span className="sw" style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: "var(--us)", marginRight: 4 }} />Kill</span><span><span className="sw" style={{ display: "inline-block", width: 10, height: 10, borderRadius: 5, background: "var(--muted)", marginRight: 4 }} />Kept in play</span>{top && <span>· Most often zone {top[0]} ({Math.round((100 * top[1].total) / T.total)}%)</span>}</div>
     </Card>}
     {rots.length > 0 && <Card title="By rotation">

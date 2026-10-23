@@ -183,3 +183,12 @@ test("schedule paste: common formats", () => {
   assert.deepEqual([g[4].date, g[4].opp, g[4].time], ["2026-10-02", "Bullard", "19:00"]);
   assert.equal(parseSchedule("1/10 vs Hoover", new Date(2026, 9, 22))[0].date, "2027-01-10", "a January date in October is next year");
 });
+
+test("tool counts as a kill, blocked counts as an attack error", () => {
+  const R = replay([ev("NS", { serve: "us", lu: LU }), ev("KT", { p: "oh1" }), ev("AB", { p: "oh1" })]);
+  const s = R.cur!.ps.oh1;
+  assert.equal(R.cur!.us, 1); assert.equal(R.cur!.them, 1);
+  assert.deepEqual([s.K, s.KT, s.AE, s.AB, s.TA], [1, 1, 1, 1, 2]);
+  assert.equal(hitting(s), 0);
+  assert.equal(R.log.find((l) => l.kind === "stat")!.kind === "stat" && (R.log.find((l) => l.kind === "stat") as any).t, "KT", "the log keeps the detail");
+});

@@ -3,7 +3,7 @@ import { useEffect, useRef } from "react";
 import { ActionCode } from "../../sports/volleyball/actions";
 
 export const KEYMAP: [string, ActionCode, string][] = [
-  ["k", "K", "Kill"], ["t", "TA", "Attack attempt"], ["e", "AE", "Attack error"],
+  ["k", "K", "Kill"], ["w", "KT", "Kill off the block (tool)"], ["t", "TA", "Attack attempt"], ["e", "AE", "Attack error"], ["r", "AB", "Attack blocked"],
   ["s", "SA", "Ace"], ["i", "SI", "Serve in"], ["n", "SEN", "Serve error, net"], ["o", "SEO", "Serve error, out"],
   ["d", "D", "Dig"], ["x", "DE", "Dig error"],
   ["h", "AST", "Assist"], ["g", "SATT", "Set attempt"], ["l", "BHE", "Setting error"],

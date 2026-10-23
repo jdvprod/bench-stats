@@ -8,7 +8,7 @@ import { Card, copyText, download } from "../../ui/kit";
 
 type Filter = "points" | "kills" | "errors" | "serve" | "pass" | "defense" | "theirs" | "tags" | "all";
 const FILTERS: [Filter, string][] = [["points", "Every point"], ["kills", "Kills"], ["errors", "Our errors"], ["serve", "Serves"], ["pass", "Passes"], ["defense", "Digs & blocks"], ["theirs", "Their points"], ["tags", "Film tags"], ["all", "Everything"]];
-const OUR_ERR = new Set(["AE", "SEN", "SEO", "SE", "BE", "BHE", "P0", "DE", "CE", "EE", "PE"]);
+const OUR_ERR = new Set(["AE", "AB", "SEN", "SEO", "SE", "BE", "BHE", "P0", "DE", "CE", "EE", "PE"]);
 const match = (f: Filter, l: LogEntry): boolean => {
   if (l.kind === "tag") return f === "tags" || f === "all";
   if (l.kind === "set") return f === "points" || f === "all";
@@ -16,7 +16,7 @@ const match = (f: Filter, l: LogEntry): boolean => {
   const t = l.t;
   switch (f) {
     case "points": return !!l.w;
-    case "kills": return t === "K";
+    case "kills": return t === "K" || t === "KT";
     case "errors": return OUR_ERR.has(t);
     case "serve": return ["SA", "SI", "SEN", "SEO", "SE"].includes(t);
     case "pass": return ["P3", "P2", "P1", "P0"].includes(t);

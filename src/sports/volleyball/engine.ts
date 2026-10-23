@@ -37,7 +37,7 @@ export function mergeLogs(logs: MatchEvent[][]): MatchEvent[] {
 
 /* ---------- stat lines ---------- */
 
-export const STAT_KEYS = ["K", "AE", "TA", "SATT", "AST", "BHE", "SA", "SE", "SEN", "SEO", "SI", "R", "RS", "R3", "R2", "R1", "P0", "D", "DE", "BS", "BA", "BE", "CE", "EE", "PE", "OVP", "FBS"] as const;
+export const STAT_KEYS = ["K", "KT", "AE", "AB", "TA", "SATT", "AST", "BHE", "SA", "SE", "SEN", "SEO", "SI", "R", "RS", "R3", "R2", "R1", "P0", "D", "DE", "BS", "BA", "BE", "CE", "EE", "PE", "OVP", "FBS"] as const;
 export type StatKey = (typeof STAT_KEYS)[number];
 export type Stat = Record<StatKey, number>;
 export const blank = (): Stat => Object.fromEntries(STAT_KEYS.map((k) => [k, 0])) as Stat;
@@ -49,7 +49,9 @@ const teamBlank = (): TeamStat => Object.fromEntries(TEAM_KEYS.map((k) => [k, 0]
 
 export function bump(st: Stat, t: ActionCode) {
   if (t === "K") { st.K++; st.TA++; }
+  else if (t === "KT") { st.K++; st.KT++; st.TA++; } // a tool is a kill
   else if (t === "AE") { st.AE++; st.TA++; }
+  else if (t === "AB") { st.AE++; st.AB++; st.TA++; } // blocked counts as an attack error
   else if (t === "TA") st.TA++;
   else if (t === "P3" || t === "P2" || t === "P1" || t === "P0") {
     st.R++; st.RS += +t[1];
@@ -202,10 +204,11 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
         log.push({ id: e.id, set: cur.n, kind: "tag", note: e.note || "", p: e.p }); continue;
     }
     if (!isAction(e.t)) continue;
-    const ev = e as StatEvent, t = ev.t, a: any = ACTIONS[t];
+    // Tools count as kills and blocked attacks as attack errors everywhere below; the detail stays on the player's line and in the log.
+    const ev = e as StatEvent, raw = ev.t, t: ActionCode = raw === "KT" ? "K" : raw === "AB" ? "AE" : raw, a: any = ACTIONS[raw];
 
     if (ev.p) {
-      bump(cur.ps[ev.p] || (cur.ps[ev.p] = blank()), t);
+      bump(cur.ps[ev.p] || (cur.ps[ev.p] = blank()), raw);
       if (scr) { const sd = ev.s === "b" ? "b" : "a"; bump(cur.side[sd], t); cur.pside[ev.p] = sd; }
     } else if (t in cur.team) (cur.team as any)[t]++;
 
@@ -252,7 +255,7 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
       else if (wn === "them" && cur.serve === "us") { cur.serve = "them"; cur.rotB = (cur.rotB % 6) + 1; }
       startRally();
     }
-    log.push({ id: e.id, set: cur.n, kind: "stat", t, p: ev.p, op: ev.op, w: wn, us: cur.us, them: cur.them });
+    log.push({ id: e.id, set: cur.n, kind: "stat", t: raw, p: ev.p, op: ev.op, w: wn, us: cur.us, them: cur.them });
   }
 
   let wonUs = 0, wonThem = 0;

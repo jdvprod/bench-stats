@@ -6,7 +6,7 @@
 import { ActionCode } from "./actions";
 
 export const CODE_MAP: Record<string, ActionCode> = {
-  k: "K", kill: "K", a: "TA", att: "TA", ta: "TA", e: "AE", ae: "AE", err: "AE",
+  k: "K", kill: "K", tool: "KT", kt: "KT", w: "KT", blocked: "AB", ab: "AB", r: "AB", roof: "AB", a: "TA", att: "TA", ta: "TA", e: "AE", ae: "AE", err: "AE",
   set: "SATT", st: "SATT", ast: "AST", as: "AST", bh: "BHE", bhe: "BHE", ste: "BHE",
   ace: "SA", sa: "SA", in: "SI", si: "SI", sn: "SEN", sen: "SEN", so: "SEO", seo: "SEO", se: "SE",
   p3: "P3", p2: "P2", p1: "P1", p0: "P0", r3: "P3", r2: "P2", r1: "P1", r0: "P0",

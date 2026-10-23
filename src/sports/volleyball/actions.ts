@@ -19,8 +19,10 @@ export interface ActionDef {
 
 export const ACTIONS = {
   K: { label: "Kill", long: "Kill", point: "us" },
+  KT: { label: "Tool", long: "Kill off the block (tool)", point: "us" },
   TA: { label: "Attempt", long: "Attack attempt" },
   AE: { label: "Error", long: "Attack error", point: "them" },
+  AB: { label: "Blocked", long: "Attack blocked", point: "them" },
   SATT: { label: "Attempt", long: "Set attempt" },
   AST: { label: "Assist", long: "Set assist" },
   BHE: { label: "Error", long: "Setting error", point: "them" },
@@ -59,7 +61,7 @@ export const action = (t: ActionCode): ActionDef => ACTIONS[t];
 
 /** Button groups on the tracking pad, in the order coaches asked for. */
 export const GROUPS: [string, ActionCode[]][] = [
-  ["Hitting", ["K", "TA", "AE"]],
+  ["Hitting", ["K", "KT", "TA", "AE", "AB"]],
   ["Setting", ["SATT", "AST", "BHE"]],
   ["Serve receive", ["P3", "P2", "P1", "P0"]],
   ["Defense", ["D", "DE"]],
@@ -72,7 +74,7 @@ export const GROUPS: [string, ActionCode[]][] = [
 
 /** Which half of the court to show when asking where the ball landed. "them" = their side. */
 export const LOCATION_HALF: Partial<Record<ActionCode, Side>> = {
-  K: "them", TA: "them", SA: "them", SI: "them", OK: "us", OA: "us", P3: "us", P2: "us", P1: "us", P0: "us", D: "us",
+  K: "them", KT: "them", TA: "them", SA: "them", SI: "them", OK: "us", OA: "us", P3: "us", P2: "us", P1: "us", P0: "us", D: "us",
 };
 
 /** Opponent actions that can carry their jersey number. */
