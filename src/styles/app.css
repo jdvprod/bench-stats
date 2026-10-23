@@ -572,6 +572,6 @@ kbd{display:inline-block;min-width:22px;text-align:center;font:600 12px/1 var(--
 /* long names never push the page sideways */
 .grid2>*,.split>*,.stack>*,.mu-layout>*{min-width:0}
 .pagehead select{max-width:100%}
-.tbl td.l{white-space:normal;overflow-wrap:anywhere;min-width:72px}
+.tbl td.l{white-space:normal;overflow-wrap:break-word;min-width:72px}
 .gc-score .nm,.board .nm{overflow-wrap:anywhere}
 .page>*{min-width:0}.pagehead>*{min-width:0}
