@@ -11,7 +11,7 @@ export const FORMAT = 'Format: section titles on their own line ending with a co
 const pct = (w: number, n: number) => fmtPct(ratio(w, n));
 
 export function statLine(s: Stat) {
-  return `${s.K}K ${s.AE}E ${s.TA}TA (hit ${fmtHit(hitting(s))}); ${s.AST} assists, ${s.BHE} setting errors; serve ${s.SA} aces, ${s.SEN} net, ${s.SEO + s.SE} out of ${serveAttempts(s)}; pass ${fmtAvg(passAvg(s))} on ${s.R} (${s.R3} perfect, ${s.P0} zeros); ${s.D} digs, ${s.DE} dig errors; ${blocks(s)} blocks, ${s.BE} block/net errors; comm/effort/positioning ${s.CE}/${s.EE}/${s.PE}`;
+  return `${s.K}K ${s.AE}E ${s.TA}TA (hit ${fmtHit(hitting(s))}${s.KT ? `, ${s.KT} kills off the block` : ""}${s.AB ? `, blocked ${s.AB} times` : ""}); ${s.AST} assists, ${s.BHE} setting errors; serve ${s.SA} aces, ${s.SEN} net, ${s.SEO + s.SE} out of ${serveAttempts(s)}; pass ${fmtAvg(passAvg(s))} on ${s.R} (${s.R3} perfect, ${s.P0} zeros); ${s.D} digs, ${s.DE} dig errors; ${blocks(s)} blocks, ${s.BE} block/net errors; comm/effort/positioning ${s.CE}/${s.EE}/${s.PE}`;
 }
 export function teamLine(A: Agg) {
   const M = teamMetrics(A), T = A.T;
