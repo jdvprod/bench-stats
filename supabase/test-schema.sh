@@ -17,7 +17,8 @@ SQL
 q -f "$(dirname "$0")/schema.sql" 2>/dev/null; q -f "$(dirname "$0")/schema.sql" 2>/dev/null
 q <<'SQL'
 -- Supabase grants table access to these roles and relies on row level security; do the same here
-grant usage on schema public to anon, authenticated; grant select on all tables in schema public to anon, authenticated;
+grant usage on schema public to anon, authenticated; grant select on all tables in schema public to anon;
+grant select, insert, update, delete on all tables in schema public to authenticated;
 insert into auth.users values ('11111111-1111-1111-1111-111111111111', 'coach@example.com');
 insert into teams_cloud (id, name, owner) values ('t1', 'Test', '11111111-1111-1111-1111-111111111111');
 insert into records (store, id, team_id, data) values
@@ -36,4 +37,21 @@ check "select watch('l1l1l1')->'match'->>'opp';" "Them" "live link returns the m
 check "select recruit_view('r1r1r1')->>'html';" "<p>profile</p>" "recruit link returns the page"
 check "select count(*) from records;" "0" "anon can't read records directly"
 check "select schema_version();" "5" "schema version is reported"
+# row level security as signed-in coaches: A owns a team, B is a stranger until invited as a viewer
+A=aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa; B=bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb
+q -c "insert into auth.users values ('$A', 'a@example.com'), ('$B', 'b@example.com');"
+as() { q -c "set role authenticated; select set_config('request.jwt.claim.sub', '$1', false); $2" 2>&1 | tail -1; }
+expect() { [ "$1" = "$2" ] && echo "ok   $3" || { echo "FAIL $3 (got: $1)"; exit 1; }; }
+as $A "insert into teams_cloud (id, name) values ('t2', 'Mine');" >/dev/null
+expect "$(as $A "select role from members where team_id = 't2';")" "owner" "creating a team makes you its owner"
+as $A "insert into records (store, id, team_id, data, u) values ('players', 'p9', 't2', '{\"first\":\"Ann\"}', 5);" >/dev/null
+expect "$(as $B "select count(*) from records where team_id = 't2';")" "0" "strangers can't read a team's data"
+expect "$(as $B "insert into records (store, id, team_id, data) values ('players', 'x', 't2', '{}');" | grep -c 'row-level security')" "1" "strangers can't write a team's data"
+as $A "insert into invites (code, team_id, role) values ('VIEW01', 't2', 'viewer');" >/dev/null
+expect "$(as $B "select join_team('view01');")" "t2" "an invite code joins the team"
+expect "$(as $B "select count(*) from records where team_id = 't2';")" "1" "members can read"
+as $B "update records set data = '{}' where id = 'p9';" >/dev/null
+expect "$(as $A "select data->>'first' from records where id = 'p9';")" "Ann" "view-only members can't change data"
+as $A "update records set data = '{\"first\":\"Old\"}', u = 3 where id = 'p9';" >/dev/null
+expect "$(as $A "select data->>'first' from records where id = 'p9';")" "Ann" "an older edit never overwrites a newer one"
 echo "schema OK"

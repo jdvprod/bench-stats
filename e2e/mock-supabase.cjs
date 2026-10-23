@@ -11,7 +11,7 @@ const canEdit = (t, u) => members.some((m) => m.team_id === t && m.user_id === u
 function session(u) { const at = "at_" + uid(), rt = "rt_" + uid(); tokens.set(at, u.id); tokens.set(rt, u.id); return { access_token: at, refresh_token: rt, expires_in: 3600, user: { id: u.id, email: u.email } }; }
 function send(res, code, body) { res.writeHead(code, { "content-type": "application/json", "access-control-allow-origin": "*", "access-control-allow-headers": "*", "access-control-allow-methods": "*" }); res.end(body === undefined ? "" : JSON.stringify(body)); }
 function q(url) { const out = {}; for (const [k, v] of url.searchParams) out[k] = v; return out; }
-const val = (s) => s.replace(/^(eq|gt|in)\./, "");
+const val = (s) => s.replace(/^(eq|gte|gt|in)\./, "");
 
 module.exports = (port) => new Promise((ok) => { const srv = http.createServer((req, res) => {
   if (req.method === "OPTIONS") return send(res, 204);
@@ -54,8 +54,8 @@ module.exports = (port) => new Promise((ok) => { const srv = http.createServer((
       return send(res, 201);
     }
     if (p === "/rest/v1/records" && req.method === "GET") {
-      const t = val(P.team_id), since = val(P.updated_at); if (!isMember(t, me)) return send(res, 200, []);
-      const rows = [...records.values()].filter((r) => r.team_id === t && r.updated_at > since).sort((a, b) => (a.updated_at < b.updated_at ? -1 : 1)).slice(0, +P.limit || 500);
+      const t = val(P.team_id), since = val(P.updated_at), inclusive = P.updated_at.startsWith("gte."); if (!isMember(t, me)) return send(res, 200, []);
+      const rows = [...records.values()].filter((r) => r.team_id === t && (inclusive ? r.updated_at >= since : r.updated_at > since)).sort((a, b) => (a.updated_at < b.updated_at ? -1 : 1)).slice(0, +P.limit || 500);
       return send(res, 200, rows);
     }
     if (p === "/rest/v1/invites" && req.method === "POST") { if (!canEdit(b.team_id, me)) return send(res, 403, { message: "rls" }); invites.set(b.code, b); return send(res, 201); }

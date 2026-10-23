@@ -60,7 +60,7 @@ export function applyRemote(r: { store: StoreName; id: string; data: any; u: num
   const local: any = get(r.store, r.id);
   const pending = S.dirty[r.store + "|" + r.id];
   if (pending && pending.u > r.u) return false;           // our unsent edit is newer
-  if (local && (local._u || 0) > r.u) return false;         // already have something newer
+  if (local && (local._u || 0) >= r.u) return false;        // already have this version or a newer one
   if (r.deleted) { if (local) { remove(r.store, r.id, true, true); return true; } return false; }
   if (!r.data) return false;
   save(r.store, { ...r.data, _u: r.u }, true, true);
@@ -69,12 +69,15 @@ export function applyRemote(r: { store: StoreName; id: string; data: any; u: num
 
 async function pull(teamId: string) {
   let since = S.since[teamId] || "1970-01-01T00:00:00Z", changed = false;
+  // Look back a little: a slow write can commit with a timestamp just before rows we already pulled.
+  // Re-reading a few rows is harmless (applyRemote skips versions we already have).
+  let from = new Date(Math.max(0, new Date(since).getTime() - 15000)).toISOString();
   for (let page = 0; page < 50; page++) {
-    const rows: any[] = await rest(`records?select=store,id,data,u,deleted,updated_at&team_id=eq.${encodeURIComponent(teamId)}&updated_at=gt.${encodeURIComponent(since)}&order=updated_at.asc&limit=500`);
+    const rows: any[] = await rest(`records?select=store,id,data,u,deleted,updated_at&team_id=eq.${encodeURIComponent(teamId)}&updated_at=gte.${encodeURIComponent(from)}&order=updated_at.asc&limit=500`);
     // teams and matches first so logs can find their match
     const order: Record<string, number> = { teams: 0, seasons: 1, players: 1, matches: 2 };
     for (const r of rows.slice().sort((a, b) => (order[a.store] ?? 3) - (order[b.store] ?? 3))) changed = applyRemote(r) || changed;
-    if (rows.length) since = rows[rows.length - 1].updated_at;
+    if (rows.length) { since = rows[rows.length - 1].updated_at; from = since; }
     if (rows.length < 500) break;
   }
   S.since[teamId] = since; persist();
