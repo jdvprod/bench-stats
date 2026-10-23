@@ -237,3 +237,7 @@ language sql stable security definer set search_path = public as $$
   select jsonb_build_object('html', html, 'updated_at', updated_at) from recruit_shares where code = upper(trim(share));
 $$;
 grant execute on function public.recruit_view(text) to anon, authenticated;
+
+-- ---------- schema version: the app's Settings → Setup check compares this with what it expects ----------
+create or replace function public.schema_version() returns int language sql immutable as $$ select 5 $$;
+grant execute on function public.schema_version() to anon, authenticated;

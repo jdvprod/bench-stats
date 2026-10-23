@@ -32,14 +32,16 @@ npm test         # engine tests
 
 ## Put it online (free)
 
-The `dist/` folder is a static website. Drag it onto **Netlify Drop** (app.netlify.com/drop) or **Cloudflare Pages**, or push it to **GitHub Pages**. Then open the link on any device and choose "Install" or "Add to Home Screen".
+Connect the GitHub repo to **Netlify** (Add new site → Import an existing project → GitHub → `benchboard`). `netlify.toml` already sets the build (`npm run build`, publish `dist`, Node 22), so leave the build settings as they are. Every push to `main` redeploys. Then open the link on any device and choose "Install" or "Add to Home Screen".
 
 ## Accounts, sync and live links (Supabase, free tier)
 
 1. Create a project at supabase.com.
 2. In **SQL Editor → New query**, paste all of `supabase/schema.sql` and click **Run**.
 3. In **Project Settings → API**, copy the **Project URL** and the **anon public** key into `src/cloud/config.ts` (both are safe to publish; Row Level Security protects the data).
-4. Optional: in **Authentication → Providers → Email**, turn off "Confirm email" for the smoothest sign-up while testing.
+4. In **Authentication → URL Configuration**, set **Site URL** to your Netlify address (e.g. `https://benchboard.netlify.app`) and add the same address to **Redirect URLs**. Without this, sign-up and password-reset emails link to localhost.
+5. Optional: in **Authentication → Providers → Email**, turn off "Confirm email" for the smoothest sign-up while testing.
+6. Open the app → **Settings → Setup check → Run check**. It confirms the database version, your account, team sync and AI, and says what's left.
 
 Then coaches sign in on the Team tab, tap **Sync this team**, and invite assistants with a code. Every match is an event log per device, so several coaches can track the same match and their entries merge. Each device picks a job under **My job** on the Track screen: everything, score only, or stats only (chosen stat groups that count for players but never change the score). **Share live link** on the Live screen gives parents a public gamecast (`#/watch/CODE`) that shows only that match, player numbers, first names and last initials; parents can follow one player. **Share season page** on the Team tab gives players and parents a read-only season hub (`#/season/CODE`) with results, schedule, leaders, box scores and every player's line.
 

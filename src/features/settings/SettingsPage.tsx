@@ -3,7 +3,8 @@ import { canPrompt, installed, isIOS, onInstallChange, promptInstall } from "../
 import { all, setPrefs, setSettings, state, team, toast } from "../../data/store";
 import { Card, Seg, SetRow, Switch } from "../../ui/kit";
 import { ask, AiError, getKey, setKey } from "../../ai/client";
-import { cloudAvailable, currentUser, setConfig, signOut } from "../../cloud/client";
+import { cloudAvailable, currentUser, fn, rpc, setConfig, signOut } from "../../cloud/client";
+import { isLinked } from "../../cloud/sync";
 import { go } from "../../app/router";
 
 export function SettingsPage() {
@@ -50,6 +51,7 @@ export function SettingsPage() {
       </div>
     </Card>
     <CloudSettings />
+    <SetupCheck />
     <Card title="Your data">
       <p className="small">Saved on this device: {counts.teams} teams, {counts.players} players, {counts.matches} matches and practices, {counts.events.toLocaleString()} recorded plays.</p>
       <p className="small muted" style={{ marginTop: 6 }}>{state.persistent ? "Your browser has agreed to keep this data." : "Your browser may clear this data if space runs low."} Save a backup from Team → Backup to move data to another device or keep a copy.</p>
@@ -87,5 +89,44 @@ function InstallCard() {
     {canPrompt() ? <button className="btn primary" onClick={async () => { if (await promptInstall()) toast("Installed"); }}>Install Benchboard</button>
       : isIOS() ? <p className="small">On iPhone or iPad: tap <b>Share</b> in Safari, then <b>Add to Home Screen</b>.</p>
       : <p className="small">In Chrome or Edge, use the install icon in the address bar, or the browser menu → <b>Install Benchboard</b>.</p>}
+  </Card>;
+}
+
+/** Setup check: walks through what the live app needs (Supabase schema, sign-in, sync, AI) and says what's missing. */
+const SCHEMA_VERSION = 5;
+type Check = { label: string; state: "ok" | "warn" | "todo" | "wait"; detail: string };
+function SetupCheck() {
+  const [checks, setChecks] = useState<Check[] | null>(null), [busy, setBusy] = useState(false);
+  const run = async () => {
+    setBusy(true);
+    const out: Check[] = [], t = team();
+    if (!cloudAvailable()) { out.push({ label: "Cloud project", state: "todo", detail: "No Supabase project is set for this app. Put your Project URL and anon key in src/cloud/config.ts." }); setChecks(out); setBusy(false); return; }
+    out.push({ label: "Cloud project", state: "ok", detail: "The app has a Supabase project URL and key." });
+    try {
+      const v = await rpc("schema_version", {}, true);
+      out.push(+v >= SCHEMA_VERSION ? { label: "Database", state: "ok", detail: `Tables and functions are up to date (version ${v}).` } : { label: "Database", state: "todo", detail: `The database is on version ${v}; the app needs ${SCHEMA_VERSION}. Run the latest supabase/schema.sql in Supabase → SQL Editor.` });
+    } catch (e: any) {
+      out.push(e?.status === 0 ? { label: "Database", state: "warn", detail: "Couldn't reach Supabase. Check your connection, or that the project isn't paused (free projects pause after a week without use)." }
+        : { label: "Database", state: "todo", detail: "The tables aren't set up yet (or are from an older version). Run supabase/schema.sql in Supabase → SQL Editor." });
+    }
+    const user = currentUser();
+    out.push(user ? { label: "Your account", state: "ok", detail: "Signed in as " + user.email + "." } : { label: "Your account", state: "todo", detail: "Sign in or create an account (Team tab or the avatar in the corner)." });
+    if (t && !t.sample) out.push(isLinked(t.id) ? { label: "Team sync", state: "ok", detail: `${t.name} syncs to the cloud. Invite coaches from the Team tab.` } : { label: "Team sync", state: user ? "todo" : "wait", detail: user ? `Tap "Sync this team" on the Team tab so ${t.name} is backed up and shareable.` : "After you sign in, turn on sync for your team on the Team tab." });
+    if (getKey()) out.push({ label: "AI features", state: "ok", detail: "Using your own Anthropic key on this device." });
+    else if (!user) out.push({ label: "AI features", state: "wait", detail: "Sign in first; then this checks the server AI." });
+    else {
+      try { await fn("ai", { ping: true }); out.push({ label: "AI features", state: "ok", detail: "The ai Edge Function is deployed and has its Anthropic key." }); }
+      catch (e: any) {
+        out.push(e?.status === 404 ? { label: "AI features", state: "todo", detail: "The ai Edge Function isn't deployed. Supabase → Edge Functions → Deploy a new function → Via Editor, name it ai, paste supabase/functions/ai/index.ts." }
+          : e?.status === 503 ? { label: "AI features", state: "todo", detail: "The ai function is deployed but has no key. Supabase → Edge Functions → Secrets: add ANTHROPIC_API_KEY." }
+          : { label: "AI features", state: "warn", detail: "The ai function didn't answer: " + (e?.message || "unknown error") + "." });
+      }
+    }
+    out.push(installed() ? { label: "Installed on this device", state: "ok", detail: "Opened from the home screen." } : { label: "Installed on this device", state: "warn", detail: "Optional: add it to your home screen (see Install the app above) so it opens full screen and works offline." });
+    setChecks(out); setBusy(false);
+  };
+  return <Card title="Setup check" actions={<button className="btn sm" disabled={busy} onClick={run}>{busy ? "Checking…" : checks ? "Check again" : "Run check"}</button>}>
+    {!checks ? <p className="small muted">Checks the database, your account, team sync and AI, and tells you exactly what's left to set up.</p>
+      : <ul className="setup-list">{checks.map((c) => <li key={c.label} className={"sc-" + c.state}><span className="sc-dot" aria-hidden="true">{c.state === "ok" ? "✓" : c.state === "todo" ? "!" : "·"}</span><div><b>{c.label}</b><p className="small" style={{ margin: 0 }}>{c.detail}</p></div></li>)}</ul>}
   </Card>;
 }

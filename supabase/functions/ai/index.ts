@@ -22,6 +22,7 @@ Deno.serve(async (req) => {
 
   let body: any;
   try { body = await req.json(); } catch { return json(400, { error: "Bad request." }); }
+  if (body?.ping) return json(200, { ok: true }); // setup check from the app's Settings; no Claude call
   const model = MODELS.has(body?.model) ? body.model : "claude-sonnet-5-5";
   const prompt = String(body?.prompt || "").slice(0, 60000);
   if (!prompt) return json(400, { error: "Nothing to ask." });

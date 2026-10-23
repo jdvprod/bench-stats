@@ -35,4 +35,5 @@ check "select jsonb_array_length(season_view('s1s1s1')->'matches');" "1" "season
 check "select watch('l1l1l1')->'match'->>'opp';" "Them" "live link returns the match"
 check "select recruit_view('r1r1r1')->>'html';" "<p>profile</p>" "recruit link returns the page"
 check "select count(*) from records;" "0" "anon can't read records directly"
+check "select schema_version();" "5" "schema version is reported"
 echo "schema OK"
