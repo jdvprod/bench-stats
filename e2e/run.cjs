@@ -26,8 +26,8 @@ function serveDist() {
   });
 }
 
-async function newPage(browser, { phone = false, dark = false, cloud = true, skew = 0 } = {}) {
-  const ctx = await browser.newContext({ viewport: phone ? { width: 390, height: 844 } : { width: 1360, height: 900 }, colorScheme: dark ? "dark" : "light", acceptDownloads: true, hasTouch: phone });
+async function newPage(browser, { phone = false, tablet = false, dark = false, cloud = true, skew = 0 } = {}) {
+  const ctx = await browser.newContext({ viewport: phone ? { width: 390, height: 844 } : tablet ? { width: 820, height: 1180 } : { width: 1360, height: 900 }, colorScheme: dark ? "dark" : "light", acceptDownloads: true, hasTouch: phone });
   if (cloud) await ctx.addInitScript((url) => { try { localStorage.setItem("bs-cloud-config", JSON.stringify({ url, key: "anon" })); } catch { /* sandboxed frame */ } }, `http://localhost:${MOCK_PORT}`);
   if (skew) await ctx.addInitScript((ms) => { const real = Date.now; Date.now = () => real() + ms; }, skew);
   const page = await ctx.newPage(); page.errors = []; OPEN.add(page); page.on("close", () => OPEN.delete(page));
@@ -45,14 +45,14 @@ const skipIfAsked = async (p) => { const s = p.getByRole("button", { name: "Skip
 /* ---------- scenarios ---------- */
 const scenarios = {
   async tour(browser) {
-    for (const opts of [{}, { phone: true }, { phone: true, dark: true }]) {
-      const tag = opts.phone ? (opts.dark ? "phone dark" : "phone") : "desktop", p = await newPage(browser, opts);
+    for (const opts of [{}, { phone: true }, { phone: true, dark: true }, { tablet: true }]) {
+      const tag = opts.phone ? (opts.dark ? "phone dark" : "phone") : opts.tablet ? "tablet" : "desktop", p = await newPage(browser, opts);
       await go(p, "sample"); await p.waitForTimeout(900);
       ok(`${tag}: sample team loads on Track`, (await p.locator(".board").count()) > 0);
       for (const r of ["track", "lineup", "matchup", "practice", "stats", "court", "team", "settings", "labs", "live", "account"]) {
         await go(p, r);
         ok(`${tag}: ${r} renders`, (await p.locator(".page, .content, .auth, main").count()) > 0);
-        if (opts.phone) ok(`${tag}: ${r} has no sideways scroll`, (await overflow(p)) <= 1, `${await overflow(p)}px`);
+        if (opts.phone || opts.tablet) ok(`${tag}: ${r} has no sideways scroll`, (await overflow(p)) <= 1, `${await overflow(p)}px`);
       }
       await go(p, "stats");
       for (const sc of [/^Season \(/, /^Event$/, /^One match$/]) {
@@ -61,7 +61,7 @@ const scenarios = {
         for (const t of ["Overview", "Players", "Offense", "Serve & pass", "Rotations", "Situations", "Opponent", "Film", "Fix plays"]) {
           const b = p.getByRole("button", { name: t, exact: true }); if (!(await b.count())) continue;
           await b.first().click(); await p.waitForTimeout(120);
-          if (opts.phone) ok(`${tag}: stats ${t} fits`, (await overflow(p)) <= 1);
+          if (opts.phone || opts.tablet) ok(`${tag}: stats ${t} fits`, (await overflow(p)) <= 1);
         }
         void tabs;
       }
