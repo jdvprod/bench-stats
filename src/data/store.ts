@@ -119,10 +119,10 @@ export function eventsOf(matchId: string): MatchEvent[] { return mergeLogs(logsO
 const replayCache = new Map<string, { R: Replay; key: string }>();
 export function replayOf(m: Match | undefined | null): Replay | null {
   if (!m) return null;
-  const key = m.bestOf + "|" + JSON.stringify(m.scrim);
+  const key = m.bestOf + "|" + (m.setTo || 25) + "|" + (m.cap || 0) + "|" + JSON.stringify(m.scrim);
   const hit = replayCache.get(m.id);
   if (hit && hit.key === key) return hit.R;
-  const R = replay(eventsOf(m.id), { id: m.id, bestOf: m.bestOf, scrim: m.scrim });
+  const R = replay(eventsOf(m.id), { id: m.id, bestOf: m.bestOf, scrim: m.scrim, setTo: m.setTo, cap: m.cap });
   replayCache.set(m.id, { R, key });
   return R;
 }
@@ -218,7 +218,7 @@ export function newMatch(o: Partial<Match> & { serve?: "us" | "them"; events?: M
   if (prev && prev.status !== "done") save("matches", { ...prev, status: "done" }, true);
   const m: Match = {
     id: uid("m"), teamId: t.id, seasonId: t.activeSeasonId, kind: o.kind || "match", opp: o.opp || (o.kind === "match" || !o.kind ? "Opponent" : "Practice"),
-    date: o.date || todayISO(), bestOf: o.bestOf || t.settings.bestOf, status: "live", site: o.site || "", event: o.event || "", notes: o.notes || "",
+    date: o.date || todayISO(), bestOf: o.bestOf || t.settings.bestOf, setTo: o.setTo, cap: o.cap ?? null, status: "live", site: o.site || "", event: o.event || "", notes: o.notes || "",
     oppPlayers: o.oppPlayers || [], scrim: o.scrim || null, filmStart: null, nextLu: null, report: "", reportAt: null, planId: o.planId || null, createdAt: Date.now(), sample: o.sample,
   };
   save("matches", m, true);

@@ -1,7 +1,7 @@
 /** End-of-season report: record, team numbers, match log, leaders, awards and every player's line. One shareable HTML file. */
 import { player, playerName, team } from "../../data/store";
 import { Match, Season } from "../../data/model";
-import { aggregate, Agg, Replay, Stat } from "../../sports/volleyball/engine";
+import { aggregate, Agg, recordOf, Replay, resultOf, Stat } from "../../sports/volleyball/engine";
 import { rate, situations } from "../../sports/volleyball/situations";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, hitting, passAvg, playerMetrics, serveAttempts, serveEfficiency, serveErrors, teamMetrics } from "../../sports/volleyball/metrics";
 
@@ -35,9 +35,9 @@ export function seasonAwards(items: { m: Match; R: Replay }[]): Award[] {
 export function seasonReportHtml(items: { m: Match; R: Replay }[], season: Season | undefined): string {
   const t = team()!, A = aggregate(items.flatMap((x) => x.R.sets)), M = teamMetrics(A);
   const esc = (x: unknown) => String(x ?? "").replace(/[&<>"]/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]!));
-  const done = items.filter((x) => x.R.matchOver), W = done.filter((x) => x.R.wonUs > x.R.wonThem).length, L = done.length - W;
+  const rec = recordOf(items.map((x) => x.R));
   const sW = items.reduce((n, x) => n + x.R.wonUs, 0), sL = items.reduce((n, x) => n + x.R.wonThem, 0);
-  const log = items.slice().sort((a, b) => a.m.date.localeCompare(b.m.date)).map(({ m, R }) => { const a = aggregate(R.sets), mm = teamMetrics(a); return `<tr><td>${esc(m.date)}</td><td>${esc(m.opp)}</td><td><b>${R.matchOver ? (R.wonUs > R.wonThem ? "W" : "L") : ""} ${R.wonUs}–${R.wonThem}</b></td><td>${fmtHit(mm.hitting)}</td><td>${fmtPct(mm.sideOut)}</td><td>${fmtAvg(mm.passAvg)}</td><td>${fmtPct(mm.serveIn)}</td></tr>`; }).join("");
+  const log = items.slice().sort((a, b) => a.m.date.localeCompare(b.m.date)).map(({ m, R }) => { const a = aggregate(R.sets), mm = teamMetrics(a); return `<tr><td>${esc(m.date)}</td><td>${esc(m.opp)}</td><td><b>${resultOf(R) || ""} ${R.wonUs}–${R.wonThem}</b></td><td>${fmtHit(mm.hitting)}</td><td>${fmtPct(mm.sideOut)}</td><td>${fmtAvg(mm.passAvg)}</td><td>${fmtPct(mm.serveIn)}</td></tr>`; }).join("");
   const awards = seasonAwards(items).map((a) => `<div class="aw"><span>${esc(a.title)}</span><b>${esc(playerName(a.id, "full"))}</b><small>${esc(a.why)}</small></div>`).join("");
   const ids = Object.keys(A.ps).filter((id) => player(id)).sort((a, b) => (+player(a)!.num || 0) - (+player(b)!.num || 0));
   const prow = (id: string) => { const s: Stat = A.ps[id], p = playerMetrics(A, id); return `<tr><td>${esc(player(id)!.num)}</td><td>${esc(player(id)!.first + " " + player(id)!.last)}</td><td>${p.sets}</td><td>${s.K}</td><td>${fmtHit(hitting(s))}</td><td>${s.SA}</td><td>${serveErrors(s)}</td><td>${s.R ? fmtAvg(passAvg(s)) : "–"}</td><td>${s.D}</td><td>${fmtNum(blocks(s))}</td><td>${s.AST}</td></tr>`; };
@@ -52,7 +52,7 @@ section{background:var(--card);border:1px solid var(--line);border-radius:12px;p
 table{border-collapse:collapse;width:100%;font-size:13px;font-variant-numeric:tabular-nums}th,td{padding:6px;border-bottom:1px solid var(--line);text-align:right;white-space:nowrap}th:nth-child(-n+2),td:nth-child(-n+2){text-align:left}th{color:var(--mut);font-size:12px}
 footer{color:var(--mut);font-size:12px;text-align:center;margin-top:16px}@media print{body{background:#fff}section{break-inside:avoid}}</style></head><body><main>
 <div class="hero"><h1>${esc(t.name)}</h1><p>${esc(season?.name || "Season")} report${t.level ? " · " + esc(t.level) : ""}</p>
-<div class="rec"><div><b>${W}–${L}</b><span>Record</span></div><div><b>${sW}–${sL}</b><span>Sets</span></div><div><b>${A.us}–${A.them}</b><span>Points</span></div><div><b>${fmtHit(M.hitting)}</b><span>Hitting</span></div></div></div>
+<div class="rec"><div><b>${rec.text}</b><span>Record</span></div><div><b>${sW}–${sL}</b><span>Sets</span></div><div><b>${A.us}–${A.them}</b><span>Points</span></div><div><b>${fmtHit(M.hitting)}</b><span>Hitting</span></div></div></div>
 <section><h2>Team numbers</h2><div class="k">
 <div><b>${fmtPct(M.sideOut)}</b><span>Side-out</span></div><div><b>${fmtPct(M.pointScoring)}</b><span>Point-scoring</span></div><div><b>${fmtAvg(M.passAvg)}</b><span>Pass average</span></div>
 <div><b>${fmtPct(M.serveIn)}</b><span>Serve in</span></div><div><b>${fmtNum(M.perSet?.K ?? null)}</b><span>Kills per set</span></div><div><b>${fmtNum(M.perSet?.SA ?? null)}</b><span>Aces per set</span></div>

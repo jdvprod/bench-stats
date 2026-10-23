@@ -1,0 +1,226 @@
+/**
+ * End-to-end tests: drives the built app in Chromium like a coach would, on desktop and phone, light and dark,
+ * with a mock Supabase for accounts, sync and share links. Run after `npm run build`:  node e2e/run.cjs
+ * Fails (exit 1) on any broken step, page error, or sideways scroll on a phone.
+ */
+const http = require("http"), fs = require("fs"), path = require("path");
+const { chromium } = require("playwright");
+const startMock = require("./mock-supabase.cjs");
+
+const DIST = path.join(__dirname, "..", "dist"), APP_PORT = 5199, MOCK_PORT = 54399, U = `http://localhost:${APP_PORT}/`;
+const TYPES = { ".html": "text/html", ".js": "text/javascript", ".css": "text/css", ".json": "application/json", ".webmanifest": "application/manifest+json", ".png": "image/png", ".webp": "image/webp", ".svg": "image/svg+xml" };
+const only = process.argv[2] || "";
+
+let failures = 0, passes = 0;
+const ok = (name, cond, detail = "") => { if (cond) { passes++; } else { failures++; console.log(`  ✗ ${name}${detail ? ": " + detail : ""}`); } };
+
+function serveDist() {
+  return new Promise((done) => {
+    const srv = http.createServer((req, res) => {
+      let f = decodeURIComponent(new URL(req.url, U).pathname); if (f.endsWith("/")) f += "index.html";
+      const file = path.join(DIST, f);
+      if (!file.startsWith(DIST) || !fs.existsSync(file)) { res.writeHead(404); return res.end(); }
+      res.writeHead(200, { "content-type": TYPES[path.extname(file)] || "application/octet-stream" }); fs.createReadStream(file).pipe(res);
+    });
+    srv.listen(APP_PORT, () => done(srv));
+  });
+}
+
+async function newPage(browser, { phone = false, dark = false, cloud = true } = {}) {
+  const ctx = await browser.newContext({ viewport: phone ? { width: 390, height: 844 } : { width: 1360, height: 900 }, colorScheme: dark ? "dark" : "light", acceptDownloads: true, hasTouch: phone });
+  if (cloud) await ctx.addInitScript((url) => { try { localStorage.setItem("bs-cloud-config", JSON.stringify({ url, key: "anon" })); } catch { /* sandboxed frame */ } }, `http://localhost:${MOCK_PORT}`);
+  const page = await ctx.newPage(); page.errors = [];
+  page.on("pageerror", (e) => page.errors.push(e.message));
+  page.on("console", (m) => { if (m.type() === "error" && !/Failed to load resource|ERR_|fonts\.g/.test(m.text())) page.errors.push(m.text()); });
+  page.setDefaultTimeout(8000);
+  return page;
+}
+const go = async (p, hash) => { await p.goto(U + "#/" + hash); await p.waitForTimeout(350); };
+const score = async (p) => { const t = (await p.locator(".board").first().innerText()).replace(/\s+/g, " "); const n = t.match(/(\d+) SET (\d) .* (\d+) (?:Rotation|Our)/); return t; };
+const download = async (p, click) => { const [d] = await Promise.all([p.waitForEvent("download"), click()]); const f = await d.path(); return { name: d.suggestedFilename(), size: fs.statSync(f).size, text: () => fs.readFileSync(f, "utf8") }; };
+const overflow = (p) => p.evaluate(() => document.documentElement.scrollWidth - innerWidth);
+const skipIfAsked = async (p) => { const s = p.getByRole("button", { name: "Skip" }); if (await s.count()) await s.first().click(); };
+
+/* ---------- scenarios ---------- */
+const scenarios = {
+  async tour(browser) {
+    for (const opts of [{}, { phone: true }, { phone: true, dark: true }]) {
+      const tag = opts.phone ? (opts.dark ? "phone dark" : "phone") : "desktop", p = await newPage(browser, opts);
+      await go(p, "sample"); await p.waitForTimeout(900);
+      ok(`${tag}: sample team loads on Track`, (await p.locator(".board").count()) > 0);
+      for (const r of ["track", "lineup", "matchup", "practice", "stats", "court", "team", "settings", "labs", "live", "account"]) {
+        await go(p, r);
+        ok(`${tag}: ${r} renders`, (await p.locator(".page, .content, .auth, main").count()) > 0);
+        if (opts.phone) ok(`${tag}: ${r} has no sideways scroll`, (await overflow(p)) <= 1, `${await overflow(p)}px`);
+      }
+      await go(p, "stats");
+      for (const sc of [/^Season \(/, /^Event$/, /^One match$/]) {
+        await p.getByRole("button", { name: sc }).first().click(); await p.waitForTimeout(150);
+        const tabs = await p.locator('[aria-label="Section"] button, .seg[aria-label="Section"] button').allInnerTexts().catch(() => []);
+        for (const t of ["Overview", "Players", "Offense", "Serve & pass", "Rotations", "Situations", "Opponent", "Film", "Fix plays"]) {
+          const b = p.getByRole("button", { name: t, exact: true }); if (!(await b.count())) continue;
+          await b.first().click(); await p.waitForTimeout(120);
+          if (opts.phone) ok(`${tag}: stats ${t} fits`, (await overflow(p)) <= 1);
+        }
+        void tabs;
+      }
+      ok(`${tag}: no page errors`, !p.errors.length, p.errors.slice(0, 3).join(" | "));
+      await p.context().close();
+    }
+  },
+
+  async match(browser) {
+    const p = await newPage(browser);
+    await go(p, "track"); await p.getByRole("button", { name: "Use without an account" }).click();
+    await p.getByLabel("Team name").fill("E2E High"); await p.getByRole("button", { name: "Create team" }).click(); await p.waitForTimeout(300);
+    await go(p, "team"); await p.getByRole("button", { name: "Paste list" }).click();
+    await p.locator("textarea").first().fill("1 Ava Setter S 2027\n2 Bea Outside OH 2027\n3 Cam Middle MB 2028\n4 Dee Oppo OPP 2028\n5 Eve Outside OH 2029\n6 Fay Middle MB 2029\n7 Gia Libero L 2027\n8 Hal Defense DS 2028");
+    await p.getByRole("button", { name: "Add players" }).click(); await p.waitForTimeout(200);
+    ok("roster: 8 players added", (await p.locator(".card", { hasText: "Roster" }).locator("tbody tr").count()) === 8);
+    await go(p, "track"); await p.getByPlaceholder("e.g. Buchanan").fill("Rival Prep"); await p.getByRole("button", { name: "Start · we serve first" }).click(); await p.waitForTimeout(300);
+    ok("match starts at 0–0", /E2E HIGH 0 SET 1/.test(await score(p)), await score(p));
+    // keyboard: #2 kills x 25 → set 1
+    for (let i = 0; i < 25; i++) { await p.keyboard.type("2"); await p.keyboard.press("k"); }
+    await p.keyboard.press("Escape"); await p.waitForTimeout(200);
+    ok("keyboard entry wins set 1 25–0", (await p.locator(".banner", { hasText: "Set 1 to E2E High, 25–0" }).count()) === 1);
+    await p.getByRole("button", { name: "E2E High serve" }).click(); await p.waitForTimeout(150);
+    // buttons: tool, blocked, ace by server, their kill, timeout, undo
+    const pl = (n) => p.locator(".pl", { hasText: n }).first();
+    await pl("Bea").click(); await p.getByRole("button", { name: "Tool", exact: true }).click(); await skipIfAsked(p);
+    ok("tool scores for us", /E2E HIGH 1 SET 2/.test(await score(p)), await score(p));
+    ok("selection clears after a play", (await p.locator(".pl[aria-pressed=true]").count()) === 0);
+    await pl("Eve").click(); await p.getByRole("button", { name: "Blocked", exact: true }).click(); await skipIfAsked(p);
+    ok("blocked gives them the point", / 1 SET 2 .* 1 /.test(await score(p)), await score(p));
+    await p.getByRole("button", { name: "Their kill", exact: true }).click(); await skipIfAsked(p); await p.keyboard.press("Escape");
+    await p.getByRole("button", { name: /^Timeout · E2E High/ }).click(); await p.waitForTimeout(100);
+    await p.getByRole("button", { name: "Their error", exact: true }).click(); await skipIfAsked(p); await p.keyboard.press("Escape");
+    const before = await score(p); await p.keyboard.press("Backspace"); await p.waitForTimeout(150);
+    ok("undo removes the last point", (await score(p)) !== before, before + " → " + (await score(p)));
+    // misc errors never touch passing
+    await pl("Gia").click(); await p.getByRole("button", { name: "2", exact: true }).click(); await skipIfAsked(p); await p.keyboard.press("Escape");
+    await pl("Gia").click(); await p.getByRole("button", { name: "Positioning", exact: true }).click(); await skipIfAsked(p);
+    const passTxt = (await p.locator(".card", { hasText: "so far" }).first().innerText()).replace(/\s+/g, " ");
+    ok("positioning error leaves pass average alone", /Pass avg 2\.00/.test(passTxt), passTxt);
+    // finish sets 2 and 3 quickly
+    for (let s = 0; s < 2; s++) {
+      for (let i = 0; i < 30; i++) { if (await p.locator(".banner", { hasText: /to E2E High|Match over/ }).count()) break; await p.keyboard.type("4"); await p.keyboard.press("k"); }
+      await p.keyboard.press("Escape"); await p.waitForTimeout(150);
+      const next = p.getByRole("button", { name: "E2E High serve" }); if (await next.count()) await next.click();
+    }
+    ok("match ends 3–0", (await p.locator(".banner", { hasText: "Match over" }).count()) === 1);
+    await p.getByRole("button", { name: "Finish" }).click(); await p.waitForTimeout(200);
+    ok("home shows last match W 3–0", (await p.locator(".home-last", { hasText: "3–0 vs Rival Prep" }).count()) === 1);
+    // stats for the match
+    await go(p, "stats"); await p.getByRole("button", { name: "One match", exact: true }).click(); await p.waitForTimeout(150);
+    await p.getByRole("button", { name: "Players", exact: true }).click();
+    const bea = (await p.locator("tr", { hasText: "Bea" }).first().innerText()).split(/\s+/);
+    ok("Bea's tool is on her line", bea.includes("1"), bea.join(" "));
+    await p.getByRole("button", { name: "Fix plays", exact: true }).click(); await p.locator(".card button[aria-pressed]", { hasText: "Set 1" }).click();
+    const last1 = await p.locator(".log.pe li .sc").last().innerText();
+    await p.locator(".log.pe li button.log-edit").first().click(); await p.getByRole("button", { name: "Delete", exact: true }).click(); await p.waitForTimeout(150);
+    ok("fix plays: deleting a kill drops the set score", (await p.locator(".log.pe li .sc").last().innerText()) === "24–0", last1);
+    await p.getByRole("button", { name: "Film", exact: true }).click(); ok("film lists plays", (await p.locator(".log.film li").count()) > 10);
+    const xl = await download(p, () => p.getByRole("button", { name: "Download spreadsheet" }).click()); ok("spreadsheet downloads", xl.size > 3000, xl.name);
+    const mr = await download(p, () => p.getByRole("button", { name: "Match report" }).click()); ok("match report has the box score", mr.text().includes("Box score") && mr.text().includes("Rival Prep"));
+    const gfx = await download(p, () => p.getByRole("button", { name: "Share graphic" }).click()); ok("share graphic is a PNG", gfx.name.endsWith(".png") && gfx.size > 20000, gfx.size + " bytes");
+    await p.getByRole("button", { name: /^Season \(/ }).click();
+    const sr = await download(p, () => p.getByRole("button", { name: "Season report" }).click()); ok("season report has awards and situations", sr.text().includes("Situations") && sr.text().includes("1–0"));
+    ok("match: no page errors", !p.errors.length, p.errors.slice(0, 3).join(" | "));
+    await p.context().close();
+  },
+
+  async formats(browser) {
+    const p = await newPage(browser);
+    await go(p, "track"); await p.getByRole("button", { name: "Use without an account" }).click();
+    await p.getByLabel("Team name").fill("Club 16s"); await p.getByRole("button", { name: "Create team" }).click(); await p.waitForTimeout(300);
+    await go(p, "team"); await p.getByRole("button", { name: "Paste list" }).click(); await p.locator("textarea").first().fill("3 Ana OH\n5 Bo MB"); await p.getByRole("button", { name: "Add players" }).click();
+    await go(p, "track"); await p.getByPlaceholder("e.g. Buchanan").fill("Pool Team"); await p.getByRole("button", { name: "2 sets (pool)" }).click();
+    await p.getByLabel("Scoring").selectOption("21c23"); await p.getByRole("button", { name: "Start · we serve first" }).click(); await p.waitForTimeout(200);
+    for (let i = 0; i < 21; i++) { await p.keyboard.type("3"); await p.keyboard.press("k"); } await p.keyboard.press("Escape"); await p.waitForTimeout(150);
+    ok("set to 21 ends at 21–0", (await p.locator(".banner", { hasText: "Set 1 to Club 16s, 21–0" }).count()) === 1);
+    await p.getByRole("button", { name: "Pool Team serve" }).click();
+    for (let i = 0; i < 4; i++) { await p.getByRole("button", { name: "Their point", exact: true }).click(); await skipIfAsked(p); await p.keyboard.press("Escape"); }
+    await p.locator("button.ctrl", { hasText: "Fix score" }).click(); await p.getByRole("button", { name: /End set · Club 16s serve next/ }).click(); await p.getByRole("button", { name: /End at 0–4\?/ }).click(); await p.waitForTimeout(200);
+    ok("pool play ends 1–1 after two sets", (await p.locator(".banner", { hasText: "Match over. Split 1–1." }).count()) === 1, await p.locator(".banner").first().innerText().catch(() => ""));
+    await p.getByRole("button", { name: "Finish" }).click(); await p.waitForTimeout(200);
+    ok("home shows the tie", (await p.locator(".home-last", { hasText: "T 1–1 vs Pool Team" }).count()) === 1 && (await p.getByText("0–0–1 this season").count()) === 1);
+    ok("formats: no page errors", !p.errors.length, p.errors.slice(0, 3).join(" | "));
+    await p.context().close();
+  },
+
+  async planning(browser) {
+    const p = await newPage(browser);
+    await go(p, "sample"); await p.waitForTimeout(800);
+    await go(p, "lineup");
+    const cards = await download(p, () => p.getByRole("button", { name: "Lineup cards" }).click()); ok("lineup cards for 5 sets", (cards.text().match(/class="card"/g) || []).length === 5);
+    ok("start-rotation advice shows", (await p.locator(".card", { hasText: "Which rotation to start in" }).count()) === 1);
+    await go(p, "matchup"); await p.getByRole("button", { name: "Paste schedule" }).click();
+    await p.locator('textarea[placeholder*="Buchanan 6:00"]').fill("Tue 11/3 vs Buchanan 6:00 PM\n11/7 @ Clovis West 5:30pm (League)\nnot a game");
+    await p.getByRole("button", { name: /^Add 2 to schedule/ }).click(); await p.waitForTimeout(150);
+    ok("pasted schedule adds 2 games", (await p.locator(".mu-sched li", { hasText: "Clovis West" }).count()) >= 1);
+    const ics = await download(p, () => p.getByRole("button", { name: "Calendar" }).click()); ok("calendar file", ics.text().includes("BEGIN:VCALENDAR") && ics.text().includes("Clovis West"));
+    await go(p, "practice"); ok("practice plan shows", (await p.locator(".block").count()) > 2);
+    await p.getByRole("button", { name: "Run practice" }).click(); await p.waitForTimeout(200);
+    ok("run practice timer opens", (await p.locator(".run").count()) > 0 || (await p.getByText(/Next up|Block 1|of \d+ min/).count()) > 0);
+    ok("planning: no page errors", !p.errors.length, p.errors.slice(0, 3).join(" | "));
+    await p.context().close();
+  },
+
+  async cloud(browser) {
+    const A = await newPage(browser);
+    await go(A, "track"); await A.getByRole("button", { name: "Create an account" }).click();
+    await A.getByLabel("Email").fill("head@e2e.test"); await A.locator("#auth-pw").fill("secret123"); await A.getByRole("button", { name: "Create account" }).click(); await A.waitForTimeout(500);
+    await A.getByLabel("Team name").fill("Cloud Club"); await A.getByRole("button", { name: "Create team" }).click(); await A.waitForTimeout(900);
+    await A.locator("input[type=file][accept*=csv]").setInputFiles(path.join(__dirname, "roster.csv")); await A.waitForTimeout(1200);
+    await A.getByRole("button", { name: "Invite a coach" }).click(); await A.waitForTimeout(300);
+    const code = (await A.locator(".hint b").first().innerText()).trim(); ok("invite code made", /^[A-Z0-9]{6}$/.test(code), code);
+    await go(A, "track"); await A.getByPlaceholder("e.g. Buchanan").fill("Buchanan"); await A.getByRole("button", { name: "Start · they serve first" }).click(); await A.waitForTimeout(200);
+    await A.locator("button.ctrl", { hasText: "My job" }).click(); await A.getByRole("button", { name: /^Score only/ }).click(); await A.getByRole("button", { name: "Done", exact: true }).click();
+    await A.waitForTimeout(2200);
+    const B = await newPage(browser, { phone: true });
+    await go(B, "join/" + code); await B.getByLabel("Email").fill("assistant@e2e.test"); await B.locator("#auth-pw").fill("secret123"); await B.getByRole("button", { name: "Create account" }).click(); await B.waitForTimeout(500);
+    await B.getByRole("button", { name: "Join team" }).click(); await B.waitForTimeout(1200);
+    await go(B, "track"); ok("assistant sees the live match", /CLOUD CLUB 0/.test(await score(B)));
+    await B.locator("button.ctrl", { hasText: "My job" }).click(); await B.getByRole("button", { name: /^Stats only/ }).click(); await B.getByRole("button", { name: "Done", exact: true }).click();
+    await B.locator(".pl", { hasText: "Nia" }).first().click(); await B.locator(".actsheet button", { hasText: /^3$/ }).click(); await skipIfAsked(B);
+    ok("stats-only pass doesn't score", /CLOUD CLUB 0 .* 0 /.test(await score(B)), await score(B));
+    await A.getByRole("button", { name: "Our point", exact: true }).click(); await A.waitForTimeout(2200);
+    for (const P of [B, A]) { await go(P, "team"); await P.getByRole("button", { name: "Sync now" }).click(); await P.waitForTimeout(900); }
+    await go(A, "track"); ok("head coach sees 1–0 and the assistant", /CLOUD CLUB 1/.test(await score(A)) && (await A.locator(".banner", { hasText: "Tracking with assistant" }).count()) === 1);
+    // live link + parent
+    await go(A, "live"); await A.getByRole("button", { name: "Share live link" }).click(); await A.waitForTimeout(1200);
+    const live = (await A.locator("span.small.muted", { hasText: "#/watch/" }).first().innerText()).trim();
+    const P = await newPage(browser, { phone: true }); await P.goto(live); await P.waitForTimeout(1200);
+    ok("parent gamecast shows 1–0", /1\s*–\s*0/.test(await P.locator(".gc-score").innerText()));
+    ok("parent gamecast fits a phone", (await overflow(P)) <= 1);
+    // season page + recruiting link
+    await go(A, "team"); await A.getByRole("button", { name: "Share season page" }).click(); await A.waitForTimeout(1200);
+    const season = await A.locator("a", { hasText: "#/season/" }).first().getAttribute("href");
+    await P.goto(season); await P.waitForTimeout(1200); ok("season page loads", (await P.locator(".sh-hero", { hasText: "CLOUD CLUB" }).count()) === 1);
+    await go(A, "stats"); await A.getByRole("button", { name: "Players", exact: true }).click(); await A.locator("tr.click", { hasText: "Nia" }).first().click(); await A.waitForTimeout(300);
+    await A.getByRole("button", { name: "Share profile link" }).click(); await A.waitForTimeout(1000);
+    const rec = await A.locator("a", { hasText: "#/recruit/" }).first().getAttribute("href");
+    await P.goto(rec); await P.waitForTimeout(1000); ok("recruiting page shows full name", (await P.frameLocator("iframe.recruit-frame").locator("h1").innerText()) === "Nia Lopez");
+    // AI through the server function, and the setup check
+    await go(A, "stats"); await A.getByRole("button", { name: "Who should pass in rotation 2?" }).click(); await A.waitForTimeout(800);
+    ok("ask your stats answers", (await A.locator(".ask-turn").count()) === 1);
+    await go(A, "settings"); await A.getByRole("button", { name: "Run check" }).click(); await A.waitForTimeout(1000);
+    ok("setup check: everything but install is ✓", (await A.locator(".setup-list li.sc-ok").count()) === 5, await A.locator(".setup-list").innerText());
+    for (const [n, pg] of [["head coach", A], ["assistant", B], ["parent", P]]) ok(`cloud: no page errors (${n})`, !pg.errors.length, pg.errors.slice(0, 3).join(" | "));
+    for (const pg of [A, B, P]) await pg.context().close();
+  },
+};
+
+(async () => {
+  if (!fs.existsSync(path.join(DIST, "index.html"))) { console.error("Build first: npm run build"); process.exit(1); }
+  const app = await serveDist(), mock = await startMock(MOCK_PORT), browser = await chromium.launch();
+  for (const [name, fn] of Object.entries(scenarios)) {
+    if (only && name !== only) continue;
+    const t0 = Date.now(), f0 = failures; console.log(`• ${name}`);
+    try { await fn(browser); } catch (e) { failures++; console.log(`  ✗ ${name} crashed: ${String(e.message || e).split("\n")[0]}`); }
+    console.log(`  ${failures === f0 ? "✓" : "✗"} ${name} (${((Date.now() - t0) / 1000).toFixed(1)}s)`);
+  }
+  await browser.close(); app.close(); mock.close();
+  console.log(`\n${passes} checks passed, ${failures} failed`);
+  process.exit(failures ? 1 : 0);
+})();

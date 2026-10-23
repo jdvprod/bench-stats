@@ -1,11 +1,11 @@
 /** #/season/CODE: the public season hub for players and parents. Results, schedule, leaders and every player's line. No account needed. */
 import { useEffect, useMemo, useState } from "react";
 import { rpc, cloudAvailable } from "./client";
-import { aggregate, mergeLogs, replay, Replay, Stat } from "../sports/volleyball/engine";
+import { aggregate, mergeLogs, recordOf, replay, Replay, resultOf, Stat } from "../sports/volleyball/engine";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, hitting, passAvg, playerMetrics, serveAttempts } from "../sports/volleyball/metrics";
 
 interface P { id: string; num: string; first: string; last: string; pos: string }
-interface M { id: string; opp: string; date: string; bestOf: number; status: string; event: string; site: string }
+interface M { id: string; opp: string; date: string; bestOf: number; setTo?: number; cap?: number | null; status: string; event: string; site: string }
 interface Data { team: { name: string; level: string; schedule: { id: string; date: string; time: string; opp: string; site: string; event: string }[] } | null; season: string | null; matches: M[]; logs: { matchId: string; events: any[] }[]; players: P[]; at: string }
 
 const fmtD = (d: string) => { const x = new Date(d + "T12:00:00"); return isNaN(+x) ? d : x.toLocaleDateString(undefined, { weekday: "short", month: "short", day: "numeric" }); };
@@ -26,7 +26,7 @@ export function SeasonPage({ code }: { code: string }) {
 
   const games = useMemo(() => {
     if (!d) return [] as { m: M; R: Replay }[];
-    return d.matches.map((m) => ({ m, R: replay(mergeLogs(d.logs.filter((l) => l.matchId === m.id).map((l) => l.events || [])), { id: m.id, bestOf: m.bestOf || 5 }) }))
+    return d.matches.map((m) => ({ m, R: replay(mergeLogs(d.logs.filter((l) => l.matchId === m.id).map((l) => l.events || [])), { id: m.id, bestOf: m.bestOf || 5, setTo: m.setTo, cap: m.cap }) }))
       .filter((x) => x.R.sets.some((s) => s.us + s.them > 0)).sort((a, b) => b.m.date.localeCompare(a.m.date));
   }, [d]);
 
@@ -35,7 +35,7 @@ export function SeasonPage({ code }: { code: string }) {
   const P = new Map(d.players.map((p) => [p.id, p]));
   const nm = (id: string) => { const p = P.get(id); return p ? `#${p.num} ${p.first} ${p.last ? p.last + "." : ""}`.trim() : ""; };
   const A = aggregate(games.flatMap((g) => g.R.sets));
-  const done = games.filter((g) => g.R.matchOver), W = done.filter((g) => g.R.wonUs > g.R.wonThem).length;
+  const rec = recordOf(games.map((g) => g.R));
   const today = new Date().toISOString().slice(0, 10);
   const upcoming = (d.team?.schedule || []).filter((x) => x.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 3);
   const leader = (f: (s: Stat) => number, label: string) => { const top = Object.entries(A.ps).filter(([id]) => P.has(id)).map(([id, s]) => [id, f(s)] as [string, number]).filter((x) => x[1] > 0).sort((a, b) => b[1] - a[1])[0]; return top ? <div key={label} className="sh-lead"><span className="label">{label}</span><b>{+top[1].toFixed(1)}</b><button className="linkish small" onClick={() => setSel(top[0])}>{nm(top[0])}</button></div> : null; };
@@ -66,15 +66,15 @@ export function SeasonPage({ code }: { code: string }) {
   return <div className="watch"><div className="page" style={{ maxWidth: 820, margin: "0 auto" }}>
     <section className="card sh-hero">
       <div><h1>{d.team?.name}</h1><p>{d.season || "Season"}{d.team?.level ? " · " + d.team.level : ""}</p></div>
-      <div className="sh-rec"><b>{W}–{done.length - W}</b><span>Record</span></div>
+      <div className="sh-rec"><b>{rec.text}</b><span>Record</span></div>
     </section>
     {upcoming.length > 0 && <section className="card"><div className="label" style={{ marginBottom: 6 }}>Coming up</div>
       <ul className="sh-list">{upcoming.map((x) => <li key={x.id}><span className="sh-date">{fmtD(x.date)}{x.time ? " · " + fmtT(x.time) : ""}</span><b>{x.site === "away" ? "at " : "vs "}{x.opp}</b><span className="small muted">{x.event}</span></li>)}</ul></section>}
     <section className="card"><div className="label" style={{ marginBottom: 6 }}>Results</div>
-      {games.length ? <ul className="sh-list">{games.map(({ m, R }) => { const won = R.wonUs > R.wonThem, isOpen = open === m.id; return <li key={m.id} className="click" onClick={() => setOpen(isOpen ? null : m.id)}>
+      {games.length ? <ul className="sh-list">{games.map(({ m, R }) => { const isOpen = open === m.id; return <li key={m.id} className="click" onClick={() => setOpen(isOpen ? null : m.id)}>
         <span className="sh-date">{fmtD(m.date)}</span>
         <b>{m.site === "away" ? "at " : "vs "}{m.opp}</b>
-        <span className={"sh-res " + (R.matchOver ? (won ? "w" : "l") : "")}>{R.matchOver ? (won ? "W " : "L ") : m.status === "live" ? "Live " : ""}{R.wonUs}–{R.wonThem}</span>
+        <span className={"sh-res " + (resultOf(R) === "W" ? "w" : resultOf(R) === "L" ? "l" : "")}>{resultOf(R) ? resultOf(R) + " " : m.status === "live" ? "Live " : ""}{R.wonUs}–{R.wonThem}</span>
         <span className="small muted sh-sets">{R.sets.filter((s) => s.us + s.them).map((s) => `${s.us}-${s.them}`).join(", ")}</span>
         {isOpen && <div className="tbl sh-box" onClick={(e) => e.stopPropagation()}><table><thead><tr><th className="l">Player</th><th>K</th><th>Ace</th><th>Dig</th><th>Blk</th><th>Ast</th></tr></thead>
           <tbody>{box(R).map(([id, s]) => <tr key={id}><td className="l"><button className="linkish" onClick={() => setSel(id)}>{nm(id)}</button></td><td>{s.K}</td><td>{s.SA}</td><td>{s.D}</td><td>{fmtNum(blocks(s))}</td><td>{s.AST}</td></tr>)}</tbody></table></div>}

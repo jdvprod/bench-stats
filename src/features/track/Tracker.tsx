@@ -145,7 +145,7 @@ function Banners({ m, R }: { m: Match; R: Replay }) {
   return <>
     {m.sample && <div className="banner"><p><b>Sample team.</b> Everything here is example data so you can explore. Create your own team from the Team tab.</p><button className="btn sm" onClick={() => go("team")}>Go to Team</button></div>}
     {ui.panel === "timeout" && !m.scrim && <AiCard title="Timeout card" desc="Three talking points from the live stats." button="Get talking points" tier="quick" prompt={() => timeoutPrompt(m)} />}
-    {R.matchOver ? <div className="banner accent"><p><b>{m.scrim ? "Scrimmage" : "Match"} over.</b> {R.wonUs > R.wonThem ? names.us : names.them} win {Math.max(R.wonUs, R.wonThem)}–{Math.min(R.wonUs, R.wonThem)}.</p>
+    {R.matchOver ? <div className="banner accent"><p><b>{m.scrim ? "Scrimmage" : "Match"} over.</b> {R.wonUs === R.wonThem ? `Split ${R.wonUs}–${R.wonThem}.` : `${R.wonUs > R.wonThem ? names.us : names.them} win ${Math.max(R.wonUs, R.wonThem)}–${Math.min(R.wonUs, R.wonThem)}.`}</p>
       <div className="row"><button className="btn" onClick={() => { setUi({ statsScope: "match" }); go("stats"); }}>See stats and report</button><button className="btn primary" onClick={() => { patch("matches", m.id, { status: "done" }); save("teams", { ...t, currentMatchId: null }); }}>Finish</button></div></div>
       : c.over && <div className="banner accent"><p><b>{unit} {c.n} to {c.winner === "us" ? names.us : names.them}, {c.us}–{c.them}.</b> Who serves first in {unit.toLowerCase()} {c.n + 1}?{!m.scrim && (m.nextLu ? " Your queued lineup starts it." : c.startLu ? " The starting lineup carries over." : "")}</p>
         <div className="row"><button className="btn primary" onClick={() => startNext("us")}>{names.us} serve</button><button className="btn" onClick={() => startNext("them")}>{names.them} serve</button></div></div>}
@@ -251,6 +251,9 @@ function FixScore({ m, c }: { m: Match; c: SetState }) {
     <div className="row"><button className="btn primary" onClick={() => { if (v.us !== c.us || v.them !== c.them) { appendEvents(m.id, [{ t: "ADJ", us: v.us, them: v.them } as any]); toast(`Score set to ${v.us}–${v.them}`); } setUi({ panel: null }); }}>Save score</button><button className="btn" onClick={() => setUi({ panel: null })}>Cancel</button></div>
     <p className="small muted">This only changes the score. Missed a whole rally? Add it so serve and rotation move too:</p>
     <div className="row"><button className="btn sm" onClick={() => { appendEvents(m.id, [{ t: "UP" } as any]); setV({ ...v, us: v.us + 1 }); }}>+1 rally to {names.us}</button><button className="btn sm" onClick={() => { appendEvents(m.id, [{ t: "TP" } as any]); setV({ ...v, them: v.them + 1 }); }}>+1 rally to {names.them}</button></div>
+    {!c.over && c.us !== c.them && <><p className="small muted">Set ended early (time limit, different scoring)? End it at {c.us}–{c.them} and start the next one:</p>
+      <div className="row"><ConfirmButton className="btn sm" confirmText={`End at ${c.us}–${c.them}?`} onConfirm={() => { appendEvents(m.id, [{ t: "NS", serve: "us" } as any]); setUi({ panel: null }); toast(`${m.scrim ? "Game" : "Set"} ${c.n} ended ${c.us}–${c.them}`); }}>{`End ${m.scrim ? "game" : "set"} · ${names.us} serve next`}</ConfirmButton>
+        <ConfirmButton className="btn sm" confirmText={`End at ${c.us}–${c.them}?`} onConfirm={() => { appendEvents(m.id, [{ t: "NS", serve: "them" } as any]); setUi({ panel: null }); toast(`${m.scrim ? "Game" : "Set"} ${c.n} ended ${c.us}–${c.them}`); }}>{`End ${m.scrim ? "game" : "set"} · ${names.them} serve next`}</ConfirmButton></div></>}
   </div>;
 }
 

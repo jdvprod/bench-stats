@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { FORMATS, SCORING } from "../track/TrackPage";
 import { canPrompt, installed, isIOS, onInstallChange, promptInstall } from "../../app/install";
 import { all, setPrefs, setSettings, state, team, toast } from "../../data/store";
 import { Card, Seg, SetRow, Switch } from "../../ui/kit";
@@ -29,7 +30,7 @@ export function SettingsPage() {
       <SetRow title="Also ask after digs" sub="Shows where you dig their attacks. One more tap per dig."><Switch checked={s.askLocDigs} disabled={!s.askLoc} onChange={(v) => setSettings({ askLocDigs: v })} label="Ask after digs" /></SetRow>
       <SetRow title="Ask for their jersey number" sub="After their kills, aces and errors, so you can scout their players."><Switch checked={s.askOpp} onChange={(v) => setSettings({ askOpp: v })} label="Ask for their number" /></SetRow>
       <SetRow title="Subs allowed per set" sub="0 means no limit. High school is usually 15, club 12 or 15."><input className="input" style={{ width: 80 }} type="number" min={0} max={30} value={s.subLimit} onChange={(e) => setSettings({ subLimit: Math.max(0, +e.target.value || 0) })} aria-label="Subs per set" /></SetRow>
-      <SetRow title="Default match format"><Seg value={s.bestOf} onChange={(v) => setSettings({ bestOf: v })} options={[[3, "Best of 3"], [5, "Best of 5"]]} label="Format" /></SetRow>
+      <SetRow title="Default match format"><div className="row"><Seg value={s.bestOf} onChange={(v) => setSettings({ bestOf: v })} options={FORMATS} label="Format" /><select className="input" style={{ width: "auto" }} value={s.scoring || "25"} onChange={(e) => setSettings({ scoring: e.target.value })} aria-label="Scoring">{SCORING.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div></SetRow>
       <SetRow title="Zone numbers on drawing boards"><Switch checked={!s.hideZones} onChange={(v) => setSettings({ hideZones: !v })} label="Show zone numbers" /></SetRow>
     </Card>
     <Card title="Labs">

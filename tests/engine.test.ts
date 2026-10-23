@@ -192,3 +192,25 @@ test("tool counts as a kill, blocked counts as an attack error", () => {
   assert.equal(hitting(s), 0);
   assert.equal(R.log.find((l) => l.kind === "stat")!.kind === "stat" && (R.log.find((l) => l.kind === "stat") as any).t, "KT", "the log keeps the detail");
 });
+
+test("match formats: sets to 21, caps, sets ended early, two-set pool play", () => {
+  const pts = (n: number, t = "UP") => Array.from({ length: n }, () => ev(t));
+  // to 21
+  let R = replay([ev("NS", { serve: "us" }), ...pts(21)], { bestOf: 3, setTo: 21 });
+  assert.equal(R.sets[0].over, true); assert.equal(R.sets[0].winner, "us");
+  // cap 27: 27–26 ends the set
+  R = replay([ev("NS", { serve: "us" }), ...pts(26), ...pts(26, "TP"), ev("UP")], { bestOf: 3, setTo: 25, cap: 27 });
+  assert.equal(R.sets[0].us, 27); assert.equal(R.sets[0].over, true);
+  // without a cap, 27–26 keeps going
+  R = replay([ev("NS", { serve: "us" }), ...pts(26), ...pts(26, "TP"), ev("UP")], { bestOf: 3 });
+  assert.equal(R.sets[0].over, false);
+  // a set ended early by starting the next one counts for whoever led
+  R = replay([ev("NS", { serve: "us" }), ...pts(18), ...pts(15, "TP"), ev("NS", { serve: "them" })], { bestOf: 3 });
+  assert.equal(R.sets[0].winner, "us"); assert.equal(R.wonUs, 1);
+  // deciding set of a best-of-3 goes to 15
+  R = replay([ev("NS", { serve: "us" }), ...pts(25), ev("NS", { serve: "us" }), ...pts(25, "TP"), ev("NS", { serve: "us" }), ...pts(15)], { bestOf: 3 });
+  assert.equal(R.matchOver, true); assert.equal(R.wonUs, 2);
+  // two-set pool play: 1–1 is a finished match
+  R = replay([ev("NS", { serve: "us" }), ...pts(25), ev("NS", { serve: "us" }), ...pts(25, "TP")], { bestOf: 2 });
+  assert.equal(R.sets[1].target, 25, "no deciding set in pool play"); assert.equal(R.matchOver, true); assert.deepEqual([R.wonUs, R.wonThem], [1, 1]);
+});

@@ -81,6 +81,8 @@ export function rotateLineup(lu: string[], steps: number): string[] {
 export interface MatchInfo {
   id?: string;
   bestOf?: number;
+  /** Points to win a set (default 25), the deciding set (default 15), and an optional cap (first to it wins, even by one). 2 sets = pool play: both sets are played. */
+  setTo?: number; decider?: number; cap?: number | null;
   /** Scrimmage between two halves of our roster. */
   scrim?: { a: { name: string; ids: string[] }; b: { name: string; ids: string[] }; to?: number } | null;
 }
@@ -261,14 +263,19 @@ export function replay(events: MatchEvent[], info: MatchInfo = {}): Replay {
   }
 
   let wonUs = 0, wonThem = 0;
-  for (const s of sets) {
-    s.target = scr ? +(scr.to || 25) : s.n === bestOf ? 15 : 25;
-    s.over = Math.max(s.us, s.them) >= s.target && Math.abs(s.us - s.them) >= 2;
+  const setTo = info.setTo || 25, decider = info.decider || 15, cap = info.cap || null;
+  sets.forEach((s, i) => {
+    const deciding = !scr && bestOf % 2 === 1 && bestOf > 1 && s.n === bestOf;
+    s.target = scr ? +(scr.to || 25) : deciding ? decider : setTo;
+    const hi = Math.max(s.us, s.them), capAt = cap && !deciding && !scr ? Math.max(cap, s.target) : null;
+    // A set is over by the rules, at the cap, or when the coach started the next one (sets ended early, time limits).
+    s.over = (hi >= s.target && Math.abs(s.us - s.them) >= 2) || (!!capAt && hi >= capAt && s.us !== s.them) || (i < sets.length - 1 && s.us !== s.them);
     s.winner = s.over ? (s.us > s.them ? "us" : "them") : null;
     if (s.winner === "us") wonUs++; if (s.winner === "them") wonThem++;
-  }
+  });
   const need = Math.ceil(bestOf / 2);
-  return { sets, cur: sets[sets.length - 1] || null, log, wonUs, wonThem, need, matchOver: wonUs >= need || wonThem >= need, firstTs: events.length ? events[0].ts : null };
+  const matchOver = bestOf % 2 === 0 ? wonUs + wonThem >= bestOf : wonUs >= need || wonThem >= need;
+  return { sets, cur: sets[sets.length - 1] || null, log, wonUs, wonThem, need, matchOver, firstTs: events.length ? events[0].ts : null };
 }
 
 export function sourceKey(t: string): string {
@@ -361,4 +368,16 @@ export function runOf(set: SetState | null): { side: Side | null; n: number } {
 /** Point differential after every rally, for momentum charts. */
 export function momentum(set: SetState): number[] {
   let d = 0; return set.rallies.map((r) => (d += r.w === "us" ? 1 : -1));
+}
+
+/** Win, loss or tie (two-set pool play can split 1–1); null while the match is still going. */
+export function resultOf(R: Replay): "W" | "L" | "T" | null {
+  if (!R.matchOver) return null;
+  return R.wonUs > R.wonThem ? "W" : R.wonThem > R.wonUs ? "L" : "T";
+}
+/** A team's record over finished matches, "12–3" or "12–3–1" when there are ties. */
+export function recordOf(list: Replay[]): { w: number; l: number; t: number; text: string } {
+  let w = 0, l = 0, t = 0;
+  for (const R of list) { const r = resultOf(R); if (r === "W") w++; else if (r === "L") l++; else if (r === "T") t++; }
+  return { w, l, t, text: `${w}–${l}${t ? "–" + t : ""}` };
 }

@@ -1,3 +1,5 @@
+import { recordOf } from "../../sports/volleyball/engine";
+import type { Replay } from "../../sports/volleyball/engine";
 import { useState } from "react";
 import { all, deleteMatch, deleteTeam, get, matchesOf, patch, player, remove, replayOf, save, seasonsOf, setTeamPatch, team, teamPlayers, toast, uid, opponentsOf, defaultSeasonName, oppKey } from "../../data/store";
 import { Player } from "../../data/model";
@@ -107,7 +109,7 @@ function Opponents() {
   const [name, setName] = useState("");
   const o = get("opponents", sel) || opps[0];
   const played = o ? matchesOf().filter((m) => m.kind === "match" && oppKey(m.opp) === oppKey(o.name)) : [];
-  const rec = played.map((m) => replayOf(m)).filter((R) => R && R.matchOver).reduce((a, R) => (R!.wonUs > R!.wonThem ? [a[0] + 1, a[1]] : [a[0], a[1] + 1]), [0, 0]);
+  const recO = recordOf(played.map((m) => replayOf(m)).filter(Boolean) as Replay[]), rec = [recO.w, recO.l];
   return <div className="stack">
     <Card title="Opponents & scouting">
       <div className="stack">

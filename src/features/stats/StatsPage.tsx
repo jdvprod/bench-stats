@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { patch, player, playerName, replayOf, seasonsOf, team, teamPlayers, toast } from "../../data/store";
-import { aggregate, Agg, Stat } from "../../sports/volleyball/engine";
+import { aggregate, Agg, recordOf, Stat } from "../../sports/volleyball/engine";
 import { AttackContext, CONTEXT_LABEL } from "../../sports/volleyball/actions";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, fmtRatio, fmtSigned, hitting, passAvg, perfectPassPct, playerMetrics, ratio, serveAttempts, serveEfficiency, serveErrors, serveInPct, teamMetrics, netPoints } from "../../sports/volleyball/metrics";
 import { flags } from "../../sports/volleyball/flags";
@@ -505,13 +505,13 @@ function Units({ A }: { A: Agg }) {
 
 /* ---------- event / tournament ---------- */
 function EventCard({ S }: { S: Scope }) {
-  const done = S.items.filter((x) => x.R.matchOver), W = done.filter((x) => x.R.wonUs > x.R.wonThem).length;
+  const rec = recordOf(S.items.map((x) => x.R));
   const sw = S.items.reduce((n, x) => n + x.R.wonUs, 0), sl = S.items.reduce((n, x) => n + x.R.wonThem, 0);
   let pf = 0, pa = 0; for (const x of S.items) for (const st of x.R.sets) { pf += st.us; pa += st.them; }
   const days = new Set(S.items.map((x) => x.m.date)).size;
   return <Card title={S.event + " · results"}>
     <div className="kpis">
-      <Kpi label="Matches" value={`${W}–${done.length - W}`} sub={days > 1 ? `over ${days} days` : S.items[0]?.m.date} />
+      <Kpi label="Matches" value={rec.text} sub={days > 1 ? `over ${days} days` : S.items[0]?.m.date} />
       <Kpi label="Sets" value={`${sw}–${sl}`} sub={sw + sl ? `${Math.round((100 * sw) / (sw + sl))}% won` : ""} />
       <Kpi label="Points" value={`${pf}–${pa}`} sub={`${pf - pa >= 0 ? "+" : ""}${pf - pa} differential`} />
       <Kpi label="Point ratio" value={pa ? (pf / pa).toFixed(3) : "—"} sub="pool tiebreaker" />
@@ -546,12 +546,12 @@ function SeasonVsSeason({ seasonId }: { seasonId: string }) {
   const idx = seasons.findIndex((x) => x.id === seasonId);
   const cols = seasons.slice(Math.max(0, idx), Math.max(0, idx) + 3).map((se) => {
     const items = resolveScope("season", se.id).items, A = aggregate(items.flatMap((x) => x.R.sets)), M = teamMetrics(A);
-    const done = items.filter((x) => x.R.matchOver), W = done.filter((x) => x.R.wonUs > x.R.wonThem).length;
-    return { se, n: items.length, W, L: done.length - W, M, A };
+    const rec = recordOf(items.map((x) => x.R));
+    return { se, n: items.length, W: rec.w, L: rec.l, rec, M, A };
   }).filter((c) => c.n > 0);
   if (cols.length < 2) return null;
   const rows: [string, (c: (typeof cols)[number]) => number | null, (v: number | null) => string, boolean][] = [
-    ["Record", (c) => (c.W + c.L ? c.W / (c.W + c.L) : null), () => "", true],
+    ["Record", (c) => (c.W + c.L + c.rec.t ? (c.W + c.rec.t / 2) / (c.W + c.L + c.rec.t) : null), () => "", true],
     ["Hitting", (c) => c.M.hitting, fmtHit, true], ["Side-out", (c) => c.M.sideOut, fmtPct, true], ["Point-scoring", (c) => ratio(c.A.psc.w, c.A.psc.n), fmtPct, true],
     ["Pass average", (c) => c.M.passAvg, fmtAvg, true], ["Serve in", (c) => c.M.serveIn, fmtPct, true],
     ["Kills per set", (c) => c.M.perSet?.K ?? null, (v) => fmtNum(v, 2), true], ["Aces per set", (c) => c.M.perSet?.SA ?? null, (v) => fmtNum(v, 2), true],
@@ -563,7 +563,7 @@ function SeasonVsSeason({ seasonId }: { seasonId: string }) {
       <tbody>{rows.map(([label, get, fmt, up]) => <tr key={label}><td className="l">{label}</td>{cols.map((c, i) => {
         const v = get(c), prev = cols[i + 1] ? get(cols[i + 1]) : null;
         const better = i === 0 && v != null && prev != null && Math.abs(v - prev) > 1e-9 ? (v > prev) === up : null;
-        return <td key={c.se.id} style={i === 0 ? { fontWeight: 700, color: better == null ? undefined : better ? "var(--us)" : "var(--them)" } : undefined}>{label === "Record" ? `${c.W}–${c.L}` : fmt(v)}</td>; })}</tr>)}</tbody>
+        return <td key={c.se.id} style={i === 0 ? { fontWeight: 700, color: better == null ? undefined : better ? "var(--us)" : "var(--them)" } : undefined}>{label === "Record" ? c.rec.text : fmt(v)}</td>; })}</tr>)}</tbody>
     </table></div>
     <p className="keys" style={{ marginTop: 8 }}>This season in bold; blue is better than last season, grey is worse.</p>
   </Card>;

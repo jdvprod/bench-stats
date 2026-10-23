@@ -3,7 +3,8 @@ import type { MatchEvent } from "../sports/volleyball/engine";
 
 export interface TeamSettings {
   subLimit: number;        // subs allowed per set (0 = no limit)
-  bestOf: number;          // default match format
+  bestOf: number;          // default match format (2 = two sets, pool play)
+  scoring?: string;        // default scoring: "25", "25c27", "21", "21c23"
   askLoc: boolean;         // ask where the ball landed
   askLocDigs: boolean;     // also ask after digs
   askOpp: boolean;         // ask for their jersey number
@@ -66,6 +67,8 @@ export interface Match {
   opp: string;             // opponent name, or session name for practice
   date: string;            // YYYY-MM-DD
   bestOf: number;
+  /** Scoring: points per set (default 25), optional cap. */
+  setTo?: number; cap?: number | null;
   status: "live" | "done";
   site: "home" | "away" | "neutral" | "";
   event: string;           // tournament / league name

@@ -55,6 +55,14 @@ Signed-in coaches use AI through the `ai` Supabase Edge Function (`supabase/func
 
 A coach can still paste their own Anthropic key in Settings; then calls go straight from the browser with no daily limit.
 
+## Tests
+
+- `npm test`: engine unit tests plus backtesting, where thousands of random matches (every action, subs, timeouts, deletes, several devices, stats-only entries, score fixes) are checked against invariants: scores match rallies, rotations follow side-outs, team totals equal player totals, merging devices or deleting entries gives the same result, no metric is ever NaN.
+- `npm run e2e`: drives the built app in Chromium on desktop and phone, light and dark, with a mock Supabase: a full match by keyboard and buttons, formats (sets to 21, caps, pool play, ending a set early), planning, two coaches syncing, parent links, the season page, recruiting links, AI and the setup check.
+- `supabase/test-schema.sh`: runs `schema.sql` twice on a throwaway Postgres and checks the public functions and row level security.
+
+All three run on every push (GitHub Actions).
+
 ## Code map
 
 ```

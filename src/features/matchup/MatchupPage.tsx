@@ -4,7 +4,7 @@ import { parseSchedule } from "./parseSchedule";
 import { useState } from "react";
 import { ensureOpponent, get, matchesOf, newMatch, oppKey, opponentsOf, patch, playerName, replayOf, setTeamPatch, team, teamPlayers, toast, todayISO, uid } from "../../data/store";
 import { Match, Opponent, PlanItem, ScheduleItem } from "../../data/model";
-import { aggregate, Agg, Replay } from "../../sports/volleyball/engine";
+import { aggregate, Agg, Replay, resultOf } from "../../sports/volleyball/engine";
 import { blocks, fmtAvg, fmtHit, fmtNum, fmtPct, fmtSigned, hitting, playerMetrics, ratio, serveErrors, teamMetrics } from "../../sports/volleyball/metrics";
 import { tendencies, ALL_ZONES } from "../../sports/volleyball/tendencies";
 import { Card, ConfirmButton, download, fmtDate, Seg } from "../../ui/kit";
@@ -121,7 +121,7 @@ function Matchup({ h, next }: { h: H2H; next?: ScheduleItem }) {
         <Card title="Past results">
           <ul className="log">{games.map(({ m, R }) => <li key={m.id} className="click" style={{ gridTemplateColumns: "1fr auto auto", cursor: "pointer" }} onClick={() => { setUi({ statsScope: "m:" + m.id }); go("stats"); }}>
             <span>{fmtDate(m.date)}{m.event ? <span className="muted"> · {m.event}</span> : null}</span><span className="small muted">{R.sets.map((s) => s.us + "-" + s.them).join(", ")}</span>
-            <b style={{ color: R.wonUs > R.wonThem ? "var(--us)" : "var(--muted)" }}>{R.matchOver ? (R.wonUs > R.wonThem ? "W " : "L ") : ""}{R.wonUs}–{R.wonThem}</b></li>)}</ul>
+            <b style={{ color: R.wonUs > R.wonThem ? "var(--us)" : "var(--muted)" }}>{resultOf(R) ? resultOf(R) + " " : ""}{R.wonUs}–{R.wonThem}</b></li>)}</ul>
           <p className="keys" style={{ marginTop: 8 }}>{last ? `Last met ${fmtDate(last.m.date)}. ` : ""}Tap a match for its full stats.</p>
         </Card>
       </div>

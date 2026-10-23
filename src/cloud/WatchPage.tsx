@@ -29,7 +29,7 @@ export function WatchPage({ code }: { code: string }) {
   useEffect(() => { if (d?.team?.color) applyTheme(d.team.color, "system", "normal", null); }, [d?.team?.color]);
 
   if (!d) return <div className="watch"><div className="page" style={{ maxWidth: 760, margin: "0 auto" }}><p className="empty" style={{ padding: 30 }}>{err || "Loading the game…"}</p></div></div>;
-  const m = d.match, R = replay(mergeLogs(d.logs || []), { id: m.id, bestOf: m.bestOf, scrim: m.scrim });
+  const m = d.match, R = replay(mergeLogs(d.logs || []), { id: m.id, bestOf: m.bestOf, scrim: m.scrim, setTo: m.setTo, cap: m.cap });
   const c = R.cur, A = aggregate(R.sets), us = d.team?.name || "Us", them = m.opp || "Opponent";
   const P = new Map(d.players.map((p) => [p.id, p]));
   const nm = (id?: string | null) => { const p = id ? P.get(id) : null; return p ? `#${p.num} ${p.first}` : ""; };

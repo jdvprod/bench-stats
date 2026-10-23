@@ -182,7 +182,7 @@ begin
   select jsonb_build_object(
     'team', (select jsonb_build_object('name', data->>'name', 'level', data->>'level', 'schedule', coalesce(data->'schedule', '[]'::jsonb)) from records where store = 'teams' and id = s.team_id and not deleted),
     'season', (select data->>'name' from records where store = 'seasons' and id = s.season_id and not deleted),
-    'matches', coalesce((select jsonb_agg(jsonb_build_object('id', data->>'id', 'opp', data->>'opp', 'date', data->>'date', 'bestOf', data->'bestOf', 'status', data->>'status', 'event', data->>'event', 'site', data->>'site'))
+    'matches', coalesce((select jsonb_agg(jsonb_build_object('id', data->>'id', 'opp', data->>'opp', 'date', data->>'date', 'bestOf', data->'bestOf', 'setTo', data->'setTo', 'cap', data->'cap', 'status', data->>'status', 'event', data->>'event', 'site', data->>'site'))
                          from records where store = 'matches' and team_id = s.team_id and data->>'seasonId' = s.season_id and data->>'kind' = 'match' and not deleted), '[]'::jsonb),
     'logs', coalesce((select jsonb_agg(jsonb_build_object('matchId', l.data->>'matchId', 'events', l.data->'events'))
                       from records l where l.store = 'logs' and l.team_id = s.team_id and not l.deleted

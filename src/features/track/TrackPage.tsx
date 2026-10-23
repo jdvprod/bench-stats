@@ -16,14 +16,17 @@ export function TrackPage() {
   return <div className="page"><Home /></div>;
 }
 
+export const FORMATS: [number, string][] = [[3, "Best of 3"], [5, "Best of 5"], [2, "2 sets (pool)"]];
+export const SCORING: [string, string][] = [["25", "Sets to 25"], ["25c27", "To 25, cap 27"], ["21", "Sets to 21"], ["21c23", "To 21, cap 23"]];
+export const parseScoring = (v: string) => { const [to, cap] = v.split("c").map(Number); return { setTo: to || 25, cap: cap || null }; };
 export function StartMatch({ formOnly }: { formOnly?: boolean } = {}) {
   const t = team()!, opps = opponentsOf();
   const [opp, setOpp] = useState(""), [date, setDate] = useState(todayISO()), [site, setSite] = useState<"home" | "away" | "neutral">("home");
-  const [event, setEvent] = useState(""), [bestOf, setBestOf] = useState(t.settings.bestOf);
+  const [event, setEvent] = useState(""), [bestOf, setBestOf] = useState(t.settings.bestOf), [scoring, setScoring] = useState(t.settings.scoring || "25");
   const upcoming = (t.schedule || []).filter((x) => x.date >= todayISO()).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time)).slice(0, 3);
   const recent = matchesOf().filter((x) => x.kind === "match" && x.status === "done").slice(0, 3);
   const start = (serve: "us" | "them") => {
-    newMatch({ kind: "match", opp: opp.trim() || "Opponent", date, site, event: event.trim(), bestOf, serve });
+    newMatch({ kind: "match", opp: opp.trim() || "Opponent", date, site, event: event.trim(), bestOf, serve, ...parseScoring(scoring) });
     setUi({ sel: null, panel: null, follow: null });
   };
   const form = <Card title="Start a match" id="start-match">
@@ -34,7 +37,8 @@ export function StartMatch({ formOnly }: { formOnly?: boolean } = {}) {
           <label className="field"><span className="label">Date</span><input type="date" value={date} onChange={(e) => setDate(e.target.value)} /></label>
           <label className="field"><span className="label">Tournament or league (optional)</span><input value={event} onChange={(e) => setEvent(e.target.value)} /></label>
         </div>
-        <div className="row"><Seg value={site} onChange={setSite} options={[["home", "Home"], ["away", "Away"], ["neutral", "Neutral"]]} label="Site" /><Seg value={bestOf} onChange={setBestOf} options={[[3, "Best of 3"], [5, "Best of 5"]]} label="Format" /></div>
+        <div className="row"><Seg value={site} onChange={setSite} options={[["home", "Home"], ["away", "Away"], ["neutral", "Neutral"]]} label="Site" /><Seg value={bestOf} onChange={setBestOf} options={FORMATS} label="Format" />
+          <select className="input" style={{ width: "auto" }} value={scoring} onChange={(e) => setScoring(e.target.value)} aria-label="Scoring">{SCORING.map(([v, l]) => <option key={v} value={v}>{l}</option>)}</select></div>
         <p className="small muted">{t.defLineup ? "Your default lineup starts the first set. Change it on the Lineup tab." : "Tip: set a default lineup on the Lineup tab to track rotations and servers automatically."}</p>
         <div className="row"><button className="btn primary" onClick={() => start("us")}>Start · we serve first</button><button className="btn" onClick={() => start("them")}>Start · they serve first</button></div>
       </div>

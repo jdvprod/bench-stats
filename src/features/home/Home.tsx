@@ -3,7 +3,7 @@ import { useState } from "react";
 import { ensureOpponent, matchesOf, newMatch, oppKey, playerName, replayOf, setTeamPatch, team, teamPlayers, todayISO } from "../../data/store";
 import { cloudAvailable, currentUser } from "../../cloud/client";
 import { isLinked } from "../../cloud/sync";
-import { aggregate } from "../../sports/volleyball/engine";
+import { aggregate, resultOf } from "../../sports/volleyball/engine";
 import { fmtAvg, fmtHit, fmtPct, teamMetrics } from "../../sports/volleyball/metrics";
 import { Card, fmtDate } from "../../ui/kit";
 import { go } from "../../app/router";
@@ -28,7 +28,7 @@ export function Home() {
   const t = team()!, today = todayISO();
   const games = matchesOf().filter((m) => m.kind === "match" && (!t.activeSeasonId || m.seasonId === t.activeSeasonId)).map((m) => ({ m, R: replayOf(m)! })).filter((x) => x.R && x.R.sets.length);
   const done = games.filter((g) => g.R.matchOver || g.m.status === "done");
-  const W = done.filter((g) => g.R.wonUs > g.R.wonThem).length, L = done.filter((g) => g.R.wonThem > g.R.wonUs).length;
+  const W = done.filter((g) => g.R.wonUs > g.R.wonThem).length, L = done.filter((g) => g.R.wonThem > g.R.wonUs).length, T = done.filter((g) => g.R.matchOver && g.R.wonUs === g.R.wonThem).length;
   const last = done[0];
   const next = (t.schedule || []).filter((s) => s.date >= today).sort((a, b) => (a.date + a.time).localeCompare(b.date + b.time))[0];
   const vsNext = next ? games.filter((g) => oppKey(g.m.opp) === oppKey(next.opp)) : [];
@@ -42,7 +42,7 @@ export function Home() {
 
   return <div className="stack">
     <div className="home-head">
-      <div><h1>{t.name}</h1><p className="muted">{t.level}{done.length ? ` · ${W}–${L} this season` : ""}</p></div>
+      <div><h1>{t.name}</h1><p className="muted">{t.level}{done.length ? ` · ${W}–${L}${T ? "–" + T : ""} this season` : ""}</p></div>
       <button className="btn primary" onClick={() => document.getElementById("start-match")?.scrollIntoView({ behavior: "smooth", block: "start" })}>Start a match</button>
     </div>
     <Setup />
@@ -59,7 +59,7 @@ export function Home() {
       <section className="card home-last">
         <div className="label">Last match</div>
         {last && lastM ? <>
-          <div className="home-opp"><span className={last.R.wonUs > last.R.wonThem ? "w" : "l"}>{last.R.wonUs > last.R.wonThem ? "W" : "L"}</span> {last.R.wonUs}–{last.R.wonThem} vs {last.m.opp}</div>
+          <div className="home-opp"><span className={resultOf(last.R) === "W" ? "w" : resultOf(last.R) === "L" ? "l" : ""}>{resultOf(last.R) || ""}</span> {last.R.wonUs}–{last.R.wonThem} vs {last.m.opp}</div>
           <p className="muted">{fmtDate(last.m.date)} · {last.R.sets.map((s) => `${s.us}-${s.them}`).join(", ")}</p>
           <p className="small">Hitting {fmtHit(lastM.hitting)} · side-out {fmtPct(lastM.sideOut)} · pass {fmtAvg(lastM.passAvg)}{star && star[1] > 0 ? ` · Top: ${playerName(star[0])}` : ""}</p>
           <div className="row"><button className="btn sm" onClick={() => { setUi({ statsScope: "m:" + last.m.id }); go("stats"); }}>Full stats</button><button className="btn sm" onClick={() => download(`${t.name} vs ${last.m.opp} ${last.m.date} report.html`.replace(/[^\w\- .]+/g, ""), matchReportHtml(last.m, last.R), "text/html")}>Match report</button><button className="btn sm" onClick={() => shareFinalGraphic(last.m, last.R)}>Share graphic</button></div>
