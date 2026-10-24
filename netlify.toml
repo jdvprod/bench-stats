@@ -1,4 +1,5 @@
-# Netlify builds the app from GitHub on every push to main.
+# Netlify builds the app from GitHub. Set the production branch to `live` in Netlify so only releases deploy
+# (free plan: 300 credits a month, 15 per production deploy). Release with: git push origin main:live
 [build]
   command = "npm run build"
   publish = "dist"

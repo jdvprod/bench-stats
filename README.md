@@ -32,7 +32,7 @@ npm test         # engine tests
 
 ## Put it online (free)
 
-Connect the GitHub repo to **Netlify** (Add new site → Import an existing project → GitHub → `benchboard`). `netlify.toml` already sets the build (`npm run build`, publish `dist`, Node 22), so leave the build settings as they are. Every push to `main` redeploys. Then open the link on any device and choose "Install" or "Add to Home Screen".
+Connect the GitHub repo to **Netlify** (Add new site → Import an existing project → GitHub → `benchboard`). `netlify.toml` already sets the build (`npm run build`, publish `dist`, Node 22), so leave the build settings as they are. Set Netlify's **production branch to `live`** (Site configuration → Build & deploy → Branches and deploy contexts) and turn off branch deploys and deploy previews. Netlify's free plan has 300 credits a month and each production deploy costs 15, so day-to-day work goes to `main` and only releases are pushed to `live` (`git push origin main:live`). Then open the link on any device and choose "Install" or "Add to Home Screen".
 
 ## Accounts, sync and live links (Supabase, free tier)
 
