@@ -32,7 +32,9 @@ npm test         # engine tests
 
 ## Put it online (free)
 
-Connect the GitHub repo to **Netlify** (Add new site → Import an existing project → GitHub → `benchboard`). `netlify.toml` already sets the build (`npm run build`, publish `dist`, Node 22), so leave the build settings as they are. Set Netlify's **production branch to `live`** (Site configuration → Build & deploy → Branches and deploy contexts) and turn off branch deploys and deploy previews. Netlify's free plan has 300 credits a month and each production deploy costs 15, so day-to-day work goes to `main` and only releases are pushed to `live` (`git push origin main:live`). Then open the link on any device and choose "Install" or "Add to Home Screen".
+**GitHub Pages** (recommended, no deploy limits for a public repo): in the repo's **Settings → Pages**, set **Source** to **GitHub Actions**. Every push to the `live` branch then builds, tests and publishes the app to `https://jdvprod.github.io/benchboard/` (`.github/workflows/pages.yml`). Day-to-day work goes to `main`; release with `git push origin main:live`.
+
+Netlify also works (`netlify.toml`), but its free plan has 300 credits a month and each production deploy costs 15, and the site goes offline when they run out. If you use it, set the production branch to `live`.
 
 ## Accounts, sync and live links (Supabase, free tier)
 
