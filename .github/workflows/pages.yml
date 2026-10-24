@@ -1,8 +1,8 @@
 # Publishes the app to GitHub Pages (free, no deploy limits for public repos) whenever `live` is updated.
 # Release with: git push origin main:live
 name: Deploy
+# Hosting is on Cloudflare Pages now; run this by hand only if you switch to GitHub Pages.
 on:
-  push: { branches: [live] }
   workflow_dispatch:
 permissions:
   contents: read
